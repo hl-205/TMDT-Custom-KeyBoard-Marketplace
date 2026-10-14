@@ -33,14 +33,27 @@ public class User {
     }
 
     public String getFullName() {
-        return (firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "");
+        return ((firstName != null ? firstName.trim() : "") + " " + (lastName != null ? lastName.trim() : "")).trim();
     }
 
     public String getShortDisplayName() {
-        if (lastName != null && !lastName.isEmpty() && firstName != null && !firstName.isEmpty()) {
-            return lastName + " " + firstName.charAt(0) + ".";
+        if (lastName != null && !lastName.isBlank() && firstName != null && !firstName.isBlank()) {
+            return lastName.trim() + " " + firstName.trim().charAt(0) + ".";
         }
         return getFullName();
+    }
+
+    // Tự động tạo tên ẩn danh theo đúng tài khoản đang đăng nhập (VD: Nguyễn Văn Anh -> N*** A**)
+    public String getMaskedName() {
+        char f = (firstName != null && !firstName.isBlank()) ? Character.toUpperCase(firstName.trim().charAt(0)) : 'K';
+        char l = (lastName != null && !lastName.isBlank()) ? Character.toUpperCase(lastName.trim().charAt(0)) : 'H';
+        return f + "*** " + l + "**";
+    }
+
+    public String getRankName() {
+        if (points >= 2000) return "Thành viên Vàng";
+        if (points >= 500) return "Thành viên Bạc";
+        return "Thành viên Mới";
     }
 
     public int getId() { return id; }

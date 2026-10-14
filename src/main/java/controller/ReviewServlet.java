@@ -9,21 +9,38 @@ import jakarta.servlet.http.*;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Set;
 
-@WebServlet(urlPatterns = {"/my-orders", "/review"})
+@WebServlet(urlPatterns = {"/my-orders", "/my-reviews", "/review"})
 public class ReviewServlet extends HttpServlet {
     private final ProductDAO productDAO = new ProductDAO();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        HttpSession session = request.getSession();
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            response.sendRedirect("login");
+            return;
+        }
+
         String path = request.getServletPath();
+        Set<Integer> reviewedProductIds = productDAO.getReviewedProductIdsByUser(user.getId());
+        request.setAttribute("reviewedProductIds", reviewedProductIds);
+
         if ("/my-orders".equals(path)) {
             request.getRequestDispatcher("my-orders.jsp").forward(request, response);
             return;
         }
 
-        int productId = 7; // Mặc định Keycap Akko Black & Pink ASA profile (chuẩn Frame 16)
+        if ("/my-reviews".equals(path)) {
+            request.setAttribute("myReviews", productDAO.getReviewsByUserId(user.getId()));
+            request.getRequestDispatcher("my-reviews.jsp").forward(request, response);
+            return;
+        }
+
+        int productId = 7;
         try {
             if (request.getParameter("productId") != null) {
                 productId = Integer.parseInt(request.getParameter("productId"));
@@ -48,16 +65,22 @@ public class ReviewServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        HttpSession session = request.getSession();
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            response.sendRedirect("login");
+            return;
+        }
+
         int productId = 7;
         try {
             productId = Integer.parseInt(request.getParameter("productId"));
         } catch (Exception ignored) {}
 
-        int rating = 5;
-        try {
-            rating = Integer.parseInt(request.getParameter("rating"));
-            if (rating < 1 || rating > 5) rating = 5;
-        } catch (Exception ignored) {}
+        int rating = parseRating(request.getParameter("rating"));
+        int qualityRating = parseRating(request.getParameter("qualityRating"));
+        int accuracyRating = parseRating(request.getParameter("accuracyRating"));
+        int deliveryRating = parseRating(request.getParameter("deliveryRating"));
 
         String orderCode = request.getParameter("orderCode");
         String variant = request.getParameter("variant");
@@ -76,15 +99,14 @@ public class ReviewServlet extends HttpServlet {
             return;
         }
 
-        HttpSession session = request.getSession();
-        User user = (User) session.getAttribute("user");
-        Integer userId = (user != null) ? user.getId() : 1;
-        String reviewerName = (user != null) ? user.getFullName() : "Lê Tùng Dương";
-        String avatarText = (user != null && user.getAvatarText() != null) ? user.getAvatarText() : "DT";
+        String reviewerName = user.getFullName();
+        String avatarText = (user.getAvatarText() != null && !user.getAvatarText().isBlank()) ? user.getAvatarText() : "KH";
 
         if ("on".equals(anonymous)) {
-            reviewerName = "L*** D**";
+            reviewerName = user.getMaskedName();
         }
+
+        String variantWithSubRatings = variant + " · (Chất lượng: " + qualityRating + "★ | Mô tả: " + accuracyRating + "★ | Giao hàng: " + deliveryRating + "★)";
 
         StringBuilder fullComment = new StringBuilder();
         if (quickTags != null && quickTags.length > 0) {
@@ -93,8 +115,22 @@ public class ReviewServlet extends HttpServlet {
         fullComment.append(comment.trim());
 
         String today = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-        productDAO.addReview(productId, userId, reviewerName, avatarText, rating, variant, fullComment.toString(), today);
+        boolean ok = productDAO.addReview(productId, user.getId(), reviewerName, avatarText, rating, variantWithSubRatings, fullComment.toString(), today);
 
-        response.sendRedirect("product-detail?id=" + productId + "#sec-danhgia");
+        if (ok) {
+            user.setPoints(user.getPoints() + 50);
+            session.setAttribute("user", user);
+        }
+
+        response.sendRedirect("my-reviews?msg=submitted");
+    }
+
+    private int parseRating(String val) {
+        try {
+            int r = Integer.parseInt(val);
+            return (r >= 1 && r <= 5) ? r : 5;
+        } catch (Exception e) {
+            return 5;
+        }
     }
 }

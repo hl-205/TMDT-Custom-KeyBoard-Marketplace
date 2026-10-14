@@ -1,4 +1,20 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ page import="model.User" %>
+<%@ page import="java.util.Set" %>
+<%@ page import="java.util.HashSet" %>
+<%
+    User currentUser = (User) session.getAttribute("user");
+    if (currentUser == null) {
+        response.sendRedirect("login");
+        return;
+    }
+    if (request.getAttribute("reviewedProductIds") == null) {
+        response.sendRedirect("my-orders");
+        return;
+    }
+    Set<Integer> reviewedIds = (Set<Integer>) request.getAttribute("reviewedProductIds");
+    if (reviewedIds == null) reviewedIds = new HashSet<>();
+%>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -14,28 +30,28 @@
 
 <main class="container">
     <div class="pd-breadcrumb" style="padding: 16px 0;">
-        <a href="index.jsp">Trang chủ</a> › <a href="#">Tài khoản</a> › <strong>Đơn hàng của tôi</strong>
+        <a href="index.jsp">Trang chủ</a> › <a href="my-orders">Tài khoản</a> › <strong>Đơn hàng của tôi</strong>
     </div>
 
     <div class="account-layout-2col">
-        <!-- Cột trái Sidebar Tài khoản -->
+        <!-- Cột trái Sidebar hiển thị đúng User đang đăng nhập -->
         <aside class="account-sidebar-card">
             <div class="acc-user-box">
-                <div class="acc-avatar-circle">DT</div>
+                <div class="acc-avatar-circle"><%= currentUser.getAvatarText() %></div>
                 <div>
-                    <strong style="display:block;font-size:14px;">Lê Tùng Dương</strong>
-                    <span style="font-size:12px;color:#64748B;">Thành viên Bạc · 1.240 điểm</span>
+                    <strong style="display:block;font-size:14px;"><%= currentUser.getFullName() %></strong>
+                    <span style="font-size:12px;color:#64748B;"><%= currentUser.getRankName() %> · <%= currentUser.getPoints() %> điểm</span>
                 </div>
             </div>
 
             <div class="acc-nav-group-title">Tài khoản</div>
-            <a href="#" class="acc-nav-link"><span>👤 Hồ sơ cá nhân</span></a>
-            <a href="#" class="acc-nav-link"><span>📍 Sổ địa chỉ</span></a>
-            <a href="#" class="acc-nav-link"><span>🔒 Bảo mật</span></a>
+            <a href="my-orders" class="acc-nav-link"><span>👤 Hồ sơ cá nhân</span></a>
+            <a href="my-orders" class="acc-nav-link"><span>📍 Sổ địa chỉ</span></a>
+            <a href="my-orders" class="acc-nav-link"><span>🔒 Bảo mật</span></a>
 
             <div class="acc-nav-group-title">Mua hàng</div>
             <a href="my-orders" class="acc-nav-link active"><span>📦 Đơn hàng của tôi</span><span class="badge">3</span></a>
-            <a href="review?orderCode=KH-281044&productId=7" class="acc-nav-link"><span>⭐ Đánh giá của tôi</span></a>
+            <a href="my-reviews" class="acc-nav-link"><span>⭐ Đánh giá của tôi</span></a>
 
             <div class="acc-nav-group-title">Hỗ trợ</div>
             <a href="logout" class="acc-nav-link" style="color:#EF4444;font-weight:700;"><span>↪ Đăng xuất</span></a>
@@ -63,12 +79,12 @@
                 <div class="order-card-foot">
                     <div>Tổng tiền: <strong style="font-size:16px;color:#EA580C;">5.320.000₫</strong></div>
                     <div style="display:flex;gap:10px;">
-                        <a href="product-detail?id=1" class="btn btn-outline-gray">Xem sản phẩm</a>
+                        <a href="order-detail?code=KH-284193" class="btn btn-blue">Xem tiến độ gia công</a>
                     </div>
                 </div>
             </div>
 
-            <!-- Đơn 2: Đã hoàn thành (Có nút Đánh giá sản phẩm đã mua - Chuẩn Frame 14) -->
+            <!-- Đơn 2: Đã hoàn thành (Sản phẩm ID = 7) -->
             <div class="order-card-box">
                 <div class="order-card-head">
                     <div>
@@ -88,12 +104,16 @@
                     <div>Tổng tiền: <strong style="font-size:16px;color:#EA580C;">690.000₫</strong></div>
                     <div style="display:flex;gap:10px;">
                         <a href="product-detail?id=7" class="btn btn-outline-gray">Mua lại</a>
+                        <% if (reviewedIds.contains(7)) { %>
+                        <a href="my-reviews" class="btn btn-outline-gray" style="color:#16A34A;border-color:#BBF7D0;background:#F0FDF4;">✓ Đã đánh giá (Xem)</a>
+                        <% } else { %>
                         <a href="review?orderCode=KH-281044&productId=7" class="btn-orange-review">★ Đánh giá nhận 50k</a>
+                        <% } %>
                     </div>
                 </div>
             </div>
 
-            <!-- Đơn 3: Kit Tofu60 2.0 hoàn thành để test đánh giá trực tiếp trên Kit số 1 -->
+            <!-- Đơn 3: Đã hoàn thành (Sản phẩm ID = 1) -->
             <div class="order-card-box">
                 <div class="order-card-head">
                     <div>
@@ -113,7 +133,11 @@
                     <div>Tổng tiền: <strong style="font-size:16px;color:#EA580C;">2.690.000₫</strong></div>
                     <div style="display:flex;gap:10px;">
                         <a href="product-detail?id=1" class="btn btn-outline-gray">Mua lại</a>
+                        <% if (reviewedIds.contains(1)) { %>
+                        <a href="my-reviews" class="btn btn-outline-gray" style="color:#16A34A;border-color:#BBF7D0;background:#F0FDF4;">✓ Đã đánh giá (Xem)</a>
+                        <% } else { %>
                         <a href="review?orderCode=KH-280912&productId=1&variant=Ph%C3%A2n%20lo%E1%BA%A1i:%20Silver%20/%20Brass%20plate" class="btn-orange-review">★ Đánh giá nhận 50k</a>
+                        <% } %>
                     </div>
                 </div>
             </div>

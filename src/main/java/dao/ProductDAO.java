@@ -6,9 +6,42 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class ProductDAO {
+
+    public static class UserReviewItem {
+        private int reviewId;
+        private int productId;
+        private String productName;
+        private String shopName;
+        private int rating;
+        private String variantInfo;
+        private String comment;
+        private String reviewDate;
+
+        public UserReviewItem(int reviewId, int productId, String productName, String shopName,
+                              int rating, String variantInfo, String comment, String reviewDate) {
+            this.reviewId = reviewId;
+            this.productId = productId;
+            this.productName = productName;
+            this.shopName = shopName;
+            this.rating = rating;
+            this.variantInfo = variantInfo;
+            this.comment = comment;
+            this.reviewDate = reviewDate;
+        }
+        public int getReviewId() { return reviewId; }
+        public int getProductId() { return productId; }
+        public String getProductName() { return productName; }
+        public String getShopName() { return shopName; }
+        public int getRating() { return rating; }
+        public String getVariantInfo() { return variantInfo; }
+        public String getComment() { return comment; }
+        public String getReviewDate() { return reviewDate; }
+    }
 
     public Product getProductById(int id) {
         String sql = "SELECT p.*, c.name AS category_name, "
@@ -43,7 +76,6 @@ public class ProductDAO {
         return null;
     }
 
-    // Chức năng tự chọn 1: Lọc sản phẩm theo nhiều tiêu chí khác nhau
     public List<Product> filterProducts(Integer categoryId, String keyword, String[] brands,
                                         String[] switchTypes, String[] forces, String[] layouts,
                                         String[] mounts, Long minPrice, Long maxPrice,
@@ -159,7 +191,6 @@ public class ProductDAO {
         return list;
     }
 
-    // Chức năng tự chọn 2: Xem sản phẩm thuộc gian hàng
     public List<Product> getProductsByShop(int shopId, Integer categoryId, String sort) {
         List<Product> list = new ArrayList<>();
         StringBuilder sql = new StringBuilder(
@@ -199,7 +230,6 @@ public class ProductDAO {
         return list;
     }
 
-    // Chức năng tự chọn 3: Lưu đánh giá sản phẩm đã mua vào CSDL
     public boolean addReview(int productId, Integer userId, String reviewerName, String avatarText,
                              int rating, String variantInfo, String comment, String reviewDate) {
         String sql = "INSERT INTO reviews (product_id, user_id, reviewer_name, avatar_text, rating, variant_info, comment, helpful_count, review_date) "
@@ -222,12 +252,66 @@ public class ProductDAO {
                     psUp.setInt(1, productId);
                     psUp.executeUpdate();
                 }
+                if (userId != null) {
+                    String updatePoints = "UPDATE users SET points = points + 50 WHERE id = ?";
+                    try (PreparedStatement psPt = conn.prepareStatement(updatePoints)) {
+                        psPt.setInt(1, userId);
+                        psPt.executeUpdate();
+                    }
+                }
             }
             return inserted;
         } catch (Exception e) {
             e.printStackTrace();
         }
         return false;
+    }
+
+    public List<UserReviewItem> getReviewsByUserId(int userId) {
+        List<UserReviewItem> list = new ArrayList<>();
+        String sql = "SELECT r.*, p.name AS product_name, s.shop_name "
+                + "FROM reviews r "
+                + "JOIN products p ON r.product_id = p.id "
+                + "JOIN shops s ON p.shop_id = s.id "
+                + "WHERE r.user_id = ? ORDER BY r.id DESC";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(new UserReviewItem(
+                            rs.getInt("id"),
+                            rs.getInt("product_id"),
+                            rs.getString("product_name"),
+                            rs.getString("shop_name"),
+                            rs.getInt("rating"),
+                            rs.getString("variant_info"),
+                            rs.getString("comment"),
+                            rs.getString("review_date")
+                    ));
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public Set<Integer> getReviewedProductIdsByUser(int userId) {
+        Set<Integer> set = new HashSet<>();
+        String sql = "SELECT DISTINCT product_id FROM reviews WHERE user_id = ?";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    set.add(rs.getInt("product_id"));
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return set;
     }
 
     public List<ProductOption> getOptionsByGroup(int productId, String group) {

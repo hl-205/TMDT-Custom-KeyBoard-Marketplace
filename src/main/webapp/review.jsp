@@ -1,6 +1,12 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ page import="model.Product" %>
+<%@ page import="model.User" %>
 <%
+    User currentUser = (User) session.getAttribute("user");
+    if (currentUser == null) {
+        response.sendRedirect("login");
+        return;
+    }
     Product product = (Product) request.getAttribute("product");
     if (product == null) {
         response.sendRedirect("review?orderCode=KH-281044&productId=7");
@@ -17,6 +23,23 @@
     <title>Đánh giá sản phẩm - KeebHub</title>
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/customer-pages.css">
+    <style>
+        .sub-star-group {
+            display: inline-flex;
+            gap: 4px;
+            margin-top: 4px;
+        }
+        .sub-star-btn {
+            font-size: 20px;
+            color: #CBD5E1;
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.15s;
+        }
+        .sub-star-btn.active {
+            color: #F59E0B;
+        }
+    </style>
 </head>
 <body>
 
@@ -30,26 +53,26 @@
     </div>
 
     <div class="account-layout-2col">
-        <!-- Sidebar Tài khoản bên trái chuẩn Frame 16 -->
+        <!-- Sidebar hiển thị đúng tên & avatar của tài khoản đang đăng nhập -->
         <aside class="account-sidebar-card">
             <div class="acc-user-box">
-                <div class="acc-avatar-circle">DT</div>
+                <div class="acc-avatar-circle"><%= currentUser.getAvatarText() %></div>
                 <div>
-                    <strong style="display:block;font-size:14px;">Lê Tùng Dương</strong>
-                    <span style="font-size:12px;color:#64748B;">Thành viên Bạc · 1.240 điểm</span>
+                    <strong style="display:block;font-size:14px;"><%= currentUser.getFullName() %></strong>
+                    <span style="font-size:12px;color:#64748B;"><%= currentUser.getRankName() %> · <%= currentUser.getPoints() %> điểm</span>
                 </div>
             </div>
             <div class="acc-nav-group-title">Tài khoản</div>
-            <a href="#" class="acc-nav-link"><span>👤 Hồ sơ cá nhân</span></a>
-            <a href="#" class="acc-nav-link"><span>📍 Sổ địa chỉ</span></a>
+            <a href="my-orders" class="acc-nav-link"><span>👤 Hồ sơ cá nhân</span></a>
+            <a href="my-orders" class="acc-nav-link"><span>📍 Sổ địa chỉ</span></a>
             <div class="acc-nav-group-title">Mua hàng</div>
             <a href="my-orders" class="acc-nav-link"><span>📦 Đơn hàng của tôi</span><span class="badge">3</span></a>
-            <a href="review" class="acc-nav-link active"><span>⭐ Đánh giá của tôi</span></a>
+            <a href="my-reviews" class="acc-nav-link active"><span>⭐ Đánh giá của tôi</span></a>
             <div class="acc-nav-group-title">Hỗ trợ</div>
             <a href="logout" class="acc-nav-link" style="color:#EF4444;font-weight:700;"><span>↪ Đăng xuất</span></a>
         </aside>
 
-        <!-- Form Đánh giá sản phẩm bên phải chuẩn Frame 16 -->
+        <!-- Form Đánh giá sản phẩm -->
         <section class="review-form-card">
             <div class="review-card-top">
                 <div>
@@ -78,6 +101,9 @@
                 <input type="hidden" name="orderCode" value="<%= orderCode %>">
                 <input type="hidden" name="variant" value="<%= variant %>">
                 <input type="hidden" name="rating" id="ratingValueInput" value="5">
+                <input type="hidden" name="qualityRating" id="qualityRatingInput" value="5">
+                <input type="hidden" name="accuracyRating" id="accuracyRatingInput" value="5">
+                <input type="hidden" name="deliveryRating" id="deliveryRatingInput" value="5">
 
                 <strong style="font-size:13px;">Bạn hài lòng đến mức nào?</strong>
                 <div class="star-picker-row" id="starPicker">
@@ -89,19 +115,38 @@
                     <span class="star-rating-text" id="ratingLabelText">Tuyệt vời</span>
                 </div>
 
+                <!-- Đánh giá chi tiết 3 tiêu chí có thể click chọn sao độc lập -->
                 <strong style="font-size:13px;display:block;margin-bottom:10px;">Đánh giá chi tiết</strong>
                 <div class="sub-ratings-3col">
                     <div>
                         <span style="font-size:12px;color:#64748B;display:block;">Chất lượng</span>
-                        <span style="color:#F59E0B;">★★★★★</span>
+                        <div class="sub-star-group" data-target="qualityRatingInput">
+                            <span class="sub-star-btn active" data-val="1">★</span>
+                            <span class="sub-star-btn active" data-val="2">★</span>
+                            <span class="sub-star-btn active" data-val="3">★</span>
+                            <span class="sub-star-btn active" data-val="4">★</span>
+                            <span class="sub-star-btn active" data-val="5">★</span>
+                        </div>
                     </div>
                     <div>
                         <span style="font-size:12px;color:#64748B;display:block;">Đúng mô tả</span>
-                        <span style="color:#F59E0B;">★★★★★</span>
+                        <div class="sub-star-group" data-target="accuracyRatingInput">
+                            <span class="sub-star-btn active" data-val="1">★</span>
+                            <span class="sub-star-btn active" data-val="2">★</span>
+                            <span class="sub-star-btn active" data-val="3">★</span>
+                            <span class="sub-star-btn active" data-val="4">★</span>
+                            <span class="sub-star-btn active" data-val="5">★</span>
+                        </div>
                     </div>
                     <div>
                         <span style="font-size:12px;color:#64748B;display:block;">Tốc độ giao</span>
-                        <span style="color:#F59E0B;">★★★★★</span>
+                        <div class="sub-star-group" data-target="deliveryRatingInput">
+                            <span class="sub-star-btn active" data-val="1">★</span>
+                            <span class="sub-star-btn active" data-val="2">★</span>
+                            <span class="sub-star-btn active" data-val="3">★</span>
+                            <span class="sub-star-btn active" data-val="4">★</span>
+                            <span class="sub-star-btn active" data-val="5">★</span>
+                        </div>
                     </div>
                 </div>
 
@@ -145,13 +190,14 @@
                 </div>
                 <div style="font-size:11px;color:#94A3B8;margin-bottom:18px;">Tối đa 6 ảnh (≤5MB/ảnh) và 1 video (≤30 giây)</div>
 
+                <!-- Tên ẩn danh tự động khớp với Họ & Tên của tài khoản đang đăng nhập -->
                 <label style="display:flex;align-items:center;gap:8px;padding:12px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;margin-bottom:20px;cursor:pointer;">
                     <input type="checkbox" name="anonymous" checked style="width:16px;height:16px;accent-color:#1B64F2;">
-                    <span>Hiển thị tên tôi là <strong>L*** D**</strong> (ẩn danh một phần)</span>
+                    <span>Hiển thị tên tôi là <strong><%= currentUser.getMaskedName() %></strong> (ẩn danh một phần)</span>
                 </label>
 
                 <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <span style="font-size:12px;color:#94A3B8;">Đánh giá sẽ hiển thị công khai ngay trên trang sản phẩm (UC23)</span>
+                    <span style="font-size:12px;color:#94A3B8;">Đánh giá sẽ hiển thị công khai ngay trên trang sản phẩm</span>
                     <div style="display:flex;gap:10px;">
                         <a href="my-orders" class="btn btn-outline-gray">Để sau</a>
                         <button type="submit" class="btn-orange-review" style="padding:11px 24px;">Gửi đánh giá</button>
@@ -165,6 +211,7 @@
 <jsp:include page="includes/footer.jsp" />
 
 <script>
+    // 1. Chọn sao tổng quan
     const stars = document.querySelectorAll('#starPicker .star-btn-big');
     const ratingInput = document.getElementById('ratingValueInput');
     const ratingLabel = document.getElementById('ratingLabelText');
@@ -188,6 +235,26 @@
         });
     });
 
+    // 2. Chọn sao cho 3 tiêu chí Đánh giá chi tiết (Chất lượng, Đúng mô tả, Tốc độ giao)
+    const subGroups = document.querySelectorAll('.sub-star-group');
+    subGroups.forEach(group => {
+        const targetId = group.getAttribute('data-target');
+        const hiddenInput = document.getElementById(targetId);
+        const subStars = group.querySelectorAll('.sub-star-btn');
+
+        subStars.forEach(st => {
+            st.addEventListener('click', () => {
+                const val = parseInt(st.getAttribute('data-val'), 10);
+                if (hiddenInput) hiddenInput.value = val;
+                subStars.forEach(item => {
+                    const iVal = parseInt(item.getAttribute('data-val'), 10);
+                    item.classList.toggle('active', iVal <= val);
+                });
+            });
+        });
+    });
+
+    // 3. Đếm ký tự nhận xét
     const commentArea = document.getElementById('reviewComment');
     const charCountNum = document.getElementById('charCountNum');
     const charMinHint = document.getElementById('charMinHint');

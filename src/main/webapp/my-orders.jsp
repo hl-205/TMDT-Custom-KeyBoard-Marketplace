@@ -1,5 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ page import="model.User" %>
+<%@ page import="dao.CustomOrderDAO.CustomOrder" %>
+<%@ page import="java.util.List" %>
 <%@ page import="java.util.Set" %>
 <%@ page import="java.util.HashSet" %>
 <%
@@ -8,10 +10,11 @@
         response.sendRedirect("login");
         return;
     }
-    if (request.getAttribute("reviewedProductIds") == null) {
+    if (request.getAttribute("userOrders") == null) {
         response.sendRedirect("my-orders");
         return;
     }
+    List<CustomOrder> userOrders = (List<CustomOrder>) request.getAttribute("userOrders");
     Set<Integer> reviewedIds = (Set<Integer>) request.getAttribute("reviewedProductIds");
     if (reviewedIds == null) reviewedIds = new HashSet<>();
 %>
@@ -34,7 +37,6 @@
     </div>
 
     <div class="account-layout-2col">
-        <!-- Cột trái Sidebar hiển thị đúng User đang đăng nhập -->
         <aside class="account-sidebar-card">
             <div class="acc-user-box">
                 <div class="acc-avatar-circle"><%= currentUser.getAvatarText() %></div>
@@ -50,97 +52,71 @@
             <a href="my-orders" class="acc-nav-link"><span>🔒 Bảo mật</span></a>
 
             <div class="acc-nav-group-title">Mua hàng</div>
-            <a href="my-orders" class="acc-nav-link active"><span>📦 Đơn hàng của tôi</span><span class="badge">3</span></a>
+            <a href="my-orders" class="acc-nav-link active"><span>📦 Đơn hàng của tôi</span><span class="badge"><%= userOrders.size() %></span></a>
             <a href="my-reviews" class="acc-nav-link"><span>⭐ Đánh giá của tôi</span></a>
 
             <div class="acc-nav-group-title">Hỗ trợ</div>
             <a href="logout" class="acc-nav-link" style="color:#EF4444;font-weight:700;"><span>↪ Đăng xuất</span></a>
         </aside>
 
-        <!-- Cột phải Danh sách đơn hàng -->
         <section>
-            <!-- Đơn 1: Đang gia công -->
+            <% if (userOrders.isEmpty()) { %>
+            <div class="order-card-box" style="text-align:center;padding:48px 24px;">
+                <h3 style="font-size:18px;margin-bottom:8px;">Bạn chưa có đơn hàng nào</h3>
+                <p style="font-size:13px;color:#64748B;margin-bottom:18px;">Tài khoản <strong><%= currentUser.getFullName() %></strong> hiện chưa phát sinh giao dịch mua hàng trong hệ thống.</p>
+                <a href="category" class="btn btn-blue">Khám phá sản phẩm ngay</a>
+            </div>
+            <% } else { %>
+            <% for (CustomOrder ord : userOrders) { %>
             <div class="order-card-box">
                 <div class="order-card-head">
                     <div>
-                        <strong style="margin-right:8px;">SwitchHouse</strong>
+                        <strong style="margin-right:8px;"><%= ord.getShopName() %></strong>
+                        <% if (ord.isCustomOrder()) { %>
                         <span class="shop-badge-pill workshop">Đơn custom</span>
-                        <span style="font-size:12px;color:#64748B;margin-left:8px;">Mã đơn <strong>#KH-284193</strong> · 26/09/2026</span>
+                        <% } %>
+                        <span style="font-size:12px;color:#64748B;margin-left:8px;">Mã đơn <strong>#<%= ord.getOrderCode() %></strong></span>
                     </div>
-                    <span style="background:#FFF7ED;color:#EA580C;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;">⚙️ Đang gia công</span>
-                </div>
-                <div class="order-item-row">
-                    <div>
-                        <strong>Bàn phím custom theo cấu hình — Build #B-7742</strong>
-                        <p style="font-size:12px;color:#64748B;">Kit Tofu60 2.0 · Oil King ×70 · GMK Olivia · Full lube</p>
-                    </div>
-                    <strong>5.320.000₫</strong>
-                </div>
-                <div class="order-card-foot">
-                    <div>Tổng tiền: <strong style="font-size:16px;color:#EA580C;">5.320.000₫</strong></div>
-                    <div style="display:flex;gap:10px;">
-                        <a href="order-detail?code=KH-284193" class="btn btn-blue">Xem tiến độ gia công</a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Đơn 2: Đã hoàn thành (Sản phẩm ID = 7) -->
-            <div class="order-card-box">
-                <div class="order-card-head">
-                    <div>
-                        <strong style="margin-right:8px;">Akko Official</strong>
-                        <span style="font-size:12px;color:#64748B;">Mã đơn <strong>#KH-281044</strong> · 18/09/2026</span>
-                    </div>
+                    <% if ("PROCESSING".equals(ord.getOrderStatus())) { %>
+                    <span style="background:#FFF7ED;color:#EA580C;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;">⚙️ Đang gia công · <%= ord.getProgressPercent() %>%</span>
+                    <% } else if ("COMPLETED".equals(ord.getOrderStatus())) { %>
                     <span style="background:#DCFCE7;color:#15803D;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;">✓ Hoàn thành</span>
+                    <% } else if ("PENDING".equals(ord.getOrderStatus())) { %>
+                    <span style="background:#FEF2F2;color:#DC2626;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;">🕒 Chờ xác nhận</span>
+                    <% } else { %>
+                    <span style="background:#EFF6FF;color:#1B64F2;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;"><%= ord.getOrderStatus() %></span>
+                    <% } %>
                 </div>
+
                 <div class="order-item-row">
                     <div>
-                        <strong>Keycap Akko Black & Pink ASA profile — 158 phím</strong>
-                        <p style="font-size:12px;color:#64748B;">Phân loại: Black & Pink · ×1</p>
+                        <strong><%= ord.getProductName() != null ? ord.getProductName() : ord.getBuildCode() %></strong>
+                        <p style="font-size:12px;color:#64748B;"><%= ord.getVariantSummary() %></p>
                     </div>
-                    <strong>690.000₫</strong>
+                    <strong><%= ord.getFormattedTotal() %></strong>
                 </div>
+
                 <div class="order-card-foot">
-                    <div>Tổng tiền: <strong style="font-size:16px;color:#EA580C;">690.000₫</strong></div>
+                    <div>Tổng tiền: <strong style="font-size:16px;color:#EA580C;"><%= ord.getFormattedTotal() %></strong></div>
                     <div style="display:flex;gap:10px;">
-                        <a href="product-detail?id=7" class="btn btn-outline-gray">Mua lại</a>
-                        <% if (reviewedIds.contains(7)) { %>
+                        <% if (ord.isCustomOrder()) { %>
+                        <a href="order-detail?code=<%= ord.getOrderCode() %>" class="btn btn-blue">Xem tiến độ gia công</a>
+                        <% } else { %>
+                        <a href="product-detail?id=<%= ord.getProductId() %>" class="btn btn-outline-gray">Xem sản phẩm</a>
+                        <% } %>
+
+                        <% if ("COMPLETED".equals(ord.getOrderStatus())) { %>
+                        <% if (reviewedIds.contains(ord.getProductId())) { %>
                         <a href="my-reviews" class="btn btn-outline-gray" style="color:#16A34A;border-color:#BBF7D0;background:#F0FDF4;">✓ Đã đánh giá (Xem)</a>
                         <% } else { %>
-                        <a href="review?orderCode=KH-281044&productId=7" class="btn-orange-review">★ Đánh giá nhận 50k</a>
+                        <a href="review?orderCode=<%= ord.getOrderCode() %>&productId=<%= ord.getProductId() %>" class="btn-orange-review">★ Đánh giá nhận 50k</a>
+                        <% } %>
                         <% } %>
                     </div>
                 </div>
             </div>
-
-            <!-- Đơn 3: Đã hoàn thành (Sản phẩm ID = 1) -->
-            <div class="order-card-box">
-                <div class="order-card-head">
-                    <div>
-                        <strong style="margin-right:8px;">KeebLab Store</strong>
-                        <span style="font-size:12px;color:#64748B;">Mã đơn <strong>#KH-280912</strong> · 12/09/2026</span>
-                    </div>
-                    <span style="background:#DCFCE7;color:#15803D;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;">✓ Hoàn thành</span>
-                </div>
-                <div class="order-item-row">
-                    <div>
-                        <strong>Kit Tofu60 2.0 Aluminium — Hotswap, gasket mount, foam sẵn</strong>
-                        <p style="font-size:12px;color:#64748B;">Phân loại: Silver / Brass plate · ×1</p>
-                    </div>
-                    <strong>2.690.000₫</strong>
-                </div>
-                <div class="order-card-foot">
-                    <div>Tổng tiền: <strong style="font-size:16px;color:#EA580C;">2.690.000₫</strong></div>
-                    <div style="display:flex;gap:10px;">
-                        <a href="product-detail?id=1" class="btn btn-outline-gray">Mua lại</a>
-                        <% if (reviewedIds.contains(1)) { %>
-                        <a href="my-reviews" class="btn btn-outline-gray" style="color:#16A34A;border-color:#BBF7D0;background:#F0FDF4;">✓ Đã đánh giá (Xem)</a>
-                        <% } else { %>
-                        <a href="review?orderCode=KH-280912&productId=1&variant=Ph%C3%A2n%20lo%E1%BA%A1i:%20Silver%20/%20Brass%20plate" class="btn-orange-review">★ Đánh giá nhận 50k</a>
-                        <% } %>
-                    </div>
-                </div>
-            </div>
+            <% } %>
+            <% } %>
         </section>
     </div>
 </main>

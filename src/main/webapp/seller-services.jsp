@@ -1,11 +1,20 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ page import="model.User" %>
+<%@ page import="model.Shop" %>
 <%@ page import="dao.CustomOrderDAO.ServicePackage" %>
 <%@ page import="java.util.List" %>
 <%
+    User currentUser = (User) session.getAttribute("user");
+    if (currentUser == null) {
+        response.sendRedirect("login");
+        return;
+    }
     if (request.getAttribute("services") == null) {
         response.sendRedirect("seller-services");
         return;
     }
+    Shop sellerShop = (Shop) request.getAttribute("sellerShop");
+    String shopName = (sellerShop != null) ? sellerShop.getShopName() : "SwitchHouse";
     List<ServicePackage> services = (List<ServicePackage>) request.getAttribute("services");
 %>
 <!DOCTYPE html>
@@ -13,58 +22,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dịch vụ gia công - KeebHub Seller</title>
+    <title>Dịch vụ gia công - <%= shopName %></title>
     <link rel="stylesheet" href="assets/css/seller.css">
 </head>
 <body>
 
 <div class="seller-app-shell">
-    <!-- Sidebar Kênh người bán chuẩn Figma -->
-    <aside class="seller-sidebar">
-        <a href="index.jsp" class="seller-brand-head">
-            <div class="seller-brand-icon">K</div>
-            <div>
-                <strong>KeebHub Seller</strong>
-                <span>Kênh người bán</span>
-            </div>
-        </a>
+    <jsp:include page="includes/seller-sidebar.jsp">
+        <jsp:param name="activeMenu" value="services" />
+    </jsp:include>
 
-        <div class="seller-shop-badge-box">
-            <div class="sh-square">SH</div>
-            <div>
-                <strong>SwitchHouse</strong>
-                <span>Đã xác minh · Xưởng gia công</span>
-            </div>
-        </div>
-
-        <div class="s-nav-section">Tổng quan</div>
-        <a href="seller-orders" class="s-nav-item"><span>◎ Bảng điều khiển</span></a>
-
-        <div class="s-nav-section">Đơn hàng</div>
-        <a href="seller-orders" class="s-nav-item"><span>📦 Quản lý đơn hàng</span><span class="s-pill-orange">12</span></a>
-        <a href="seller-confirm-custom" class="s-nav-item"><span>⚙️ Đơn custom chờ xác nhận</span><span class="s-pill-orange">3</span></a>
-        <a href="seller-progress" class="s-nav-item"><span>🛠️ Tiến độ gia công</span><span class="s-pill-orange">5</span></a>
-
-        <div class="s-nav-section">Sản phẩm</div>
-        <a href="shop?id=2" class="s-nav-item"><span>📋 Danh sách sản phẩm</span></a>
-        <a href="seller-services" class="s-nav-item active"><span>🔧 Dịch vụ gia công</span></a>
-
-        <div class="s-nav-section">Khách hàng & Shop</div>
-        <a href="index.jsp" class="s-nav-item"><span>🏠 Về sàn KeebHub</span></a>
-    </aside>
-
-    <!-- Main Content -->
     <main class="seller-main-area">
         <div class="seller-topbar">
             <div class="seller-page-title">
                 <h1>Dịch vụ gia công</h1>
-                <p><%= services.size() %> gói đang mở · công suất 10 đơn/ngày · 38 đơn trong tháng</p>
+                <p>${activePkgCount} gói đang mở · ${totalSoldMonth} đơn trong tháng</p>
             </div>
             <div class="seller-top-right">
-                <input type="text" class="seller-search-box" placeholder="🔍 Tìm gói dịch vụ...">
                 <div class="seller-user-pill">
-                    <div class="sh-square" style="width:26px;height:26px;border-radius:50%;font-size:11px;">SH</div>
-                    <span>Trần Hùng · Chủ shop ▾</span>
+                    <div class="sh-square" style="width:26px;height:26px;border-radius:50%;font-size:11px;"><%= currentUser.getAvatarText() %></div>
+                    <span><%= currentUser.getFullName() %> · Chủ shop (<%= shopName %>)</span>
                 </div>
                 <button type="button" class="btn-seller-primary" onclick="openServiceModal('', '', '', '3–4 ngày làm việc', '', false)">+ Thêm gói dịch vụ</button>
             </div>
@@ -72,38 +49,36 @@
 
         <% if (request.getParameter("msg") != null) { %>
         <div style="background:#DCFCE7;border:1px solid #BBF7D0;color:#15803D;padding:10px 16px;border-radius:8px;margin-bottom:16px;font-size:13px;font-weight:600;">
-            ✓ Đã cập nhật dữ liệu dịch vụ gia công thành công!
+            ✓ Đã cập nhật dữ liệu dịch vụ gia công trong Database thành công!
         </div>
         <% } %>
 
-        <!-- 4 KPI Cards chuẩn Frame 26 -->
         <div class="seller-kpi-grid4">
             <div class="s-kpi-card">
                 <div class="s-kpi-head">🛠️ Đơn gia công tháng này</div>
-                <strong>38</strong>
-                <span class="s-kpi-sub up">▲ 15.2% so với tháng trước</span>
+                <strong>${totalSoldMonth}</strong>
+                <span class="s-kpi-sub up">▲ Dữ liệu từ bảng custom_services</span>
             </div>
             <div class="s-kpi-card">
                 <div class="s-kpi-head">💰 Doanh thu gia công</div>
-                <strong>28.5tr</strong>
-                <span class="s-kpi-sub" style="color:#64748B;">3 gói dịch vụ đang bật</span>
+                <strong>${formattedCustomRevenue}</strong>
+                <span class="s-kpi-sub" style="color:#64748B;">${activePkgCount} gói dịch vụ đang bật</span>
             </div>
             <div class="s-kpi-card">
-                <div class="s-kpi-head">⏱️ Thời gian TB/đơn</div>
-                <strong>5.4 ngày</strong>
-                <span class="s-kpi-sub up">▲ Cam kết 5–7 ngày</span>
+                <div class="s-kpi-head">⏱️ Công suất nhận đơn</div>
+                <strong><%= session.getAttribute("cap_maxOrders") != null ? session.getAttribute("cap_maxOrders") : "10" %> đơn/ngày</strong>
+                <span class="s-kpi-sub up">▲ <%= session.getAttribute("cap_staffCount") != null ? session.getAttribute("cap_staffCount") : "4" %> thợ kỹ thuật</span>
             </div>
             <div class="s-kpi-card">
-                <div class="s-kpi-head">⭐ Đánh giá dịch vụ</div>
-                <strong>4.9</strong>
-                <span class="s-kpi-sub up">▲ 96% đúng hẹn</span>
+                <div class="s-kpi-head">⭐ Đánh giá xưởng</div>
+                <strong><%= sellerShop != null ? sellerShop.getRatingAvg() : 4.8 %></strong>
+                <span class="s-kpi-sub up">▲ <%= sellerShop != null ? sellerShop.getOnTimeRate() : 96.0 %>% đúng hẹn</span>
             </div>
         </div>
 
-        <!-- Khối Các gói dịch vụ -->
         <section class="white-panel-card">
-            <h2 style="font-size:16px;font-weight:800;">Các gói dịch vụ</h2>
-            <p style="font-size:12px;color:#64748B;">Khách chọn gói ở bước 4 của Custom Builder</p>
+            <h2 style="font-size:16px;font-weight:800;">Các gói dịch vụ của <%= shopName %></h2>
+            <p style="font-size:12px;color:#64748B;">Dữ liệu đọc trực tiếp từ bảng <code>custom_services</code> trong MySQL</p>
 
             <div class="service-pkg-grid3">
                 <% for (ServicePackage pkg : services) { %>
@@ -147,7 +122,7 @@
                             <% if (services.size() > 1) { %>
                             <a href="seller-services?action=delete&id=<%= pkg.getId() %>"
                                class="btn-seller-outline" style="color:#EF4444;border-color:#FECACA;"
-                               onclick="return confirm('Xóa gói dịch vụ này?')">Xoá</a>
+                               onclick="return confirm('Xóa gói dịch vụ này khỏi Database?')">Xoá</a>
                             <% } %>
                         </div>
                     </div>
@@ -156,14 +131,10 @@
             </div>
         </section>
 
-        <!-- Khối Cấu hình công suất xưởng & Vật tư gia công chuẩn Frame 26 -->
         <div class="capacity-bottom-grid">
             <form action="seller-services" method="POST" class="white-panel-card" style="margin-bottom:0;">
                 <input type="hidden" name="formType" value="capacity">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                    <h3 style="font-size:15px;font-weight:800;">Cấu hình công suất xưởng</h3>
-                    <span style="font-size:12px;color:#94A3B8;">Quyết định số đơn custom sàn cho phép nhận mỗi ngày</span>
-                </div>
+                <h3 style="font-size:15px;font-weight:800;margin-bottom:16px;">Cấu hình công suất xưởng</h3>
 
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
                     <div>
@@ -198,46 +169,28 @@
                     </div>
                 </div>
 
-                <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:18px;">
-                    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
-                        <input type="checkbox" checked style="width:16px;height:16px;accent-color:#1B64F2;">
-                        <div>
-                            <strong style="font-size:13px;display:block;">Tự động từ chối khi hết slot</strong>
-                            <span style="font-size:12px;color:#64748B;">Đơn mới sẽ đẩy sang ngày trống gần nhất thay vì báo lỗi</span>
-                        </div>
-                    </label>
-                    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
-                        <input type="checkbox" checked style="width:16px;height:16px;accent-color:#1B64F2;">
-                        <div>
-                            <strong style="font-size:13px;display:block;">Bắt buộc cập nhật ảnh mỗi công đoạn</strong>
-                            <span style="font-size:12px;color:#64748B;">Giảm khiếu nại, tăng điểm uy tín shop</span>
-                        </div>
-                    </label>
-                </div>
-
                 <button type="submit" class="btn-seller-primary">Lưu cấu hình công suất</button>
             </form>
 
             <div class="white-panel-card" style="margin-bottom:0;">
-                <h3 style="font-size:15px;font-weight:800;margin-bottom:14px;">Vật tư gia công</h3>
-                <table class="orders-table">
-                    <thead>
-                    <tr><th>Vật tư</th><th>Còn lại</th><th>Trạng thái</th></tr>
-                    </thead>
-                    <tbody>
-                    <tr><td><strong>Krytox 205g0</strong><br><span style="font-size:11px;color:#94A3B8;">Dầu lube switch</span></td><td><strong>14 ml</strong></td><td><span class="st-badge processing">Sắp hết</span></td></tr>
-                    <tr><td><strong>Dielectric grease</strong><br><span style="font-size:11px;color:#94A3B8;">Lube stabilizer</span></td><td><strong>62 ml</strong></td><td><span class="st-badge completed">Đủ</span></td></tr>
-                    <tr><td><strong>Film Deskeys</strong><br><span style="font-size:11px;color:#94A3B8;">Film switch</span></td><td><strong>840 cái</strong></td><td><span class="st-badge completed">Đủ</span></td></tr>
-                    <tr><td><strong>PE foam 0.5mm</strong><br><span style="font-size:11px;color:#94A3B8;">Tape/PE mod</span></td><td><strong>3 tấm</strong></td><td><span class="st-badge pending">Sắp hết</span></td></tr>
-                    <tr><td><strong>Band-aid</strong><br><span style="font-size:11px;color:#94A3B8;">Mod stabilizer</span></td><td><strong>210 miếng</strong></td><td><span class="st-badge completed">Đủ</span></td></tr>
-                    </tbody>
-                </table>
+                <h3 style="font-size:15px;font-weight:800;margin-bottom:14px;">Thông tin vận hành xưởng (<%= shopName %>)</h3>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F1F5F9;">
+                    <span>Chủ sở hữu</span><strong><%= currentUser.getFullName() %></strong>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F1F5F9;">
+                    <span>Email quản trị</span><strong><%= currentUser.getEmail() %></strong>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F1F5F9;">
+                    <span>Địa chỉ xưởng</span><strong><%= sellerShop != null ? sellerShop.getAddress() : "TP.HCM" %></strong>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;">
+                    <span>Tỉ lệ giao đúng hẹn</span><strong style="color:#16A34A;"><%= sellerShop != null ? sellerShop.getOnTimeRate() : 96.0 %>%</strong>
+                </div>
             </div>
         </div>
     </main>
 </div>
 
-<!-- Modal Thêm / Chỉnh sửa Gói dịch vụ -->
 <div class="modal-backdrop" id="serviceModal">
     <div class="modal-card">
         <h3 id="modalTitle" style="font-size:18px;font-weight:800;margin-bottom:16px;">Chỉnh sửa gói dịch vụ</h3>

@@ -11,13 +11,14 @@ import java.util.Locale;
 
 public class CustomOrderDAO {
 
+    private static boolean dbNormalized = false;
+
     public static String formatVND(long amount) {
         DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.getDefault());
         symbols.setGroupingSeparator('.');
         return new DecimalFormat("#,###", symbols).format(amount) + "₫";
     }
 
-    // DTO Gói dịch vụ Custom (Frame 26)
     public static class ServicePackage {
         private int id;
         private int shopId;
@@ -55,10 +56,15 @@ public class CustomOrderDAO {
         }
     }
 
-    // DTO Đơn hàng & Yêu cầu gia công (Frame 20, 21, 22, 15)
     public static class CustomOrder {
         private int id;
         private String orderCode;
+        private int userId;
+        private int shopId;
+        private String shopName;
+        private int productId;
+        private String productName;
+        private String variantSummary;
         private String receiverName;
         private String receiverPhone;
         private String shippingAddress;
@@ -69,7 +75,7 @@ public class CustomOrderDAO {
         private long discountAmount;
         private long totalAmount;
         private String paymentMethod;
-        private String orderStatus; // PENDING, PROCESSING, SHIPPING, COMPLETED, CANCELLED
+        private String orderStatus;
         private int progressPercent;
         private String customerNote;
         private int committedDays;
@@ -79,6 +85,18 @@ public class CustomOrderDAO {
         public void setId(int id) { this.id = id; }
         public String getOrderCode() { return orderCode; }
         public void setOrderCode(String orderCode) { this.orderCode = orderCode; }
+        public int getUserId() { return userId; }
+        public void setUserId(int userId) { this.userId = userId; }
+        public int getShopId() { return shopId; }
+        public void setShopId(int shopId) { this.shopId = shopId; }
+        public String getShopName() { return shopName != null ? shopName : "SwitchHouse"; }
+        public void setShopName(String shopName) { this.shopName = shopName; }
+        public int getProductId() { return productId > 0 ? productId : 1; }
+        public void setProductId(int productId) { this.productId = productId; }
+        public String getProductName() { return productName; }
+        public void setProductName(String productName) { this.productName = productName; }
+        public String getVariantSummary() { return variantSummary; }
+        public void setVariantSummary(String variantSummary) { this.variantSummary = variantSummary; }
         public String getReceiverName() { return receiverName; }
         public void setReceiverName(String receiverName) { this.receiverName = receiverName; }
         public String getReceiverPhone() { return receiverPhone; }
@@ -123,33 +141,24 @@ public class CustomOrderDAO {
         }
 
         public String getBuildCode() {
-            if ("KH-284193".equals(orderCode)) return "Build #B-7742";
-            if ("KH-284170".equals(orderCode)) return "Build #B-7738";
-            if ("KH-284169".equals(orderCode)) return "Build #B-7737";
-            if ("KH-284140".equals(orderCode)) return "Build #B-7731";
-            return "Build #B-7750";
+            return "Build #B-" + (7700 + id);
         }
 
         public String getProductSummary() {
-            if ("KH-284193".equals(orderCode)) return "Build #B-7742";
-            if ("KH-284188".equals(orderCode)) return "Switch Oil King ×2";
-            if ("KH-284170".equals(orderCode)) return "Build #B-7738";
-            if ("KH-284169".equals(orderCode)) return "Build #B-7737";
-            if ("KH-284166".equals(orderCode)) return "Durock V2 ×3";
-            if ("KH-284152".equals(orderCode)) return "Keycap GMK Olivia";
-            if ("KH-284140".equals(orderCode)) return "Build #B-7731";
-            return "Switch HMX Xinhai ×1";
+            if (productName != null && !productName.isBlank()) {
+                return productName.length() > 38 ? productName.substring(0, 38) + "..." : productName;
+            }
+            return getBuildCode();
         }
     }
 
-    // DTO Bước tiến độ gia công (Frame 22 & 15)
     public static class ProgressStep {
         private int id;
         private int orderId;
         private int stepNumber;
         private String stepTitle;
         private String stepDesc;
-        private String status; // COMPLETED, IN_PROGRESS, PENDING
+        private String status;
         private String updatedTime;
 
         public int getId() { return id; }
@@ -168,43 +177,70 @@ public class CustomOrderDAO {
         public void setUpdatedTime(String updatedTime) { this.updatedTime = updatedTime; }
     }
 
-    // Tự động khởi tạo dữ liệu đơn hàng mẫu khớp Figma 20, 21, 22 nếu bảng orders đang trống
-    public void ensureSampleOrdersSeeded() {
-        String checkSql = "SELECT COUNT(*) FROM orders";
+    // Tự động chuẩn hóa CSDL: tách đánh giá mẫu khỏi user_id=1 và đảm bảo bảng orders có cột product_id
+    public synchronized void ensureDatabaseNormalized() {
+        if (dbNormalized) return;
         try (Connection conn = DBContext.getConnection();
-             PreparedStatement ps = conn.prepareStatement(checkSql);
-             ResultSet rs = ps.executeQuery()) {
-            if (rs.next() && rs.getInt(1) > 0) {
-                return;
-            }
-            String insertOrder = "INSERT INTO orders (order_code, user_id, shop_id, receiver_name, receiver_phone, shipping_address, "
-                    + "is_custom_order, subtotal, custom_fee, shipping_fee, discount_amount, total_amount, payment_method, "
-                    + "order_status, progress_percent, customer_note, committed_days) VALUES "
-                    + "('KH-284193', 1, 2, 'Lê Tùng Dương', '0987 654 321', '128 Nguyễn Văn Cừ, Phường 2, Quận 5, TP. Hồ Chí Minh', 1, 8500000, 750000, 30000, 790000, 8490000, 'VNPAY', 'PROCESSING', 60, 'Lube kỹ phím dài giúp em, ưu tiên âm trầm thocky.', 7),"
-                    + "('KH-284188', 1, 2, 'Phạm Vũ', '0912 345 678', 'Quận Cầu Giấy, Hà Nội', 0, 1780000, 0, 0, 0, 1780000, 'MoMo', 'SHIPPING', 100, '', 3),"
-                    + "('KH-284170', 1, 2, 'Nguyễn Minh', '0938 111 222', 'Quận Bình Thạnh, TP. Hồ Chí Minh', 1, 5890000, 1250000, 0, 0, 7140000, 'VNPAY', 'PENDING', 0, 'Em muốn tape mod + PE foam nếu shop làm được. Stab thì clip chân với band-aid giúp em. Space không cần lube quá nặng, em thích tiếng hơi thocky. Cảm ơn shop!', 7),"
-                    + "('KH-284169', 1, 2, 'Vũ Thành', '0905 888 777', 'Quận 1, TP. Hồ Chí Minh', 1, 4140000, 750000, 0, 0, 4890000, 'ZaloPay', 'PENDING', 0, 'Nhờ shop test kỹ từng socket hotswap trước khi lắp switch.', 6),"
-                    + "('KH-284166', 1, 2, 'Trần Hoàng', '0977 222 333', 'Quận Hải Châu, Đà Nẵng', 0, 1260000, 0, 0, 0, 1260000, 'COD', 'COMPLETED', 100, '', 3),"
-                    + "('KH-284140', 1, 2, 'Bùi Khánh', '0944 666 111', 'Quận 7, TP. Hồ Chí Minh', 1, 5670000, 750000, 0, 0, 6420000, 'VNPAY', 'COMPLETED', 100, '', 7)";
+             Statement st = conn.createStatement()) {
 
-            try (PreparedStatement psIns = conn.prepareStatement(insertOrder)) {
-                psIns.executeUpdate();
+            // 1. Gỡ user_id = 1 khỏi 2 đánh giá mẫu của Nguyễn Minh và Trần Hoàng để không bị gắn nhầm vào tài khoản đăng nhập
+            st.executeUpdate("UPDATE reviews SET user_id = NULL WHERE reviewer_name IN ('Nguyễn Minh', 'Trần Hoàng')");
+
+            // 2. Thêm cột product_id và variant_summary vào bảng orders nếu chưa có
+            try {
+                st.executeUpdate("ALTER TABLE orders ADD COLUMN product_id INT DEFAULT 1");
+            } catch (SQLException ignored) {}
+            try {
+                st.executeUpdate("ALTER TABLE orders ADD COLUMN variant_summary VARCHAR(255) DEFAULT 'Phân loại: Tiêu chuẩn · ×1'");
+            } catch (SQLException ignored) {}
+
+            // 3. Nếu bảng orders chưa có dữ liệu thì khởi tạo dữ liệu đơn hàng trong DB
+            try (ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM orders")) {
+                if (rs.next() && rs.getInt(1) == 0) {
+                    String insertOrder = "INSERT INTO orders (order_code, user_id, shop_id, product_id, variant_summary, receiver_name, receiver_phone, shipping_address, "
+                            + "is_custom_order, subtotal, custom_fee, shipping_fee, discount_amount, total_amount, payment_method, "
+                            + "order_status, progress_percent, customer_note, committed_days) VALUES "
+                            + "('KH-284193', 1, 2, 1, 'Kit Tofu60 2.0 · Oil King ×70 · GMK Olivia · Full lube', 'Khách hàng ID #1', '0987 654 321', '128 Nguyễn Văn Cừ, Quận 5, TP.HCM', 1, 8500000, 750000, 30000, 790000, 8490000, 'VNPAY', 'PROCESSING', 60, 'Lube kỹ phím dài giúp em, ưu tiên âm trầm thocky.', 7),"
+                            + "('KH-281044', 1, 3, 7, 'Phân loại: Black & Pink · ×1', 'Khách hàng ID #1', '0987 654 321', '128 Nguyễn Văn Cừ, Quận 5, TP.HCM', 0, 690000, 0, 0, 0, 690000, 'MoMo', 'COMPLETED', 100, '', 3),"
+                            + "('KH-284170', 2, 2, 4, 'Keychron Q1 Pro · Boba U4T ×84 · Gói Premium', 'Nguyễn Minh', '0938 111 222', 'Quận Bình Thạnh, TP.HCM', 1, 5890000, 1250000, 0, 0, 7140000, 'VNPAY', 'PENDING', 0, 'Em muốn tape mod + PE foam nếu shop làm được. Stab thì clip chân với band-aid giúp em.', 7),"
+                            + "('KH-284169', 2, 2, 1, 'Kit Tofu60 2.0 · Akko Cream Yellow · Gói Full lube', 'Vũ Thành', '0905 888 777', 'Quận 1, TP.HCM', 1, 4140000, 750000, 0, 0, 4890000, 'ZaloPay', 'PENDING', 0, 'Nhờ shop test kỹ từng socket hotswap trước khi lắp switch.', 6)";
+                    st.executeUpdate(insertOrder);
+                }
             }
 
-            // Tạo sẵn 5 công đoạn cho đơn #KH-284193 (Đang ở bước 4 - 60% chuẩn Frame 22 & 15)
+            // 4. Đảm bảo đơn #KH-281044 (sản phẩm 7) tồn tại trong DB cho user_id = 1 để test đánh giá từ DB
+            try (ResultSet rs = st.executeQuery("SELECT id FROM orders WHERE order_code = 'KH-281044'")) {
+                if (!rs.next()) {
+                    st.executeUpdate("INSERT INTO orders (order_code, user_id, shop_id, product_id, variant_summary, receiver_name, receiver_phone, shipping_address, "
+                            + "is_custom_order, subtotal, custom_fee, shipping_fee, discount_amount, total_amount, payment_method, "
+                            + "order_status, progress_percent, customer_note, committed_days) VALUES "
+                            + "('KH-281044', 1, 3, 7, 'Phân loại: Black & Pink · ×1', 'Khách hàng', '0987 654 321', 'TP.HCM', 0, 690000, 0, 0, 0, 690000, 'MoMo', 'COMPLETED', 100, '', 3)");
+                }
+            }
+
+            // Cập nhật product_id chuẩn cho các đơn hiện có trong bảng orders
+            st.executeUpdate("UPDATE orders SET product_id = 7, shop_id = 3, variant_summary = 'Phân loại: Black & Pink · ×1' WHERE order_code = 'KH-281044'");
+            st.executeUpdate("UPDATE orders SET product_id = 1, variant_summary = 'Kit Tofu60 2.0 · Oil King ×70 · GMK Olivia · Full lube' WHERE order_code = 'KH-284193'");
+            st.executeUpdate("UPDATE orders SET product_id = 4, variant_summary = 'Keychron Q1 Pro · Boba U4T ×84 · Gói Premium' WHERE order_code = 'KH-284170'");
+
+            // Gán các đơn mẫu ban đầu (trừ đơn của user_id=1) sang user_id=2 để user_id=1 chỉ thấy đúng đơn của mình
+            st.executeUpdate("UPDATE orders SET user_id = 2 WHERE order_code IN ('KH-284188', 'KH-284170', 'KH-284169', 'KH-284166', 'KH-284140')");
+
+            // Khởi tạo 5 bước tiến độ trong bảng order_progress nếu chưa có
             CustomOrder ord193 = getOrderByCode("KH-284193");
-            if (ord193 != null) {
+            if (ord193 != null && getProgressSteps(ord193.getId()).isEmpty()) {
                 seedProgressStepsForOrder193(conn, ord193.getId());
             }
-            // Tạo sẵn 5 công đoạn chờ cho đơn #KH-284170 và #KH-284169
             CustomOrder ord170 = getOrderByCode("KH-284170");
-            if (ord170 != null) {
+            if (ord170 != null && getProgressSteps(ord170.getId()).isEmpty()) {
                 createInitialFiveSteps(conn, ord170.getId());
             }
             CustomOrder ord169 = getOrderByCode("KH-284169");
-            if (ord169 != null) {
+            if (ord169 != null && getProgressSteps(ord169.getId()).isEmpty()) {
                 createInitialFiveSteps(conn, ord169.getId());
             }
+
+            dbNormalized = true;
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -241,8 +277,87 @@ public class CustomOrderDAO {
         }
     }
 
-    // --- CHỨC NĂNG ĐẶC TRƯNG 1: QUẢN LÝ DỊCH VỤ CUSTOM (FRAME 26) ---
+    // Lấy danh sách đơn hàng của đúng User đang đăng nhập từ bảng orders
+    public List<CustomOrder> getOrdersByUserId(int userId) {
+        ensureDatabaseNormalized();
+        List<CustomOrder> list = new ArrayList<>();
+        String sql = "SELECT o.*, s.shop_name, p.name AS product_name "
+                + "FROM orders o "
+                + "LEFT JOIN shops s ON o.shop_id = s.id "
+                + "LEFT JOIN products p ON o.product_id = p.id "
+                + "WHERE o.user_id = ? ORDER BY o.id DESC";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    CustomOrder o = mapOrder(rs);
+                    o.setShopName(rs.getString("shop_name"));
+                    o.setProductName(rs.getString("product_name"));
+                    list.add(o);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    // Lấy danh sách các đơn đã COMPLETED của User nhưng chưa được User đó đánh giá trong bảng reviews
+    public List<CustomOrder> getPendingReviewOrdersByUser(int userId) {
+        ensureDatabaseNormalized();
+        List<CustomOrder> list = new ArrayList<>();
+        String sql = "SELECT o.*, s.shop_name, p.name AS product_name "
+                + "FROM orders o "
+                + "LEFT JOIN shops s ON o.shop_id = s.id "
+                + "LEFT JOIN products p ON o.product_id = p.id "
+                + "WHERE o.user_id = ? AND o.order_status = 'COMPLETED' "
+                + "AND o.product_id NOT IN (SELECT r.product_id FROM reviews r WHERE r.user_id = ?) "
+                + "ORDER BY o.id DESC";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            ps.setInt(2, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    CustomOrder o = mapOrder(rs);
+                    o.setShopName(rs.getString("shop_name"));
+                    o.setProductName(rs.getString("product_name"));
+                    list.add(o);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    // Đếm số lượng đơn theo trạng thái trong DB cho Seller KPI & Sidebar badge
+    public int countOrdersByStatus(String status, boolean onlyCustom) {
+        ensureDatabaseNormalized();
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM orders WHERE 1=1 ");
+        if (status != null && !"ALL".equals(status)) {
+            sql.append("AND order_status = ? ");
+        }
+        if (onlyCustom) {
+            sql.append("AND is_custom_order = 1 ");
+        }
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            if (status != null && !"ALL".equals(status)) {
+                ps.setString(1, status);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt(1);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
     public List<ServicePackage> getAllServicesByShop(int shopId) {
+        ensureDatabaseNormalized();
         List<ServicePackage> list = new ArrayList<>();
         String sql = "SELECT * FROM custom_services WHERE shop_id = ? ORDER BY price ASC";
         try (Connection conn = DBContext.getConnection();
@@ -328,18 +443,21 @@ public class CustomOrderDAO {
         return false;
     }
 
-    // --- CHỨC NĂNG ĐẶC TRƯNG 2: TIẾP NHẬN YÊU CẦU GIA CÔNG (FRAME 20 & 21) ---
     public List<CustomOrder> getOrdersForSeller(String statusFilter, boolean onlyCustom) {
-        ensureSampleOrdersSeeded();
+        ensureDatabaseNormalized();
         List<CustomOrder> list = new ArrayList<>();
-        StringBuilder sql = new StringBuilder("SELECT * FROM orders WHERE 1=1 ");
+        StringBuilder sql = new StringBuilder(
+                "SELECT o.*, s.shop_name, p.name AS product_name FROM orders o "
+                        + "LEFT JOIN shops s ON o.shop_id = s.id "
+                        + "LEFT JOIN products p ON o.product_id = p.id WHERE 1=1 "
+        );
         if (statusFilter != null && !statusFilter.isEmpty() && !"ALL".equals(statusFilter)) {
-            sql.append("AND order_status = ? ");
+            sql.append("AND o.order_status = ? ");
         }
         if (onlyCustom) {
-            sql.append("AND is_custom_order = 1 ");
+            sql.append("AND o.is_custom_order = 1 ");
         }
-        sql.append("ORDER BY id ASC");
+        sql.append("ORDER BY o.id ASC");
 
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql.toString())) {
@@ -348,7 +466,10 @@ public class CustomOrderDAO {
             }
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    list.add(mapOrder(rs));
+                    CustomOrder o = mapOrder(rs);
+                    o.setShopName(rs.getString("shop_name"));
+                    o.setProductName(rs.getString("product_name"));
+                    list.add(o);
                 }
             }
         } catch (Exception e) {
@@ -358,13 +479,20 @@ public class CustomOrderDAO {
     }
 
     public CustomOrder getOrderById(int id) {
-        ensureSampleOrdersSeeded();
-        String sql = "SELECT * FROM orders WHERE id = ?";
+        ensureDatabaseNormalized();
+        String sql = "SELECT o.*, s.shop_name, p.name AS product_name FROM orders o "
+                + "LEFT JOIN shops s ON o.shop_id = s.id "
+                + "LEFT JOIN products p ON o.product_id = p.id WHERE o.id = ?";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return mapOrder(rs);
+                if (rs.next()) {
+                    CustomOrder o = mapOrder(rs);
+                    o.setShopName(rs.getString("shop_name"));
+                    o.setProductName(rs.getString("product_name"));
+                    return o;
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -373,12 +501,19 @@ public class CustomOrderDAO {
     }
 
     public CustomOrder getOrderByCode(String code) {
-        String sql = "SELECT * FROM orders WHERE order_code = ?";
+        String sql = "SELECT o.*, s.shop_name, p.name AS product_name FROM orders o "
+                + "LEFT JOIN shops s ON o.shop_id = s.id "
+                + "LEFT JOIN products p ON o.product_id = p.id WHERE o.order_code = ?";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, code.trim());
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return mapOrder(rs);
+                if (rs.next()) {
+                    CustomOrder o = mapOrder(rs);
+                    o.setShopName(rs.getString("shop_name"));
+                    o.setProductName(rs.getString("product_name"));
+                    return o;
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -421,7 +556,6 @@ public class CustomOrderDAO {
         return false;
     }
 
-    // --- CHỨC NĂNG ĐẶC TRƯNG 3: CẬP NHẬT TIẾN ĐỘ GIA CÔNG (FRAME 22 & 15) ---
     public List<ProgressStep> getProgressSteps(int orderId) {
         List<ProgressStep> list = new ArrayList<>();
         String sql = "SELECT * FROM order_progress WHERE order_id = ? ORDER BY step_number ASC";
@@ -461,7 +595,6 @@ public class CustomOrderDAO {
                     ps.executeUpdate();
                 }
 
-                // Kích hoạt bước tiếp theo sang IN_PROGRESS
                 if (stepNumber < 5) {
                     String nextSql = "UPDATE order_progress SET status = 'IN_PROGRESS' "
                             + "WHERE order_id = ? AND step_number = ? AND status = 'PENDING'";
@@ -472,7 +605,6 @@ public class CustomOrderDAO {
                     }
                 }
 
-                // Tính lại phần trăm tiến độ (mỗi bước = 20%)
                 String cntSql = "SELECT COUNT(*) FROM order_progress WHERE order_id = ? AND status = 'COMPLETED'";
                 int completedCount = 0;
                 try (PreparedStatement psCnt = conn.prepareStatement(cntSql)) {
@@ -492,7 +624,6 @@ public class CustomOrderDAO {
                     psOrd.executeUpdate();
                 }
             } else {
-                // Chỉ lưu nháp ghi chú công đoạn
                 String draftSql = "UPDATE order_progress SET step_desc = ? WHERE order_id = ? AND step_number = ?";
                 try (PreparedStatement ps = conn.prepareStatement(draftSql)) {
                     ps.setString(1, stepDesc.trim());
@@ -512,6 +643,10 @@ public class CustomOrderDAO {
         CustomOrder o = new CustomOrder();
         o.setId(rs.getInt("id"));
         o.setOrderCode(rs.getString("order_code"));
+        o.setUserId(rs.getInt("user_id"));
+        o.setShopId(rs.getInt("shop_id"));
+        try { o.setProductId(rs.getInt("product_id")); } catch (SQLException ignored) { o.setProductId(1); }
+        try { o.setVariantSummary(rs.getString("variant_summary")); } catch (SQLException ignored) { o.setVariantSummary("Phân loại: Tiêu chuẩn · ×1"); }
         o.setReceiverName(rs.getString("receiver_name"));
         o.setReceiverPhone(rs.getString("receiver_phone"));
         o.setShippingAddress(rs.getString("shipping_address"));

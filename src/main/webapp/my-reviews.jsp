@@ -1,9 +1,8 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ page import="model.User" %>
+<%@ page import="dao.CustomOrderDAO.CustomOrder" %>
 <%@ page import="dao.ProductDAO.UserReviewItem" %>
 <%@ page import="java.util.List" %>
-<%@ page import="java.util.Set" %>
-<%@ page import="java.util.HashSet" %>
 <%
     User currentUser = (User) session.getAttribute("user");
     if (currentUser == null) {
@@ -14,9 +13,8 @@
         response.sendRedirect("my-reviews");
         return;
     }
+    List<CustomOrder> pendingOrders = (List<CustomOrder>) request.getAttribute("pendingReviewOrders");
     List<UserReviewItem> myReviews = (List<UserReviewItem>) request.getAttribute("myReviews");
-    Set<Integer> reviewedIds = (Set<Integer>) request.getAttribute("reviewedProductIds");
-    if (reviewedIds == null) reviewedIds = new HashSet<>();
 %>
 <!DOCTYPE html>
 <html lang="vi">
@@ -37,7 +35,6 @@
     </div>
 
     <div class="account-layout-2col">
-        <!-- Sidebar hiển thị đúng User đang đăng nhập -->
         <aside class="account-sidebar-card">
             <div class="acc-user-box">
                 <div class="acc-avatar-circle"><%= currentUser.getAvatarText() %></div>
@@ -53,54 +50,43 @@
             <a href="my-orders" class="acc-nav-link"><span>🔒 Bảo mật</span></a>
 
             <div class="acc-nav-group-title">Mua hàng</div>
-            <a href="my-orders" class="acc-nav-link"><span>📦 Đơn hàng của tôi</span><span class="badge">3</span></a>
+            <a href="my-orders" class="acc-nav-link"><span>📦 Đơn hàng của tôi</span></a>
             <a href="my-reviews" class="acc-nav-link active"><span>⭐ Đánh giá của tôi</span></a>
 
             <div class="acc-nav-group-title">Hỗ trợ</div>
             <a href="logout" class="acc-nav-link" style="color:#EF4444;font-weight:700;"><span>↪ Đăng xuất</span></a>
         </aside>
 
-        <!-- Nội dung Quản lý Đánh giá -->
         <section>
             <% if ("submitted".equals(request.getParameter("msg"))) { %>
             <div style="background:#DCFCE7;border:1px solid #BBF7D0;color:#15803D;padding:12px 16px;border-radius:10px;margin-bottom:16px;font-weight:600;font-size:13px;">
-                ✓ Gửi đánh giá thành công! Tài khoản của bạn đã được cộng thêm +50 điểm thưởng.
+                ✓ Đánh giá của bạn đã được lưu vào Database và hiển thị trên trang sản phẩm (+50 điểm thưởng)!
             </div>
             <% } %>
 
-            <!-- Khối 1: Sản phẩm đã mua chờ đánh giá -->
+            <!-- Khối 1: Sản phẩm đã hoàn thành trong bảng orders nhưng chưa đánh giá -->
             <div class="order-card-box">
-                <h3 style="font-size:16px;font-weight:800;margin-bottom:12px;">Sản phẩm chờ đánh giá</h3>
-                <% boolean hasPending = !reviewedIds.contains(7) || !reviewedIds.contains(1); %>
-                <% if (!hasPending) { %>
-                <p style="font-size:13px;color:#64748B;">Bạn đã đánh giá toàn bộ các đơn hàng hoàn thành.</p>
+                <h3 style="font-size:16px;font-weight:800;margin-bottom:12px;">Sản phẩm chờ đánh giá (<%= pendingOrders != null ? pendingOrders.size() : 0 %>)</h3>
+                <% if (pendingOrders == null || pendingOrders.isEmpty()) { %>
+                <p style="font-size:13px;color:#64748B;">Hiện tại tài khoản <strong><%= currentUser.getFullName() %></strong> không có đơn hàng hoàn thành nào chờ đánh giá.</p>
                 <% } else { %>
-                <% if (!reviewedIds.contains(7)) { %>
-                <div class="order-item-row" style="border-bottom:1px solid #F1F5F9;padding:12px 0;">
+                <% for (CustomOrder po : pendingOrders) { %>
+                <div class="order-item-row" style="border-top:1px solid #F1F5F9;padding:12px 0;">
                     <div>
-                        <strong>Keycap Akko Black & Pink ASA profile — 158 phím</strong>
-                        <p style="font-size:12px;color:#64748B;">Đơn #KH-281044 · Akko Official · Phân loại: Black & Pink</p>
+                        <strong><%= po.getProductName() %></strong>
+                        <p style="font-size:12px;color:#64748B;">Đơn #<%= po.getOrderCode() %> · <%= po.getShopName() %> · <%= po.getVariantSummary() %></p>
                     </div>
-                    <a href="review?orderCode=KH-281044&productId=7" class="btn-orange-review">★ Viết đánh giá (+50 điểm)</a>
-                </div>
-                <% } %>
-                <% if (!reviewedIds.contains(1)) { %>
-                <div class="order-item-row" style="padding:12px 0;">
-                    <div>
-                        <strong>Kit Tofu60 2.0 Aluminium — Hotswap, gasket mount, foam sẵn</strong>
-                        <p style="font-size:12px;color:#64748B;">Đơn #KH-280912 · KeebLab Store · Phân loại: Silver / Brass plate</p>
-                    </div>
-                    <a href="review?orderCode=KH-280912&productId=1&variant=Ph%C3%A2n%20lo%E1%BA%A1i:%20Silver%20/%20Brass%20plate" class="btn-orange-review">★ Viết đánh giá (+50 điểm)</a>
+                    <a href="review?orderCode=<%= po.getOrderCode() %>&productId=<%= po.getProductId() %>" class="btn-orange-review">★ Viết đánh giá (+50 điểm)</a>
                 </div>
                 <% } %>
                 <% } %>
             </div>
 
-            <!-- Khối 2: Lịch sử đánh giá đã đăng của User -->
+            <!-- Khối 2: Các đánh giá thực sự do chính tài khoản này đã đăng trong bảng reviews -->
             <div class="order-card-box">
                 <h3 style="font-size:16px;font-weight:800;margin-bottom:14px;">Đánh giá đã đăng của bạn (<%= myReviews.size() %>)</h3>
                 <% if (myReviews.isEmpty()) { %>
-                <p style="font-size:13px;color:#64748B;">Bạn chưa đăng đánh giá nào. Hãy chọn một sản phẩm phía trên để đánh giá nhé!</p>
+                <p style="font-size:13px;color:#64748B;">Tài khoản <strong><%= currentUser.getFullName() %></strong> chưa đăng bài đánh giá nào.</p>
                 <% } else { %>
                 <% for (UserReviewItem item : myReviews) { %>
                 <div style="border-top:1px solid #F1F5F9;padding:16px 0;">

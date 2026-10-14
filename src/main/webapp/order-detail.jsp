@@ -63,7 +63,7 @@
                         <span style="font-size:12px;color:#64748B;">Đặt ngày 20/09/2026 · SwitchHouse · Dự kiến nhận 28–30/09/2026</span>
                     </div>
                     <div style="display:flex;gap:8px;">
-                        <a href="seller-progress?id=<%= order.getId() %>" class="btn btn-outline-gray">🛠️ Mở trang Xưởng (Frame 22)</a>
+                        <a href="seller-progress?id=<%= order.getId() %>" class="btn btn-outline-gray">🛠️ Mở trang Xưởng</a>
                     </div>
                 </div>
             </div>

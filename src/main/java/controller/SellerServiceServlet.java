@@ -1,18 +1,34 @@
 package controller;
 
 import dao.CustomOrderDAO;
+import dao.CustomOrderDAO.ServicePackage;
+import dao.ShopDAO;
+import model.Shop;
+import model.User;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import java.io.IOException;
+import java.util.List;
 
 @WebServlet("/seller-services")
 public class SellerServiceServlet extends HttpServlet {
     private final CustomOrderDAO customDAO = new CustomOrderDAO();
+    private final ShopDAO shopDAO = new ShopDAO();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        HttpSession session = request.getSession();
+        User currentUser = (User) session.getAttribute("user");
+        if (currentUser == null) {
+            response.sendRedirect("login");
+            return;
+        }
+
+        Shop sellerShop = shopDAO.getShopByOwnerId(currentUser.getId());
+        int shopId = (sellerShop != null) ? sellerShop.getId() : 2;
+
         String action = request.getParameter("action");
         if ("toggle".equals(action)) {
             try {
@@ -30,17 +46,42 @@ public class SellerServiceServlet extends HttpServlet {
             return;
         }
 
-        request.setAttribute("services", customDAO.getAllServicesByShop(2)); // Shop 2: SwitchHouse
+        List<ServicePackage> services = customDAO.getAllServicesByShop(shopId);
+        int totalSoldMonth = 0;
+        long totalCustomRevenue = 0;
+        int activePkgCount = 0;
+        for (ServicePackage sp : services) {
+            totalSoldMonth += sp.getSoldMonth();
+            totalCustomRevenue += (sp.getPrice() * sp.getSoldMonth());
+            if ("ACTIVE".equals(sp.getStatus())) activePkgCount++;
+        }
+
+        request.setAttribute("sellerShop", sellerShop);
+        request.setAttribute("services", services);
+        request.setAttribute("totalSoldMonth", totalSoldMonth);
+        request.setAttribute("formattedCustomRevenue", CustomOrderDAO.formatVND(totalCustomRevenue));
+        request.setAttribute("activePkgCount", activePkgCount);
+        request.setAttribute("totalOrdersCount", customDAO.countOrdersByStatus("ALL", false));
+        request.setAttribute("pendingCustomCount", customDAO.countOrdersByStatus("PENDING", true));
+        request.setAttribute("processingCustomCount", customDAO.countOrdersByStatus("PROCESSING", true));
+
         request.getRequestDispatcher("seller-services.jsp").forward(request, response);
     }
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        String formType = request.getParameter("formType");
+        HttpSession session = request.getSession();
+        User currentUser = (User) session.getAttribute("user");
+        if (currentUser == null) {
+            response.sendRedirect("login");
+            return;
+        }
+        Shop sellerShop = shopDAO.getShopByOwnerId(currentUser.getId());
+        int shopId = (sellerShop != null) ? sellerShop.getId() : 2;
 
+        String formType = request.getParameter("formType");
         if ("capacity".equals(formType)) {
-            HttpSession session = request.getSession();
             session.setAttribute("cap_maxOrders", request.getParameter("maxOrders"));
             session.setAttribute("cap_staffCount", request.getParameter("staffCount"));
             session.setAttribute("cap_workHours", request.getParameter("workHours"));
@@ -64,7 +105,7 @@ public class SellerServiceServlet extends HttpServlet {
             int id = Integer.parseInt(idParam);
             customDAO.updateServicePackage(id, serviceName, price, durationText, description, isPopular);
         } else {
-            customDAO.addServicePackage(2, serviceName, price, durationText, description, isPopular);
+            customDAO.addServicePackage(shopId, serviceName, price, durationText, description, isPopular);
         }
         response.sendRedirect("seller-services?msg=saved");
     }

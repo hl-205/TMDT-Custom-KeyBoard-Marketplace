@@ -2,6 +2,9 @@ package controller;
 
 import dao.CustomOrderDAO;
 import dao.CustomOrderDAO.CustomOrder;
+import dao.ShopDAO;
+import model.Shop;
+import model.User;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
@@ -11,12 +14,29 @@ import java.util.List;
 @WebServlet(urlPatterns = {"/seller-orders", "/seller-confirm-custom"})
 public class SellerOrderServlet extends HttpServlet {
     private final CustomOrderDAO customDAO = new CustomOrderDAO();
+    private final ShopDAO shopDAO = new ShopDAO();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        String path = request.getServletPath();
+        HttpSession session = request.getSession();
+        User currentUser = (User) session.getAttribute("user");
+        if (currentUser == null) {
+            response.sendRedirect("login");
+            return;
+        }
 
+        Shop sellerShop = shopDAO.getShopByOwnerId(currentUser.getId());
+        request.setAttribute("sellerShop", sellerShop);
+        request.setAttribute("totalOrdersCount", customDAO.countOrdersByStatus("ALL", false));
+        request.setAttribute("pendingCount", customDAO.countOrdersByStatus("PENDING", false));
+        request.setAttribute("pendingCustomCount", customDAO.countOrdersByStatus("PENDING", true));
+        request.setAttribute("processingCount", customDAO.countOrdersByStatus("PROCESSING", false));
+        request.setAttribute("processingCustomCount", customDAO.countOrdersByStatus("PROCESSING", true));
+        request.setAttribute("shippingCount", customDAO.countOrdersByStatus("SHIPPING", false));
+        request.setAttribute("completedCount", customDAO.countOrdersByStatus("COMPLETED", false));
+
+        String path = request.getServletPath();
         if ("/seller-confirm-custom".equals(path)) {
             CustomOrder order = null;
             String idParam = request.getParameter("id");
@@ -26,7 +46,8 @@ public class SellerOrderServlet extends HttpServlet {
                 } catch (Exception ignored) {}
             }
             if (order == null) {
-                order = customDAO.getOrderByCode("KH-284170");
+                List<CustomOrder> pendingList = customDAO.getOrdersForSeller("PENDING", true);
+                if (!pendingList.isEmpty()) order = pendingList.get(0);
             }
             if (order == null) {
                 List<CustomOrder> all = customDAO.getOrdersForSeller("ALL", false);
@@ -80,7 +101,6 @@ public class SellerOrderServlet extends HttpServlet {
         String shopNote = request.getParameter("shopNote");
         customDAO.acceptCustomOrder(orderId, committedDays, shopNote, extraFee);
 
-        // Nhận đơn xong chuyển thẳng sang màn hình Tiến độ gia công của đơn đó
         response.sendRedirect("seller-progress?id=" + orderId + "&msg=accepted");
     }
 }

@@ -1,5 +1,6 @@
 package controller;
 
+import dao.CustomOrderDAO;
 import dao.ProductDAO;
 import model.Product;
 import model.User;
@@ -14,6 +15,7 @@ import java.util.Set;
 @WebServlet(urlPatterns = {"/my-orders", "/my-reviews", "/review"})
 public class ReviewServlet extends HttpServlet {
     private final ProductDAO productDAO = new ProductDAO();
+    private final CustomOrderDAO customOrderDAO = new CustomOrderDAO();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -25,16 +27,21 @@ public class ReviewServlet extends HttpServlet {
             return;
         }
 
+        // Đảm bảo dữ liệu DB đã được chuẩn hóa (tách review mẫu Nguyễn Minh, Trần Hoàng khỏi user_id=1)
+        customOrderDAO.ensureDatabaseNormalized();
+
         String path = request.getServletPath();
         Set<Integer> reviewedProductIds = productDAO.getReviewedProductIdsByUser(user.getId());
         request.setAttribute("reviewedProductIds", reviewedProductIds);
 
         if ("/my-orders".equals(path)) {
+            request.setAttribute("userOrders", customOrderDAO.getOrdersByUserId(user.getId()));
             request.getRequestDispatcher("my-orders.jsp").forward(request, response);
             return;
         }
 
         if ("/my-reviews".equals(path)) {
+            request.setAttribute("pendingReviewOrders", customOrderDAO.getPendingReviewOrdersByUser(user.getId()));
             request.setAttribute("myReviews", productDAO.getReviewsByUserId(user.getId()));
             request.getRequestDispatcher("my-reviews.jsp").forward(request, response);
             return;

@@ -125,7 +125,7 @@
                 <div class="form-group">
                     <label>Email đã đăng ký</label>
                     <input type="email" name="email" class="form-control"
-                           placeholder="letungduong.nvn@gmail.com"
+                           placeholder="nva@gmail.com"
                            value="<%= request.getAttribute("email") != null ? request.getAttribute("email") : "" %>" required>
                 </div>
                 <button type="submit" class="btn-submit-primary">Tiếp tục · Gửi mã xác thực</button>

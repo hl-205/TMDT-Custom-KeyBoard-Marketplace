@@ -19,10 +19,11 @@
       <div class="footer-col">
         <h4>Khám phá</h4>
         <ul>
-          <li><a href="category.jsp?cat=1">Kit bàn phím</a></li>
-          <li><a href="category.jsp?cat=2">Switch</a></li>
-          <li><a href="category.jsp?cat=3">Keycap</a></li>
-          <li><a href="category.jsp?cat=6">Dịch vụ gia công</a></li>
+          <li><a href="category?cat=1">Kit bàn phím</a></li>
+          <li><a href="category?cat=2">Switch</a></li>
+          <li><a href="category?cat=3">Keycap</a></li>
+          <li><a href="category?cat=6">Dịch vụ gia công</a></li>
+          <li><a href="shops">Gian hàng & Xưởng</a></li>
           <li><a href="#">Group buy</a></li>
         </ul>
       </div>

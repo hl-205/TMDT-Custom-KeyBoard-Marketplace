@@ -2,6 +2,7 @@
 <div class="topbar">
   <div class="container topbar-content">
     <div class="topbar-left">
+      <a href="shops">🏪 Gian hàng & Xưởng</a> <span class="dot">·</span>
       <a href="#">Kênh người bán</a> <span class="dot">·</span>
       <a href="#">Tải ứng dụng</a> <span class="dot">·</span>
       <a href="#">Kết nối cộng đồng</a>
@@ -29,7 +30,7 @@
 
     <form action="search" method="GET" class="search-wrapper">
       <span class="search-icon-left">🔍</span>
-      <input type="text" name="keyword" class="search-input" placeholder="Tìm kit bàn phím, switch, keycap, xưởng gia công...">
+      <input type="text" name="keyword" class="search-input" placeholder="Tìm kit bàn phím, switch, keycap, gian hàng, xưởng gia công...">
       <button type="submit" class="search-btn">Tìm kiếm</button>
     </form>
 
@@ -71,17 +72,17 @@
 
 <nav class="main-nav">
   <div class="container nav-content">
-    <a href="category.jsp" class="nav-all-categories">
+    <a href="category" class="nav-all-categories">
       ☰ Tất cả danh mục
     </a>
     <ul class="nav-links">
-      <li><a href="category.jsp?cat=1">Kit bàn phím</a></li>
-      <li><a href="category.jsp?cat=2">Switch</a></li>
-      <li><a href="category.jsp?cat=3">Keycap</a></li>
-      <li><a href="category.jsp?cat=4">Stabilizer</a></li>
-      <li><a href="category.jsp?cat=5">Phụ kiện</a></li>
-      <li><a href="category.jsp?cat=6">Dịch vụ gia công</a></li>
-      <li><a href="#">Build sẵn</a></li>
+      <li><a href="category?cat=1">Kit bàn phím</a></li>
+      <li><a href="category?cat=2">Switch</a></li>
+      <li><a href="category?cat=3">Keycap</a></li>
+      <li><a href="category?cat=4">Stabilizer</a></li>
+      <li><a href="category?cat=5">Phụ kiện</a></li>
+      <li><a href="category?cat=6">Dịch vụ gia công</a></li>
+      <li><a href="shops">🏪 Gian hàng</a></li>
     </ul>
     <a href="#" class="nav-group-buy">
       🔥 Group buy đang mở

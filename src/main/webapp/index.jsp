@@ -1,4 +1,22 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ page import="dao.ProductDAO" %>
+<%@ page import="dao.ShopDAO" %>
+<%@ page import="model.Product" %>
+<%@ page import="model.Shop" %>
+<%@ page import="java.util.List" %>
+<%
+    List<Product> bestSellingProducts = (List<Product>) request.getAttribute("bestSellingProducts");
+    if (bestSellingProducts == null || bestSellingProducts.isEmpty()) {
+        ProductDAO pDao = new ProductDAO();
+        bestSellingProducts = pDao.getBestSellingProducts(6);
+    }
+
+    List<Shop> topShops = (List<Shop>) request.getAttribute("topShops");
+    if (topShops == null || topShops.isEmpty()) {
+        ShopDAO sDao = new ShopDAO();
+        topShops = sDao.getTopShops(4);
+    }
+%>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -202,120 +220,76 @@
     <section class="home-section">
         <div class="section-head">
             <h3>Sản phẩm bán chạy</h3>
-            <a href="category.jsp" class="view-all-link">Xem tất cả →</a>
+            <a href="category?sort=best_selling" class="view-all-link">Xem tất cả →</a>
         </div>
         <div class="product-grid-6">
-            <a href="product-detail?id=1" class="p-card">
-                <span class="p-badge discount">-18%</span>
+            <% if (bestSellingProducts != null && !bestSellingProducts.isEmpty()) {
+                for (Product p : bestSellingProducts) { %>
+            <a href="product-detail?id=<%= p.getId() %>" class="p-card">
+                <% if (p.getBadge() != null && !p.getBadge().isEmpty()) { %>
+                <span class="p-badge <%= p.getBadge().contains("%") ? "discount" : (p.getBadge().equalsIgnoreCase("Mới") ? "new" : "preorder") %>"><%= p.getBadge() %></span>
+                <% } else if (p.getDiscountPercent() > 0) { %>
+                <span class="p-badge discount">-<%= p.getDiscountPercent() %>%</span>
+                <% } %>
                 <span class="p-wish">♡</span>
-                <div class="p-thumb"><div class="illus-kit"></div></div>
-                <div class="p-Shop"><span class="dot-green"></span> KeebLab Store</div>
-                <h4 class="p-name">Kit Tofu60 2.0 Aluminium — Hotswap...</h4>
-                <div class="p-price">2.690.000đ <del>3.280.000đ</del></div>
-                <div class="p-meta"><span class="stars">★★★★★ 4.9</span><span>Đã bán 1.2k</span></div>
+                <div class="p-thumb">
+                    <% if (p.getCategoryId() == 1) { %>
+                    <div class="illus-kit <%= p.getId() % 2 == 0 ? "dark" : "" %>"></div>
+                    <% } else if (p.getCategoryId() == 2) { %>
+                    <div class="illus-switch <%= p.getId() % 2 == 0 ? "yellow" : "dark" %>"></div>
+                    <% } else if (p.getCategoryId() == 3) { %>
+                    <div class="illus-keycap <%= p.getId() % 2 == 0 ? "pink" : "" %>"></div>
+                    <% } else { %>
+                    <div class="illus-switch purple"></div>
+                    <% } %>
+                </div>
+                <div class="p-Shop"><span class="dot-green"></span> <%= p.getShopName() %></div>
+                <h4 class="p-name"><%= p.getName() %></h4>
+                <div class="p-price">
+                    <%= p.getFormattedPrice() %>
+                    <% if (p.getOldPrice() > 0) { %>
+                    <del><%= p.getFormattedOldPrice() %></del>
+                    <% } %>
+                </div>
+                <div class="p-meta">
+                    <span class="stars">★★★★★ <%= p.getRatingAvg() %></span>
+                    <span>Đã bán <%= p.getFormattedSoldCount() %></span>
+                </div>
             </a>
-
-            <a href="product-detail?id=2" class="p-card">
-                <span class="p-badge new">Mới</span>
-                <span class="p-wish">♡</span>
-                <div class="p-thumb"><div class="illus-switch dark"></div></div>
-                <div class="p-Shop"><span class="dot-green"></span> SwitchHouse</div>
-                <h4 class="p-name">Switch Gateron Oil King — Linear 55g (bịch 70...</h4>
-                <div class="p-price">890.000đ</div>
-                <div class="p-meta"><span class="stars">★★★★★ 4.7</span><span>Đã bán 430</span></div>
-            </a>
-
-            <a href="product-detail?id=3" class="p-card">
-                <span class="p-badge preorder">Pre-order</span>
-                <span class="p-wish">♡</span>
-                <div class="p-thumb"><div class="illus-keycap pink"></div></div>
-                <div class="p-Shop"><span class="dot-green"></span> Keycap Đông Nam</div>
-                <h4 class="p-name">Keycap GMK Olivia++ Cherry profile — bộ...</h4>
-                <div class="p-price">4.150.000đ</div>
-                <div class="p-meta"><span class="stars">★★★★★ 5.0</span><span>Đã bán 86</span></div>
-            </a>
-
-            <a href="product-detail?id=4" class="p-card">
-                <span class="p-badge discount">-10%</span>
-                <span class="p-wish">♡</span>
-                <div class="p-thumb"><div class="illus-kit dark"></div></div>
-                <div class="p-Shop"><span class="dot-green"></span> Keychron VN</div>
-                <h4 class="p-name">Kit Keychron Q1 Pro QMK/VIA — knob...</h4>
-                <div class="p-price">4.290.000đ <del>4.790.000đ</del></div>
-                <div class="p-meta"><span class="stars">★★★★★ 4.8</span><span>Đã bán 2.1k</span></div>
-            </a>
-
-            <a href="product-detail?id=5" class="p-card">
-                <span class="p-badge discount">-24%</span>
-                <span class="p-wish">♡</span>
-                <div class="p-thumb"><div class="illus-switch yellow"></div></div>
-                <div class="p-Shop"><span class="dot-green"></span> Akko Official</div>
-                <h4 class="p-name">Switch Akko Cream Yellow V3 Pro — Linear...</h4>
-                <div class="p-price">320.000đ <del>420.000đ</del></div>
-                <div class="p-meta"><span class="stars">★★★★★ 4.6</span><span>Đã bán 3.4k</span></div>
-            </a>
-
-            <a href="product-detail?id=6" class="p-card">
-                <span class="p-wish">♡</span>
-                <div class="p-thumb"><div class="illus-switch purple"></div></div>
-                <div class="p-Shop"><span class="dot-green"></span> SwitchHouse</div>
-                <h4 class="p-name">Stabilizer Durock V2 PCB-mount — đã lube...</h4>
-                <div class="p-price">420.000đ</div>
-                <div class="p-meta"><span class="stars">★★★★★ 4.8</span><span>Đã bán 760</span></div>
-            </a>
+            <%  }
+            } else { %>
+            <p style="grid-column: 1 / -1; text-align: center; color: #64748B; padding: 24px;">Chưa có sản phẩm bán chạy.</p>
+            <% } %>
         </div>
     </section>
 
     <section class="home-section">
         <div class="section-head">
             <h3>Shop gia công uy tín</h3>
-            <a href="#" class="view-all-link">Xem tất cả →</a>
+            <a href="shops" class="view-all-link">Xem tất cả →</a>
         </div>
         <div class="shop-cards-grid">
-            <a href="shop.jsp?id=1" class="shop-mini-card">
-                <div class="shop-avatar blue">KL</div>
+            <% if (topShops != null && !topShops.isEmpty()) {
+                for (Shop s : topShops) { %>
+            <a href="shop?id=<%= s.getId() %>" class="shop-mini-card">
+                <div class="shop-avatar" style="background-color: <%= s.getAvatarColor() != null ? s.getAvatarColor() : "#1B64F2" %>"><%= s.getAvatarText() %></div>
                 <div class="shop-mini-info">
-                    <strong>KeebLab Store</strong>
-                    <p>★ 4.9 · 12.4k lượt theo dõi</p>
+                    <strong><%= s.getShopName() %></strong>
+                    <p>★ <%= s.getRatingAvg() %> · <%= s.getFormattedFollowers() %> lượt theo dõi</p>
                     <div class="shop-badges">
+                        <% if (s.isVerified()) { %>
                         <span class="s-badge verified">Đã xác minh</span>
+                        <% } %>
+                        <% if (s.isWorkshop()) { %>
                         <span class="s-badge workshop">Gia công</span>
+                        <% } %>
                     </div>
                 </div>
             </a>
-            <a href="shop.jsp?id=2" class="shop-mini-card">
-                <div class="shop-avatar orange">SH</div>
-                <div class="shop-mini-info">
-                    <strong>SwitchHouse</strong>
-                    <p>★ 4.8 · 8.9k lượt theo dõi</p>
-                    <div class="shop-badges">
-                        <span class="s-badge verified">Đã xác minh</span>
-                        <span class="s-badge workshop">Gia công</span>
-                    </div>
-                </div>
-            </a>
-            <a href="shop.jsp?id=4" class="shop-mini-card">
-                <div class="shop-avatar purple">KĐ</div>
-                <div class="shop-mini-info">
-                    <strong>Keycap Đông Nam</strong>
-                    <p>★ 5.0 · 4.2k lượt theo dõi</p>
-                    <div class="shop-badges">
-                        <span class="s-badge verified">Đã xác minh</span>
-                        <span class="s-badge workshop">Gia công</span>
-                    </div>
-                </div>
-            </a>
-            <a href="shop.jsp?id=6" class="shop-mini-card">
-                <div class="shop-avatar green">MG</div>
-                <div class="shop-mini-info">
-                    <strong>Monsgeek VN</strong>
-                    <p>★ 4.7 · 6.1k lượt theo dõi</p>
-                    <div class="shop-badges">
-                        <span class="s-badge verified">Đã xác minh</span>
-                        <span class="s-badge workshop">Gia công</span>
-                    </div>
-                </div>
-            </a>
+            <%  }
+            } else { %>
+            <p style="grid-column: 1 / -1; text-align: center; color: #64748B; padding: 24px;">Chưa có gian hàng nào.</p>
+            <% } %>
         </div>
     </section>
 </main>

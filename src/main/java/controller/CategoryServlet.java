@@ -1,7 +1,9 @@
 package controller;
 
 import dao.ProductDAO;
+import dao.ShopDAO;
 import model.Product;
+import model.Shop;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
@@ -13,6 +15,7 @@ import java.util.List;
 @WebServlet(urlPatterns = {"/category", "/search"})
 public class CategoryServlet extends HttpServlet {
     private final ProductDAO productDAO = new ProductDAO();
+    private final ShopDAO shopDAO = new ShopDAO();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -37,6 +40,11 @@ public class CategoryServlet extends HttpServlet {
                 minPrice, maxPrice, inStock, supportCustom, minRating, sort
         );
 
+        List<Shop> matchedShops = null;
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            matchedShops = shopDAO.searchShops(keyword, null, null, null);
+        }
+
         // Tạo danh sách các tag "Đang lọc" hiển thị trên đầu trang (như Frame 04)
         List<String> activeTags = new ArrayList<>();
         if (brands != null) activeTags.addAll(Arrays.asList(brands));
@@ -51,6 +59,7 @@ public class CategoryServlet extends HttpServlet {
         }
 
         request.setAttribute("products", products);
+        request.setAttribute("matchedShops", matchedShops);
         request.setAttribute("catId", catId);
         request.setAttribute("keyword", keyword);
         request.setAttribute("selectedBrands", brands != null ? Arrays.asList(brands) : new ArrayList<>());

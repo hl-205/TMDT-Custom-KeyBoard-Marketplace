@@ -17,34 +17,103 @@ public class ShopDAO {
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    Shop s = new Shop();
-                    s.setId(rs.getInt("id"));
-                    s.setShopName(rs.getString("shop_name"));
-                    s.setSlug(rs.getString("slug"));
-                    s.setAvatarText(rs.getString("avatar_text"));
-                    s.setAvatarColor(rs.getString("avatar_color"));
-                    s.setDescription(rs.getString("description"));
-                    s.setAddress(rs.getString("address"));
-                    s.setWorkingHours(rs.getString("working_hours"));
-                    s.setVerified(rs.getInt("is_verified") == 1);
-                    s.setWorkshop(rs.getInt("is_workshop") == 1);
-                    s.setRatingAvg(rs.getDouble("rating_avg"));
-                    s.setRatingCount(rs.getInt("rating_count"));
-                    s.setFollowerCount(rs.getInt("follower_count"));
-                    s.setProductCount(rs.getInt("product_count"));
-                    s.setResponseRate(rs.getInt("response_rate"));
-                    s.setResponseTime(rs.getString("response_time"));
-                    s.setOnTimeRate(rs.getDouble("on_time_rate"));
-                    s.setCancelRate(rs.getDouble("cancel_rate"));
-                    s.setReturnRate(rs.getDouble("return_rate"));
-                    s.setJoinedDate(rs.getString("joined_date"));
-                    return s;
+                    return mapShop(rs);
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
         return null;
+    }
+
+    public List<Shop> getTopShops(int limit) {
+        List<Shop> list = new ArrayList<>();
+        String sql = "SELECT * FROM shops ORDER BY rating_avg DESC, follower_count DESC LIMIT ?";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapShop(rs));
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public List<Shop> searchShops(String keyword, Boolean workshopOnly, Boolean verifiedOnly, String sort) {
+        List<Shop> list = new ArrayList<>();
+        StringBuilder sql = new StringBuilder("SELECT * FROM shops WHERE 1=1 ");
+        List<Object> params = new ArrayList<>();
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql.append("AND (shop_name LIKE ? OR description LIKE ? OR address LIKE ? OR slug LIKE ?) ");
+            String kw = "%" + keyword.trim() + "%";
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+        }
+        if (workshopOnly != null && workshopOnly) {
+            sql.append("AND is_workshop = 1 ");
+        }
+        if (verifiedOnly != null && verifiedOnly) {
+            sql.append("AND is_verified = 1 ");
+        }
+
+        if ("rating".equals(sort)) {
+            sql.append("ORDER BY rating_avg DESC, rating_count DESC");
+        } else if ("followers".equals(sort)) {
+            sql.append("ORDER BY follower_count DESC");
+        } else if ("products".equals(sort)) {
+            sql.append("ORDER BY product_count DESC");
+        } else if ("name_asc".equals(sort)) {
+            sql.append("ORDER BY shop_name ASC");
+        } else {
+            sql.append("ORDER BY rating_avg DESC, follower_count DESC");
+        }
+
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapShop(rs));
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    private Shop mapShop(ResultSet rs) throws Exception {
+        Shop s = new Shop();
+        s.setId(rs.getInt("id"));
+        s.setShopName(rs.getString("shop_name"));
+        s.setSlug(rs.getString("slug"));
+        s.setAvatarText(rs.getString("avatar_text"));
+        s.setAvatarColor(rs.getString("avatar_color"));
+        s.setDescription(rs.getString("description"));
+        s.setAddress(rs.getString("address"));
+        s.setWorkingHours(rs.getString("working_hours"));
+        s.setVerified(rs.getInt("is_verified") == 1);
+        s.setWorkshop(rs.getInt("is_workshop") == 1);
+        s.setRatingAvg(rs.getDouble("rating_avg"));
+        s.setRatingCount(rs.getInt("rating_count"));
+        s.setFollowerCount(rs.getInt("follower_count"));
+        s.setProductCount(rs.getInt("product_count"));
+        s.setResponseRate(rs.getInt("response_rate"));
+        s.setResponseTime(rs.getString("response_time"));
+        s.setOnTimeRate(rs.getDouble("on_time_rate"));
+        s.setCancelRate(rs.getDouble("cancel_rate"));
+        s.setReturnRate(rs.getDouble("return_rate"));
+        s.setJoinedDate(rs.getString("joined_date"));
+        return s;
     }
 
     public List<CustomServiceItem> getServicesByShopId(int shopId) {

@@ -1,12 +1,15 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ page import="model.Product" %>
+<%@ page import="model.Shop" %>
 <%@ page import="java.util.List" %>
 <%
     if (request.getAttribute("products") == null) {
-        response.sendRedirect("category");
+        String qs = request.getQueryString();
+        response.sendRedirect("category" + (qs != null && !qs.isEmpty() ? "?" + qs : ""));
         return;
     }
     List<Product> products = (List<Product>) request.getAttribute("products");
+    List<Shop> matchedShops = (List<Shop>) request.getAttribute("matchedShops");
     Integer catId = (Integer) request.getAttribute("catId");
     String keyword = (String) request.getAttribute("keyword");
     List<String> selectedBrands = (List<String>) request.getAttribute("selectedBrands");
@@ -45,8 +48,49 @@
     <!-- Giao diện Header Tìm kiếm chuẩn Frame 04 -->
     <div class="search-title-block">
         <h2>Kết quả cho “<%= keyword %>”</h2>
-        <p>Tìm thấy <strong><%= products.size() %></strong> sản phẩm · <a href="#" style="color:#1B64F2;font-weight:700;">Lưu tìm kiếm này</a></p>
+        <p>Tìm thấy <strong><%= products.size() %></strong> sản phẩm<%= (matchedShops != null && !matchedShops.isEmpty()) ? " và <strong>" + matchedShops.size() + "</strong> gian hàng" : "" %> · <a href="#" style="color:#1B64F2;font-weight:700;">Lưu tìm kiếm này</a></p>
     </div>
+
+    <% if (matchedShops != null && !matchedShops.isEmpty()) { %>
+    <!-- Khối Gian hàng liên quan khi tìm kiếm theo tên shop -->
+    <div class="matched-shops-block">
+        <div class="matched-shops-title">
+            <span>🏪 Gian hàng liên quan</span>
+            <a href="shops?keyword=<%= java.net.URLEncoder.encode(keyword, "UTF-8") %>">Xem tất cả gian hàng →</a>
+        </div>
+        <div class="matched-shops-grid">
+            <% for (Shop ms : matchedShops) { %>
+            <div class="matched-shop-card">
+                <div class="shop-avatar" style="background-color: <%= ms.getAvatarColor() != null ? ms.getAvatarColor() : "#1B64F2" %>"><%= ms.getAvatarText() %></div>
+                <div class="matched-shop-details">
+                    <div class="matched-shop-head">
+                        <h4><%= ms.getShopName() %></h4>
+                        <% if (ms.isVerified()) { %>
+                        <span class="s-badge verified">✓ Đã xác minh</span>
+                        <% } %>
+                        <% if (ms.isWorkshop()) { %>
+                        <span class="s-badge workshop">🛠️ Xưởng</span>
+                        <% } %>
+                    </div>
+                    <p class="matched-shop-desc"><%= ms.getDescription() %></p>
+                    <div class="matched-shop-stats">
+                        <span>★ <strong><%= ms.getRatingAvg() %></strong></span>
+                        <span>·</span>
+                        <span><strong><%= ms.getFormattedFollowers() %></strong> theo dõi</span>
+                        <span>·</span>
+                        <span><strong><%= ms.getProductCount() %></strong> sp</span>
+                        <span>·</span>
+                        <span>📍 <%= ms.getAddress() %></span>
+                    </div>
+                </div>
+                <div class="matched-shop-action">
+                    <a href="shop?id=<%= ms.getId() %>" class="btn btn-blue btn-sm">Xem Shop →</a>
+                </div>
+            </div>
+            <% } %>
+        </div>
+    </div>
+    <% } %>
     <% } else { %>
     <!-- Giao diện Banner Danh mục chuẩn Frame 03 -->
     <div class="cat-hero-banner">
@@ -212,10 +256,10 @@
                 <div class="sort-header-bar">
                     <span class="s-label">Sắp xếp theo</span>
                     <button type="button" class="sort-pill-btn <%= "popular".equals(sort) ? "active" : "" %>" onclick="submitSort('popular')">Phổ biến</button>
+                    <button type="button" class="sort-pill-btn <%= "best_selling".equals(sort) ? "active" : "" %>" onclick="submitSort('best_selling')">Bán chạy (Số lượng bán)</button>
+                    <button type="button" class="sort-pill-btn <%= "price_asc".equals(sort) ? "active" : "" %>" onclick="submitSort('price_asc')">Giá: Thấp → Cao</button>
+                    <button type="button" class="sort-pill-btn <%= "price_desc".equals(sort) ? "active" : "" %>" onclick="submitSort('price_desc')">Giá: Cao → Thấp</button>
                     <button type="button" class="sort-pill-btn <%= "newest".equals(sort) ? "active" : "" %>" onclick="submitSort('newest')">Mới nhất</button>
-                    <button type="button" class="sort-pill-btn <%= "best_selling".equals(sort) ? "active" : "" %>" onclick="submitSort('best_selling')">Bán chạy</button>
-                    <button type="button" class="sort-pill-btn <%= "price_asc".equals(sort) ? "active" : "" %>" onclick="submitSort('price_asc')">Giá thấp → cao</button>
-                    <button type="button" class="sort-pill-btn <%= "price_desc".equals(sort) ? "active" : "" %>" onclick="submitSort('price_desc')">Giá cao → thấp</button>
                     <span class="sort-right-count"><strong><%= products.size() %></strong> sản phẩm</span>
                 </div>
 

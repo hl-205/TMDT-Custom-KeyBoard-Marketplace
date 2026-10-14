@@ -207,8 +207,10 @@ public class ProductDAO {
             sql.append("ORDER BY p.sold_count DESC");
         } else if ("price_asc".equals(sort)) {
             sql.append("ORDER BY p.price ASC");
+        } else if ("price_desc".equals(sort)) {
+            sql.append("ORDER BY p.price DESC");
         } else {
-            sql.append("ORDER BY p.sold_count DESC");
+            sql.append("ORDER BY p.sold_count DESC, p.rating_avg DESC");
         }
 
         try (Connection conn = DBContext.getConnection();
@@ -426,6 +428,32 @@ public class ProductDAO {
                 while (rs.next()) {
                     Product p = mapProduct(rs);
                     p.setShopName(rs.getString("shop_name"));
+                    list.add(p);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public List<Product> getBestSellingProducts(int limit) {
+        List<Product> list = new ArrayList<>();
+        String sql = "SELECT p.*, s.shop_name, c.name AS category_name "
+                + "FROM products p "
+                + "JOIN shops s ON p.shop_id = s.id "
+                + "JOIN categories c ON p.category_id = c.id "
+                + "WHERE p.status = 'ACTIVE' "
+                + "ORDER BY p.sold_count DESC, p.rating_avg DESC "
+                + "LIMIT ?";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Product p = mapProduct(rs);
+                    p.setShopName(rs.getString("shop_name"));
+                    p.setCategoryName(rs.getString("category_name"));
                     list.add(p);
                 }
             }

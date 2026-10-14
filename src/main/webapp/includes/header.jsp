@@ -1,0 +1,106 @@
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<div class="topbar">
+  <div class="container topbar-content">
+    <div class="topbar-left">
+      <a href="#">Kênh người bán</a> <span class="dot">·</span>
+      <a href="#">Tải ứng dụng</a> <span class="dot">·</span>
+      <a href="#">Kết nối cộng đồng</a>
+    </div>
+    <div class="topbar-right">
+      <a href="#">Thông báo</a>
+      <a href="guide.jsp">Trợ giúp</a>
+      <% if (session.getAttribute("user") == null) { %>
+      <a href="register.jsp"><strong>Đăng ký</strong></a>
+      <a href="login.jsp"><strong>Đăng nhập</strong></a>
+      <% } else { %>
+      <a href="profile.jsp"><strong>Tài khoản</strong></a>
+      <a href="logout"><strong>Đăng xuất</strong></a>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<header class="header">
+  <div class="container header-content">
+    <a href="index.jsp" class="logo">
+      <div class="logo-icon">K</div>
+      <h1>Keeb<span>Hub</span></h1>
+    </a>
+
+    <form action="search" method="GET" class="search-wrapper">
+      <span class="search-icon-left">🔍</span>
+      <input type="text" name="keyword" class="search-input" placeholder="Tìm kit bàn phím, switch, keycap, xưởng gia công...">
+      <button type="submit" class="search-btn">Tìm kiếm</button>
+    </form>
+
+    <div class="header-actions">
+      <a href="#" class="action-icon" title="Yêu thích">♡</a>
+      <a href="#" class="action-icon badge-wrap" title="Thông báo">
+        🔔<span class="badge">0</span>
+      </a>
+      <a href="cart.jsp" class="action-icon badge-wrap" title="Giỏ hàng">
+        🛒<span class="badge badge-orange">0</span>
+      </a>
+
+      <% if (session.getAttribute("user") == null) { %>
+      <div class="auth-header-btns">
+        <a href="login.jsp" class="btn-header-login">Đăng nhập</a>
+        <a href="register.jsp" class="btn-header-register">Đăng ký</a>
+      </div>
+      <% } else { %>
+      <div class="user-dropdown-wrap">
+        <div class="user-profile" id="userDropdownBtn">
+          <div class="avatar">${sessionScope.userAvatar != null ? sessionScope.userAvatar : 'DT'}</div>
+          <span class="user-name">${sessionScope.userName != null ? sessionScope.userName : 'Duong T.'} ▾</span>
+        </div>
+        <div class="user-dropdown-menu" id="userDropdownMenu">
+          <div class="dropdown-user-info">
+            <strong>${sessionScope.userFullName != null ? sessionScope.userFullName : 'Lê Tùng Dương'}</strong>
+            <span>${sessionScope.userEmail != null ? sessionScope.userEmail : 'Thành viên Bạc'}</span>
+          </div>
+          <a href="profile.jsp" class="dropdown-item">👤 Hồ sơ cá nhân</a>
+          <a href="my-orders.jsp" class="dropdown-item">📦 Đơn hàng của tôi</a>
+          <div class="dropdown-divider"></div>
+          <a href="logout" class="dropdown-item logout-link">↪ Đăng xuất</a>
+        </div>
+      </div>
+      <% } %>
+    </div>
+  </div>
+</header>
+
+<nav class="main-nav">
+  <div class="container nav-content">
+    <a href="category.jsp" class="nav-all-categories">
+      ☰ Tất cả danh mục
+    </a>
+    <ul class="nav-links">
+      <li><a href="category.jsp?cat=1">Kit bàn phím</a></li>
+      <li><a href="category.jsp?cat=2">Switch</a></li>
+      <li><a href="category.jsp?cat=3">Keycap</a></li>
+      <li><a href="category.jsp?cat=4">Stabilizer</a></li>
+      <li><a href="category.jsp?cat=5">Phụ kiện</a></li>
+      <li><a href="category.jsp?cat=6">Dịch vụ gia công</a></li>
+      <li><a href="#">Build sẵn</a></li>
+    </ul>
+    <a href="#" class="nav-group-buy">
+      🔥 Group buy đang mở
+    </a>
+  </div>
+</nav>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    var btn = document.getElementById("userDropdownBtn");
+    var menu = document.getElementById("userDropdownMenu");
+    if (btn && menu) {
+      btn.addEventListener("click", function(e) {
+        e.stopPropagation();
+        menu.classList.toggle("show");
+      });
+      document.addEventListener("click", function() {
+        menu.classList.remove("show");
+      });
+    }
+  });
+</script>

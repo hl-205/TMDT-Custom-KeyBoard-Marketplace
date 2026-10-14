@@ -1,5 +1,7 @@
 Hãy đảm bảo máy tính đã cài đặt các công cụ sau:
-1. **Java Development Kit (JDK):** Bắt buộc sử dụng **JDK 21** (hoặc JRE tương thích JDK 21)
+1. **Java Development Kit (JDK):** Bắt buộc sử dụng **JDK 21** (hoặc JRE tương thích JDK 21). Kiểm tra trong pom.xml có 2 dòng này rồi thì mới chính xác 
+        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.source>21</maven.compiler.source>
 2. **Apache Tomcat:** Phiên bản **Tomcat 10** (hoặc Tomcat 10.1.x trở lên sử dụng chuẩn `jakarta.servlet`)
 3. **Database:** WampServer
 4. **Quản lý CSDL:** Navicat Premium

@@ -2,7 +2,7 @@
 <div class="topbar">
   <div class="container topbar-content">
     <div class="topbar-left">
-      <a href="#">Kênh người bán</a> <span class="dot">·</span>
+      <a href="seller-orders">Kênh người bán</a> <span class="dot">·</span>
       <a href="#">Tải ứng dụng</a> <span class="dot">·</span>
       <a href="#">Kết nối cộng đồng</a>
     </div>

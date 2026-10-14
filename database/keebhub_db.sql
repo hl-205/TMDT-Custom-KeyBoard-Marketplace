@@ -174,9 +174,9 @@ CREATE TABLE order_progress (
 );
 
 INSERT INTO users (id, first_name, last_name, email, phone, password, gender, dob, avatar_text, role, points) VALUES
-                                                                                                                  (1, 'Nguyễn Văn', 'A', 'nva@gmail.com', '0987654321', '123456', 'Nam', '2005-05-20', 'DT', 'CUSTOMER', 1240),
-                                                                                                                  (2, 'Trần Văn', 'B', 'tvb@switchhouse.vn', '0901234567', '123456', 'Nam', '1998-10-12', 'TH', 'SELLER', 500),
-                                                                                                                  (3, 'Lương Hoàng', 'Long', 'admin@keebhub.vn', '0977000111', '123456', 'Nam', '1995-01-01', 'ADMIN', 0);
+                                                                                                                  (1, 'Nguyễn Văn', 'Anh', 'nva@gmail.com', '0987654321', '123456', 'Nam', '2005-05-20', 'NVA', 'CUSTOMER', 1240),
+                                                                                                                  (2, 'Trần Văn', 'Báo', 'tvb@switchhouse.vn', '0901234567', '123456', 'Nam', '1998-10-12', 'TVB', 'SELLER', 500),
+                                                                                                                  (3, 'Lương Hoàng', 'Long', 'admin@keebhub.vn', '0977000111', '123456', 'Nam', '1995-01-01', 'ADMIN', 'ADMIN', 0);
 
 INSERT INTO shops (id, owner_id, shop_name, slug, avatar_text, avatar_color, description, address, is_verified, is_workshop, rating_avg, rating_count, follower_count, product_count) VALUES
                                                                                                                                                                                           (1, 2, 'KeebLab Store', 'keeblab-store', 'KL', '#1B64F2', 'Chuyên kit nhôm CNC và dịch vụ gia công bàn phím custom. Xưởng tại Quận Bình Thạnh, TP.HCM. Hoạt động từ 2019.', 'Bình Thạnh, TP.HCM', 1, 1, 4.9, 3200, 12400, 486),

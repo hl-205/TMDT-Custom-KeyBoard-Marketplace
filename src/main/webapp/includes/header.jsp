@@ -206,11 +206,11 @@
 
           <% } %>
 
-
-
           <a href="my-orders" class="dropdown-item">📦 Đơn hàng của tôi</a>
 
           <a href="my-reviews" class="dropdown-item">⭐ Đánh giá của tôi</a>
+
+          <a href="custom-builder" class="dropdown-item" style="color:#1B64F2;font-weight:700;">⚙️ Custom Builder</a>
 
           <div class="dropdown-divider"></div>
 
@@ -237,7 +237,6 @@
     <a href="category" class="nav-all-categories">
 
       ☰ Tất cả danh mục
-
     </a>
 
     <ul class="nav-links">
@@ -257,13 +256,10 @@
       <li><a href="category">Build sẵn</a></li>
 
       <li><a href="shops">🏪 Gian hàng</a></li>
-
+      <li><a href="custom-builder" style="color:#1B64F2;font-weight:700;">⚙️ Custom Builder</a></li>
     </ul>
-
     <a href="category" class="nav-group-buy">
-
-      🔥 Group buy đang mở
-
+     🔥 Group buy đang mở
     </a>
 
   </div>

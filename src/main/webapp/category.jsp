@@ -211,11 +211,11 @@
             <section>
                 <div class="sort-header-bar">
                     <span class="s-label">Sắp xếp theo</span>
-                    <button type="button" class="sort-pill-btn <%= "popular".equals(sort) ? "active" : "" %>" onclick="submitSort('popular')">Phổ biến</button>
-                    <button type="button" class="sort-pill-btn <%= "newest".equals(sort) ? "active" : "" %>" onclick="submitSort('newest')">Mới nhất</button>
-                    <button type="button" class="sort-pill-btn <%= "best_selling".equals(sort) ? "active" : "" %>" onclick="submitSort('best_selling')">Bán chạy</button>
-                    <button type="button" class="sort-pill-btn <%= "price_asc".equals(sort) ? "active" : "" %>" onclick="submitSort('price_asc')">Giá thấp → cao</button>
-                    <button type="button" class="sort-pill-btn <%= "price_desc".equals(sort) ? "active" : "" %>" onclick="submitSort('price_desc')">Giá cao → thấp</button>
+                    <button type="button" class="sort-pill-btn <%= "popular".equals(sort) ? "active" : "" %>" onclick="submitSort('popular')">🔥 Phổ biến</button>
+                                        <button type="button" class="sort-pill-btn <%= "newest".equals(sort) ? "active" : "" %>" onclick="submitSort('newest')">🆕 Mới nhất</button>
+                                        <button type="button" class="sort-pill-btn <%= "best_selling".equals(sort) ? "active" : "" %>" onclick="submitSort('best_selling')">📦 Bán chạy</button>
+                                        <button type="button" class="sort-pill-btn <%= "price_asc".equals(sort) ? "active" : "" %>" onclick="submitSort('price_asc')">💰 Giá thấp → cao</button>
+                                        <button type="button" class="sort-pill-btn <%= "price_desc".equals(sort) ? "active" : "" %>" onclick="submitSort('price_desc')">💎 Giá cao → thấp</button>
                     <span class="sort-right-count"><strong><%= products.size() %></strong> sản phẩm</span>
                 </div>
 

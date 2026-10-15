@@ -7,6 +7,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -91,7 +92,7 @@ public class AdminDAO extends DBContext {
         return list;
     }
 
-    // 4. Lấy số liệu thống kê tổng quan (Stats)
+    // 4. Lấy số liệu thống kê tổng quan (Stats) - Tự động nhóm ĐỘNG cho tất cả các Role & Trạng thái đơn
     public Map<String, Object> getStats() {
         Map<String, Object> stats = new HashMap<>();
 
@@ -100,23 +101,61 @@ public class AdminDAO extends DBContext {
         String sqlProduct = "SELECT COUNT(*) FROM products";
         String sqlTotalValue = "SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE order_status != 'CANCELLED'";
 
+        // Gom nhóm động toàn bộ các Role thực tế trong Database (kể cả CUSTOM, MODERATOR,...)
+        String sqlRoles = "SELECT COALESCE(role, 'GUEST') AS role_name, COUNT(*) AS count " +
+                "FROM users GROUP BY role ORDER BY count DESC";
+
+        // Gom nhóm động toàn bộ các Trạng thái đơn hàng thực tế trong Database
+        String sqlStatuses = "SELECT COALESCE(order_status, 'UNKNOWN') AS status_name, COUNT(*) AS count " +
+                "FROM orders GROUP BY order_status ORDER BY count DESC";
+
         try (Connection conn = getConnection()) {
-            // Đếm user
+            // Đếm tổng số người dùng
             try (PreparedStatement ps = conn.prepareStatement(sqlUser); ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) stats.put("userCount", rs.getInt(1));
             }
-            // Đếm order
+
+            // Đếm tổng số đơn hàng
             try (PreparedStatement ps = conn.prepareStatement(sqlOrder); ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) stats.put("orderCount", rs.getInt(1));
             }
-            // Đếm product
+
+            // Đếm tổng số sản phẩm
             try (PreparedStatement ps = conn.prepareStatement(sqlProduct); ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) stats.put("productCount", rs.getInt(1));
             }
-            // Tính tổng tiền đơn thành công/đang xử lý
+
+            // Tính tổng giá trị đơn không hủy
             try (PreparedStatement ps = conn.prepareStatement(sqlTotalValue); ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) stats.put("totalOrdersValue", rs.getLong(1));
             }
+
+            // 1. Map lưu toàn bộ Role động (Dùng cho biểu đồ tròn & danh sách hiển thị)
+            Map<String, Integer> roleStats = new LinkedHashMap<>();
+            try (PreparedStatement ps = conn.prepareStatement(sqlRoles); ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String role = rs.getString("role_name").toUpperCase();
+                    int count = rs.getInt("count");
+                    roleStats.put(role, count);
+                    // Đưa key lẻ vào stats để tương thích với code cũ (ví dụ: stats.customCount, stats.customerCount)
+                    stats.put(role.toLowerCase() + "Count", count);
+                }
+            }
+            stats.put("roleStats", roleStats);
+
+            // 2. Map lưu toàn bộ Trạng thái đơn động
+            Map<String, Integer> orderStatusStats = new LinkedHashMap<>();
+            try (PreparedStatement ps = conn.prepareStatement(sqlStatuses); ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String status = rs.getString("status_name").toUpperCase();
+                    int count = rs.getInt("count");
+                    orderStatusStats.put(status, count);
+                    // Đưa key lẻ vào stats (ví dụ: stats.pendingCount, stats.completedCount)
+                    stats.put(status.toLowerCase() + "Count", count);
+                }
+            }
+            stats.put("orderStatusStats", orderStatusStats);
+
         } catch (Exception e) {
             e.printStackTrace();
         }

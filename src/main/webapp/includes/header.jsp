@@ -79,7 +79,7 @@
       <% } else { %>
       <div class="user-dropdown-wrap">
         <div class="user-profile" id="userDropdownBtn">
-          <div class="avatar"><%= headerUser.getAvatarText() %></div>
+          <div class="avatar"><%= isAdminRole ? "ADMIN" : headerUser.getAvatarText() %></div>
           <span class="user-name"><%= headerUser.getShortDisplayName() %> ▾</span>
         </div>
         <div class="user-dropdown-menu" id="userDropdownMenu">

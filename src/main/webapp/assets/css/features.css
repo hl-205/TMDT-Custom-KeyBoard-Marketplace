@@ -2,7 +2,7 @@
     --ink: #172033;
     --muted: #667085;
     --line: #e4e7ec;
-    --paper: #fff;
+    --paper: #ffffff;
     --bg: #f5f7fb;
     --brand: #2563eb;
     --brand-dark: #1d4ed8;
@@ -29,217 +29,178 @@ body {
     line-height: 1.55;
 }
 
-a {
-    color: var(--brand);
-    text-decoration: none;
-}
-
-a:hover {
-    text-decoration: underline;
-}
-
-.container,
 .wrap {
     width: min(1200px, calc(100% - 32px));
     margin: 32px auto;
 }
 
-.container > h1,
-.wrap > h1 {
-    font-size: clamp(26px, 4vw, 34px);
-    line-height: 1.2;
-    margin: 0 0 8px;
-    letter-spacing: -.03em;
+.admin-header {
+    margin-bottom: 24px;
 }
 
-.container > p,
-.wrap > p {
-    color: var(--muted);
-}
-
-h2 {
-    font-size: 21px;
-    margin: 0 0 14px;
-}
-
-h3 {
-    margin: 0 0 8px;
-}
-
-form {
-    margin: 8px 0;
-}
-
-label {
-    display: block;
-    font-weight: 650;
-    margin: 14px 0 6px;
-}
-
-input,
-textarea,
-select {
-    font: inherit;
+.admin-header h1 {
+    font-size: clamp(24px, 3vw, 32px);
+    font-weight: 800;
     color: var(--ink);
-    background: #fff;
-    border: 1px solid #d0d5dd;
-    border-radius: 10px;
-    padding: 10px 12px;
-    max-width: 100%;
+    margin: 0 0 6px;
 }
 
-input:not([type=hidden]),
-textarea {
-    width: 100%;
-}
-
-textarea {
-    min-height: 100px;
-    resize: vertical;
-}
-
-input:focus,
-textarea:focus,
-select:focus {
-    outline: 3px solid rgba(37, 99, 235, .15);
-    border-color: var(--brand);
-}
-
-button,
-.button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    border: 0;
-    border-radius: 10px;
-    padding: 10px 15px;
-    background: var(--brand);
-    color: #fff;
-    font-weight: 700;
-    font-size: 14px;
-    cursor: pointer;
-    text-decoration: none;
-    transition: background .15s, transform .15s;
-}
-
-button:hover,
-.button:hover {
-    background: var(--brand-dark);
-    text-decoration: none;
-    transform: translateY(-1px);
-}
-
-button[type=submit] {
-    margin-top: 8px;
-}
-
-.button-outline {
-    background: #fff;
-    color: var(--brand);
-    border: 1px solid var(--brand);
-}
-
-.button-outline:hover {
-    background: #eff6ff;
-    color: var(--brand-dark);
-}
-
-.checkout-actions {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-top: 18px;
-}
-
-.container > form,
-.panel,
-.stat,
-.card {
-    background: var(--paper);
-    border: 1px solid rgba(228, 231, 236, .8);
-    border-radius: var(--radius);
-    padding: 22px;
-    box-shadow: var(--shadow);
-}
-
-.container > form {
-    max-width: 760px;
-    margin: 20px 0;
-}
-
-.container > form button {
-    margin-top: 18px;
-}
-
-.panel {
-    margin: 20px 0;
-    overflow: auto;
-}
-
-.stats {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 14px;
-    margin: 22px 0;
-}
-
-.stat {
-    min-width: 0;
-    font-size: 14px;
+.admin-header p {
     color: var(--muted);
-}
-
-.stat strong {
-    display: inline-block;
-    color: var(--ink);
-    font-size: 27px;
-    margin-top: 5px;
-}
-
-.chart-layout {
-    display: grid;
-    grid-template-columns: minmax(260px, 460px) 1fr;
-    gap: 24px;
-    align-items: center;
-}
-
-.chart-box {
-    width: 100%;
-    max-width: 460px;
-    min-height: 260px;
-    margin: auto;
-}
-
-.legend-list {
-    list-style: none;
-    padding: 0;
+    font-size: 14px;
     margin: 0;
 }
 
-.legend-list li {
-    padding: 11px 0;
-    border-bottom: 1px solid #eef0f4;
-    color: var(--muted);
+/* ==========================================================================
+   STYLING CÁC THẺ THỐNG KÊ (STATS CARDS - FIX LỖI RỜI NỀN)
+   ========================================================================== */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
 }
 
-.legend-list strong {
-    float: right;
+.stat-card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(15, 23, 42, .08);
+}
+
+.stat-details .stat-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+}
+
+.stat-details .stat-value {
+    font-size: 24px;
+    font-weight: 800;
     color: var(--ink);
+    line-height: 1.2;
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+}
+
+.icon-blue   { background: #eff6ff; color: #2563eb; }
+.icon-purple { background: #f3e8ff; color: #7c3aed; }
+.icon-orange { background: #ffedd5; color: #c2410c; }
+.icon-green  { background: #f0fdf4; color: #16a34a; }
+
+/* ==========================================================================
+   HỆ THỐNG TAB NGHỆ THUẬT (TABS SYSTEM)
+   ========================================================================== */
+.admin-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 12px;
+}
+
+.tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--muted);
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tab-btn:hover {
+    background: rgba(37, 99, 235, 0.06);
+    color: var(--brand);
+}
+
+.tab-btn.active {
+    background: var(--brand);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+}
+
+.tab-pane {
+    display: none;
+}
+
+.tab-pane.active {
+    display: block;
+    animation: fadeIn 0.25s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==========================================================================
+   BẢNG VÀ FORM THAO TÁC
+   ========================================================================== */
+.panel {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.panel-header h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 0;
+}
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
 }
 
 table {
-    border-collapse: collapse;
     width: 100%;
-    margin: 14px 0;
-    min-width: 680px;
-    background: #fff;
+    border-collapse: collapse;
+    text-align: left;
+    white-space: nowrap;
 }
 
-th,
-td {
-    padding: 12px 14px;
-    text-align: left;
+th, td {
+    padding: 14px 16px;
     border-bottom: 1px solid var(--line);
     vertical-align: middle;
 }
@@ -248,9 +209,9 @@ th {
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: .04em;
-    color: #667085;
+    color: var(--muted);
     background: #f8fafc;
-    white-space: nowrap;
+    font-weight: 700;
 }
 
 td {
@@ -261,118 +222,78 @@ tr:hover td {
     background: #fafcff;
 }
 
-td form {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    margin: 3px;
-}
-
-td select {
-    padding: 7px 9px;
-    max-width: 150px;
-}
-
-td button {
-    padding: 7px 10px;
+/* Badges Trạng Thái */
+.badge-status {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
     font-size: 12px;
-}
-
-.error,
-.success,
-.notice {
-    padding: 12px 14px;
-    border-radius: 10px;
-    margin: 14px 0;
-}
-
-.error {
-    background: #fef2f2;
-    color: #991b1b;
-    border: 1px solid #fecaca;
-}
-
-.success {
-    background: #f0fdf4;
-    color: #166534;
-    border: 1px solid #bbf7d0;
-}
-
-.notice {
-    background: #eff6ff;
-    color: #1d4ed8;
-    border: 1px solid #bfdbfe;
-}
-
-.container > h2 {
-    margin-top: 28px;
-}
-
-.container table + h2 {
-    margin-top: 20px;
-}
-
-.container > p a {
     font-weight: 700;
 }
 
-.container > table {
-    border-radius: 12px;
-    overflow: hidden;
+.status-ACTIVE, .status-COMPLETED { background: #dcfce7; color: var(--success); }
+.status-INACTIVE, .status-PENDING   { background: #fef3c7; color: #b45309; }
+.status-BLOCKED, .status-CANCELLED { background: #fee2e2; color: var(--danger); }
+.status-CONFIRMED, .status-PROCESSING, .status-SHIPPED { background: #dbeafe; color: var(--brand-dark); }
+
+/* Input và Button trong Bảng */
+select {
+    font: inherit;
+    color: var(--ink);
+    background: #fff;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 13px;
+    outline: none;
 }
 
-.stats .stat:nth-child(1) {
-    border-top: 3px solid #2563eb;
+select:focus {
+    border-color: var(--brand);
 }
 
-.stats .stat:nth-child(2) {
-    border-top: 3px solid #7c3aed;
+.btn-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s ease;
 }
 
-.stats .stat:nth-child(3) {
-    border-top: 3px solid #0891b2;
+.btn-update {
+    background: var(--brand);
+    color: #fff;
 }
 
-.stats .stat:nth-child(4) {
-    border-top: 3px solid #16a34a;
+.btn-update:hover {
+    background: var(--brand-dark);
 }
 
-.muted {
-    color: var(--muted);
+.btn-delete {
+    background: var(--danger);
+    color: #fff;
+}
+
+.btn-delete:hover {
+    background: #b91c1c;
 }
 
 @media (max-width: 800px) {
-    .stats {
+    .stats-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .chart-layout {
-        grid-template-columns: 1fr;
-    }
-
-    .wrap,
-    .container {
-        width: calc(100% - 22px);
-        margin: 20px auto;
-    }
-
-    .panel,
-    .container > form {
-        padding: 16px;
     }
 }
 
-@media (max-width: 460px) {
-    .stats {
+@media (max-width: 480px) {
+    .stats-grid {
         grid-template-columns: 1fr;
     }
-
-    .checkout-actions > * {
-        width: 100%;
-    }
-
-    .container > h1,
-    .wrap > h1 {
-        font-size: 26px;
+    .admin-tabs {
+        flex-direction: column;
     }
 }

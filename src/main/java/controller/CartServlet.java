@@ -1,11 +1,13 @@
 package controller;
 
+import dao.CartDAO;
 import dao.ProductDAO;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import model.CartItem;
 import model.Product;
+import model.User;
 
 import java.io.IOException;
 import java.util.LinkedHashMap;
@@ -14,11 +16,18 @@ import java.util.Map;
 @WebServlet("/cart")
 public class CartServlet extends HttpServlet {
 
+    private final CartDAO cartDAO = new CartDAO();
+
     @SuppressWarnings("unchecked")
     private Map<Integer, CartItem> getCart(HttpSession session) {
         Map<Integer, CartItem> cart = (Map<Integer, CartItem>) session.getAttribute("cart");
         if (cart == null) {
-            cart = new LinkedHashMap<>();
+            User user = (User) session.getAttribute("user");
+            if (user != null) {
+                cart = cartDAO.getCartByUserId(user.getId());
+            } else {
+                cart = new LinkedHashMap<>();
+            }
             session.setAttribute("cart", cart);
         }
         return cart;
@@ -33,10 +42,10 @@ public class CartServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         HttpSession session = req.getSession();
+        User user = (User) session.getAttribute("user");
         Map<Integer, CartItem> cart = getCart(session);
         String action = req.getParameter("action");
 
-        // Nhận diện cả 'productId' và 'id' từ Form gửi lên
         String productIdStr = req.getParameter("productId");
         if (productIdStr == null || productIdStr.trim().isEmpty()) {
             productIdStr = req.getParameter("id");
@@ -51,14 +60,19 @@ public class CartServlet extends HttpServlet {
 
             if ("remove".equals(action)) {
                 cart.remove(productId);
+                if (user != null) {
+                    cartDAO.removeItem(user.getId(), productId);
+                }
             } else if ("update".equals(action)) {
                 int quantity = Integer.parseInt(req.getParameter("quantity"));
                 CartItem item = cart.get(productId);
                 if (item != null) {
                     item.setQuantity(quantity);
+                    if (user != null) {
+                        cartDAO.saveOrUpdateItem(user.getId(), productId, item.getQuantity());
+                    }
                 }
             } else {
-                // Hành động mặc định: THÊM VÀO GIỎ HÀNG (ADD)
                 ProductDAO productDAO = new ProductDAO();
                 Product product = productDAO.getProductById(productId);
 
@@ -71,15 +85,21 @@ public class CartServlet extends HttpServlet {
                     int addQty = (qtyStr != null && !qtyStr.trim().isEmpty()) ? Integer.parseInt(qtyStr.trim()) : 1;
 
                     CartItem item = cart.get(productId);
+                    int finalQty;
                     if (item == null) {
-                        cart.put(productId, new CartItem(product, Math.min(addQty, product.getStock())));
+                        finalQty = Math.min(addQty, product.getStock());
+                        cart.put(productId, new CartItem(product, finalQty));
                     } else {
-                        int newQty = item.getQuantity() + addQty;
-                        if (newQty > product.getStock()) {
-                            newQty = product.getStock();
+                        finalQty = item.getQuantity() + addQty;
+                        if (finalQty > product.getStock()) {
+                            finalQty = product.getStock();
                             session.setAttribute("flashError", "Số lượng trong giỏ đã đạt giới hạn tồn kho.");
                         }
-                        item.setQuantity(newQty);
+                        item.setQuantity(finalQty);
+                    }
+
+                    if (user != null) {
+                        cartDAO.saveOrUpdateItem(user.getId(), productId, cart.get(productId).getQuantity());
                     }
                 }
             }
@@ -89,7 +109,6 @@ public class CartServlet extends HttpServlet {
             session.setAttribute("flashError", "Lỗi cập nhật giỏ hàng: " + e.getMessage());
         }
 
-        // "Mua ngay" -> sau khi thêm vào giỏ thì chuyển thẳng sang thanh toán
         if (req.getParameter("buyNow") != null && session.getAttribute("flashError") == null) {
             resp.sendRedirect(req.getContextPath() + "/checkout");
             return;

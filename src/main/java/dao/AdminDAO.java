@@ -1,75 +1,176 @@
 package dao;
 
-import java.sql.*;
-import java.util.*;
+import context.DBContext;
 
-/** DAO cho màn hình quản trị cơ bản: người dùng, đơn hàng, sản phẩm. */
-public class AdminDAO {
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-    private List<Map<String, Object>> query(String sql) throws SQLException {
-        List<Map<String, Object>> rows = new ArrayList<>();
-        try (Connection c = DBContext.getConnection();
-             PreparedStatement ps = c.prepareStatement(sql);
+public class AdminDAO extends DBContext {
+
+    // 1. Lấy danh sách tất cả người dùng
+    public List<Map<String, Object>> getUsers() {
+        List<Map<String, Object>> list = new ArrayList<>();
+        String sql = "SELECT id, first_name, last_name, email, role, status FROM users ORDER BY id DESC";
+
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
 
-            ResultSetMetaData md = rs.getMetaData();
-            int n = md.getColumnCount();
+            while (rs.next()) {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", rs.getInt("id"));
+                map.put("first_name", rs.getString("first_name"));
+                map.put("last_name", rs.getString("last_name"));
+                map.put("email", rs.getString("email"));
+                map.put("role", rs.getString("role"));
+                map.put("status", rs.getString("status"));
+                list.add(map);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    // 2. Lấy danh sách tất cả đơn hàng (kèm email người mua)
+    public List<Map<String, Object>> getOrders() {
+        List<Map<String, Object>> list = new ArrayList<>();
+        String sql = "SELECT o.id, o.order_code, o.receiver_name, u.email AS customer_email, " +
+                "o.total_amount, o.order_status " +
+                "FROM orders o LEFT JOIN users u ON o.user_id = u.id ORDER BY o.id DESC";
+
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
-                Map<String, Object> row = new LinkedHashMap<>();
-                for (int i = 1; i <= n; i++) {
-                    row.put(md.getColumnLabel(i), rs.getObject(i));
-                }
-                rows.add(row);
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", rs.getInt("id"));
+                map.put("order_code", rs.getString("order_code"));
+                map.put("receiver_name", rs.getString("receiver_name"));
+                map.put("customer_email", rs.getString("customer_email"));
+                map.put("total_amount", rs.getLong("total_amount"));
+                map.put("order_status", rs.getString("order_status"));
+                list.add(map);
             }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        return rows;
+        return list;
     }
 
-    private boolean update(String sql, Object... args) throws SQLException {
-        try (Connection c = DBContext.getConnection();
-             PreparedStatement ps = c.prepareStatement(sql)) {
+    // 3. Lấy danh sách tất cả sản phẩm (kèm tên cửa hàng)
+    public List<Map<String, Object>> getProducts() {
+        List<Map<String, Object>> list = new ArrayList<>();
+        String sql = "SELECT p.id, p.name, p.sku, s.shop_name, p.price, p.stock, p.status " +
+                "FROM products p LEFT JOIN shops s ON p.shop_id = s.id ORDER BY p.id DESC";
 
-            for (int i = 0; i < args.length; i++) {
-                ps.setObject(i + 1, args[i]);
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", rs.getInt("id"));
+                map.put("name", rs.getString("name"));
+                map.put("sku", rs.getString("sku"));
+                map.put("shop_name", rs.getString("shop_name"));
+                map.put("price", rs.getLong("price"));
+                map.put("stock", rs.getInt("stock"));
+                map.put("status", rs.getString("status"));
+                list.add(map);
             }
-            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    // 4. Lấy số liệu thống kê tổng quan (Stats)
+    public Map<String, Object> getStats() {
+        Map<String, Object> stats = new HashMap<>();
+
+        String sqlUser = "SELECT COUNT(*) FROM users";
+        String sqlOrder = "SELECT COUNT(*) FROM orders";
+        String sqlProduct = "SELECT COUNT(*) FROM products";
+        String sqlTotalValue = "SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE order_status != 'CANCELLED'";
+
+        try (Connection conn = getConnection()) {
+            // Đếm user
+            try (PreparedStatement ps = conn.prepareStatement(sqlUser); ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) stats.put("userCount", rs.getInt(1));
+            }
+            // Đếm order
+            try (PreparedStatement ps = conn.prepareStatement(sqlOrder); ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) stats.put("orderCount", rs.getInt(1));
+            }
+            // Đếm product
+            try (PreparedStatement ps = conn.prepareStatement(sqlProduct); ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) stats.put("productCount", rs.getInt(1));
+            }
+            // Tính tổng tiền đơn thành công/đang xử lý
+            try (PreparedStatement ps = conn.prepareStatement(sqlTotalValue); ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) stats.put("totalOrdersValue", rs.getLong(1));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return stats;
+    }
+
+    // 5. Cập nhật trạng thái Người dùng
+    public void updateUserStatus(int id, String status) {
+        String sql = "UPDATE users SET status = ? WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, status);
+            ps.setInt(2, id);
+            ps.executeUpdate();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
-    public List<Map<String, Object>> getUsers() throws SQLException {
-        return query("SELECT id, first_name, last_name, email, phone, role, status, created_at FROM users ORDER BY created_at DESC");
+    // 6. Cập nhật trạng thái Đơn hàng
+    public void updateOrderStatus(int id, String status) {
+        String sql = "UPDATE orders SET order_status = ? WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, status);
+            ps.setInt(2, id);
+            ps.executeUpdate();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
-    public List<Map<String, Object>> getOrders() throws SQLException {
-        return query("SELECT o.id, o.order_code, o.receiver_name, o.receiver_phone, o.total_amount, o.order_status, o.created_at, u.email AS customer_email FROM orders o JOIN users u ON u.id = o.user_id ORDER BY o.created_at DESC");
+    // 7. Cập nhật trạng thái Sản phẩm
+    public void updateProductStatus(int id, String status) {
+        String sql = "UPDATE products SET status = ? WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, status);
+            ps.setInt(2, id);
+            ps.executeUpdate();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
-    public List<Map<String, Object>> getProducts() throws SQLException {
-        return query("SELECT p.id, p.name, p.sku, p.price, p.stock, p.status, s.shop_name FROM products p JOIN shops s ON s.id = p.shop_id ORDER BY p.created_at DESC");
-    }
-
-    public boolean updateUserStatus(int id, String status) throws SQLException {
-        if (!Set.of("ACTIVE", "INACTIVE", "BLOCKED").contains(status)) return false;
-        return update("UPDATE users SET status = ? WHERE id = ?", status, id);
-    }
-
-    public boolean updateOrderStatus(int id, String status) throws SQLException {
-        if (!Set.of("PENDING", "CONFIRMED", "PROCESSING", "SHIPPED", "COMPLETED", "CANCELLED").contains(status)) return false;
-        return update("UPDATE orders SET order_status = ? WHERE id = ?", status, id);
-    }
-
-    public boolean updateProductStatus(int id, String status) throws SQLException {
-        if (!Set.of("ACTIVE", "INACTIVE").contains(status)) return false;
-        return update("UPDATE products SET status = ? WHERE id = ?", status, id);
-    }
-
-    public boolean deleteProduct(int id) throws SQLException {
-        return update("DELETE FROM products WHERE id = ?", id);
-    }
-
-    public Map<String, Object> getStats() throws SQLException {
-        List<Map<String, Object>> r = query("SELECT (SELECT COUNT(*) FROM users) AS userCount, (SELECT COUNT(*) FROM orders) AS orderCount, (SELECT COUNT(*) FROM products) AS productCount, (SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE order_status <> 'CANCELLED') AS totalOrdersValue");
-        return r.isEmpty() ? new HashMap<>() : r.get(0);
+    // 8. Xóa sản phẩm
+    public void deleteProduct(int id) {
+        String sql = "DELETE FROM products WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            ps.executeUpdate();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

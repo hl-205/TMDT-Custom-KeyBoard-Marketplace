@@ -138,6 +138,18 @@ CREATE TABLE custom_services (
                                  CONSTRAINT fk_services_shop FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+CREATE TABLE cart_items (
+                            id INT AUTO_INCREMENT PRIMARY KEY,
+                            user_id INT NOT NULL,
+                            product_id INT NOT NULL,
+                            quantity INT NOT NULL DEFAULT 1,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                            UNIQUE KEY user_product_unique (user_id, product_id),
+                            CONSTRAINT fk_cart_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                            CONSTRAINT fk_cart_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 CREATE TABLE orders (
                         id INT AUTO_INCREMENT PRIMARY KEY,
                         order_code VARCHAR(30) NOT NULL UNIQUE,
@@ -162,18 +174,18 @@ CREATE TABLE orders (
                         CONSTRAINT fk_orders_shop FOREIGN KEY (shop_id) REFERENCES shops(id)
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS order_items (
-                                           id INT AUTO_INCREMENT PRIMARY KEY,
-                                           order_id INT NOT NULL,
-                                           product_id INT NOT NULL,
-                                           product_name VARCHAR(255) NOT NULL,
-    quantity INT NOT NULL,
-    unit_price DECIMAL(12,0) NOT NULL,
-    line_total DECIMAL(12,0) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
-    CONSTRAINT fk_order_items_product FOREIGN KEY (product_id) REFERENCES products(id)
-    ) ENGINE=InnoDB;
+CREATE TABLE order_items (
+                             id INT AUTO_INCREMENT PRIMARY KEY,
+                             order_id INT NOT NULL,
+                             product_id INT NOT NULL,
+                             product_name VARCHAR(255) NOT NULL,
+                             quantity INT NOT NULL,
+                             unit_price DECIMAL(12,0) NOT NULL,
+                             line_total DECIMAL(12,0) NOT NULL,
+                             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                             CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+                             CONSTRAINT fk_order_items_product FOREIGN KEY (product_id) REFERENCES products(id)
+) ENGINE=InnoDB;
 
 CREATE TABLE order_progress (
                                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -208,14 +220,14 @@ INSERT INTO categories (id, name, slug, icon, product_count) VALUES
                                                                  (6, 'Dịch vụ gia công', 'dich-vu-gia-cong', '🛠️', 142);
 
 INSERT INTO products (id, shop_id, category_id, sku, name, brand, short_desc, description, price, old_price, discount_percent, stock, sold_count, rating_avg, rating_count, badge, support_custom, switch_type, actuation_force, pin_type, layout, mount_type) VALUES
-                                                                                                                                                                                                                                                                   (1, 1, 1, 'KH-TF60-AL', 'Kit Tofu60 2.0 Aluminium — Hotswap, gasket mount, foam sẵn', 'KBDfans', 'Tofu60 2.0 giữ nguyên khối nhôm CNC đặc trưng nhưng chuyển sang gasket mount, cho cảm giác gõ mềm và đồng đều hơn hẳn bản tray mount cũ. Bộ kit đã kèm sẵn ba lớp foam và PET sheet, nên gõ ra ngay không cần mod thêm.', 'PCB hotswap 5 chân hỗ trợ QMK/VIA, đèn south-facing nên dùng được keycap Cherry profile mà không cộm. Daughterboard tách rời giúp thay cáp dễ và giảm nhiễu.', 2690000, 3280000, 18, 38, 1200, 4.9, 218, '-18%', 1, NULL, NULL, '5-pin', '60%', 'Gasket mount'),
+                                                                                                                                                                                                                                                                   (1, 1, 1, 'KH-TF60-AL', 'Kit Tofu60 2.0 Aluminium — Hotswap, gasket mount, foam sẵn', 'KBDfans', 'Tofu60 2.0 giữ nguyên khối nhôm CNC đặc trưng nhưng chuyển sang gasket mount, cho cảm giác gõ mềm và đồng đều hơn hẳn bản tray mount cũ.', 'PCB hotswap 5 chân hỗ trợ QMK/VIA, đèn south-facing nên dùng được keycap Cherry profile mà không cộm.', 2690000, 3280000, 18, 38, 1200, 4.9, 218, '-18%', 1, NULL, NULL, '5-pin', '60%', 'Gasket mount'),
                                                                                                                                                                                                                                                                    (2, 2, 2, 'SW-OIL-70', 'Switch Gateron Oil King — Linear 55g (bịch 70 nút)', 'Gateron', 'Switch Linear cao cấp đã được pre-lube mượt từ nhà máy, âm trầm đục.', 'Gateron Oil King là dòng switch linear nổi tiếng với housing đen tuyền, lò xo mạ đen dài 20mm cho cảm giác nhấn đầm và trả phím nhanh.', 890000, 0, 0, 120, 430, 4.7, 145, 'Mới', 1, 'Linear', '45-55g', '5-pin', NULL, NULL),
-                                                                                                                                                                                                                                                                   (3, 4, 3, 'KC-GMK-OLV', 'Keycap GMK Olivia++ Cherry profile — bộ base 137 phím', 'GMK', 'Bộ keycap ABS doubleshot cao cấp tông màu hồng đen kinh điển.', 'GMK Olivia++ sử dụng nhựa ABS cao cấp sản xuất tại Đức với ký tự doubleshot sắc nét, tương thích mọi layout từ 60% đến Fullsize.', 4150000, 0, 0, 15, 86, 5.0, 42, 'Pre-order', 0, NULL, NULL, NULL, '60%, 75%, TKL', NULL),
-                                                                                                                                                                                                                                                                   (4, 5, 1, 'KH-Q1-PRO', 'Kit Keychron Q1 Pro QMK/VIA — knob, hotswap, ANSI', 'Keychron', 'Kit nhôm nguyên khối CNC layout 75% có núm xoay, kết nối Bluetooth & Type-C.', 'Keychron Q1 Pro sở hữu khung nhôm 6063 CNC hoàn toàn, cấu trúc Double-Gasket mount và mạch hotswap 5-pin hỗ trợ keymap qua VIA.', 4290000, 4790000, 10, 24, 2100, 4.8, 310, '-10%', 1, NULL, NULL, '5-pin', '75%', 'Gasket mount'),
-                                                                                                                                                                                                                                                                   (5, 3, 2, 'SW-AKKO-CY', 'Switch Akko Cream Yellow V3 Pro — Linear 50g (45 nút)', 'Akko', 'Switch quốc dân cho âm thanh clacky/thocky rõ nét, stem POM chống bụi.', 'Phiên bản nâng cấp V3 Pro với chân tiếp xúc hợp kim đồng bền bỉ, lò xo 50g dễ làm quen cho cả gõ văn bản và chơi game.', 320000, 420000, 24, 260, 3400, 4.6, 520, '-24%', 1, 'Linear', '45-55g', '5-pin', NULL, NULL),
+                                                                                                                                                                                                                                                                   (3, 4, 3, 'KC-GMK-OLV', 'Keycap GMK Olivia++ Cherry profile — bộ base 137 phím', 'GMK', 'Bộ keycap ABS doubleshot cao cấp tông màu hồng đen kinh điển.', 'GMK Olivia++ sử dụng nhựa ABS cao cấp sản xuất tại Đức với ký tự doubleshot sắc nét.', 4150000, 0, 0, 15, 86, 5.0, 42, 'Pre-order', 0, NULL, NULL, NULL, '60%, 75%, TKL', NULL),
+                                                                                                                                                                                                                                                                   (4, 5, 1, 'KH-Q1-PRO', 'Kit Keychron Q1 Pro QMK/VIA — knob, hotswap, ANSI', 'Keychron', 'Kit nhôm nguyên khối CNC layout 75% có núm xoay, kết nối Bluetooth & Type-C.', 'Keychron Q1 Pro sở hữu khung nhôm 6063 CNC hoàn toàn, cấu trúc Double-Gasket mount.', 4290000, 4790000, 10, 24, 2100, 4.8, 310, '-10%', 1, NULL, NULL, '5-pin', '75%', 'Gasket mount'),
+                                                                                                                                                                                                                                                                   (5, 3, 2, 'SW-AKKO-CY', 'Switch Akko Cream Yellow V3 Pro — Linear 50g (45 nút)', 'Akko', 'Switch quốc dân cho âm thanh clacky/thocky rõ nét, stem POM chống bụi.', 'Phiên bản nâng cấp V3 Pro với chân tiếp xúc hợp kim đồng bền bỉ, lò xo 50g dễ làm quen.', 320000, 420000, 24, 260, 3400, 4.6, 520, '-24%', 1, 'Linear', '45-55g', '5-pin', NULL, NULL),
                                                                                                                                                                                                                                                                    (6, 2, 4, 'ST-DRV2', 'Stabilizer Durock V2 PCB-mount — đã lube sẵn', 'Durock', 'Bộ stab screw-in tiêu chuẩn vàng chống lọc xọc, đã được thợ lube Krytox 205g0.', 'Bộ sản phẩm gồm 4 thanh 2u và 1 thanh 6.25u/7u, ốc vít mạ vàng kèm long đền chống chập mạch.', 420000, 0, 0, 54, 760, 4.8, 190, NULL, 1, NULL, NULL, NULL, NULL, NULL),
-                                                                                                                                                                                                                                                                   (7, 3, 3, 'KC-AKKO-BP', 'Keycap Akko Black & Pink ASA profile — 158 phím', 'Akko', 'Keycap nhựa PBT Double-Shot dày dặn, ASA profile bầu bĩnh dễ gõ.', 'Bộ nút phím 158 nút cân được hầu hết các chuẩn layout trên thị trường hiện nay, không bị bóng nhám sau thời gian dài sử dụng.', 690000, 890000, 22, 85, 1800, 4.7, 290, '-22%', 0, NULL, NULL, NULL, 'All layout', NULL),
-                                                                                                                                                                                                                                                                   (8, 6, 1, 'KH-M1W-V3', 'Kit Monsgeek M1W V3 nhôm CNC — wireless, hotswap', 'Monsgeek', 'Kit nhôm 75% 3 chế độ kết nối có núm xoay, pin 6000mAh.', 'Lựa chọn hàng đầu trong phân khúc 2 triệu đồng với vỏ nhôm аноdized mịn màng, sẵn đầy đủ foam.', 2150000, 0, 0, 40, 540, 4.5, 98, 'Mới', 1, NULL, NULL, '5-pin', '75%', 'Gasket mount');
+                                                                                                                                                                                                                                                                   (7, 3, 3, 'KC-AKKO-BP', 'Keycap Akko Black & Pink ASA profile — 158 phím', 'Akko', 'Keycap nhựa PBT Double-Shot dày dặn, ASA profile bầu bĩnh dễ gõ.', 'Bộ nút phím 158 nút cân được hầu hết các chuẩn layout trên thị trường hiện nay.', 690000, 890000, 22, 85, 1800, 4.7, 290, '-22%', 0, NULL, NULL, NULL, 'All layout', NULL),
+                                                                                                                                                                                                                                                                   (8, 6, 1, 'KH-M1W-V3', 'Kit Monsgeek M1W V3 nhôm CNC — wireless, hotswap', 'Monsgeek', 'Kit nhôm 75% 3 chế độ kết nối có núm xoay, pin 6000mAh.', 'Lựa chọn hàng đầu trong phân khúc 2 triệu đồng với vỏ nhôm anodized mịn màng.', 2150000, 0, 0, 40, 540, 4.5, 98, 'Mới', 1, NULL, NULL, '5-pin', '75%', 'Gasket mount');
 
 INSERT INTO product_options (product_id, option_group, option_name, extra_price, is_available) VALUES
                                                                                                    (1, 'COLOR', 'Silver', 0, 1),
@@ -248,10 +260,29 @@ INSERT INTO product_compatibilities (product_id, title, description, is_compatib
                                                                                         (1, 'Switch có LED SMD', 'PCB south-facing, không đụng keycap Cherry profile.', 1);
 
 INSERT INTO reviews (product_id, user_id, reviewer_name, avatar_text, rating, variant_info, comment, helpful_count, review_date) VALUES
-                                                                                                                                     (1, 1, 'Nguyễn Minh', 'NM', 5, 'Phân loại: Silver / Brass plate', 'Kit hoàn thiện rất tốt, anodize đều màu, không có vết xước. Gasket êm, gõ nghe chắc chứ không vang. Đã lắp Oil King lube sẵn, tiếng rất đã. Shop đóng gói kỹ, có thêm bộ ốc dự phòng.', 24, '20/09/2026'),
-                                                                                                                                     (1, 1, 'Trần Hoàng', 'TH', 4, 'Phân loại: Black / PC plate', 'Chất lượng ổn trong tầm giá. PC plate mềm hơn brass nhiều, ai thích gõ êm thì chọn. Trừ 1 sao vì giao chậm 2 ngày so với hẹn.', 24, '18/09/2026');
+                                                                                                                                     (1, 1, 'Nguyễn Minh', 'NM', 5, 'Phân loại: Silver / Brass plate', 'Kit hoàn thiện rất tốt, anodize đều màu, không có vết xước.', 24, '20/09/2026'),
+                                                                                                                                     (1, 1, 'Trần Hoàng', 'TH', 4, 'Phân loại: Black / PC plate', 'Chất lượng ổn trong tầm giá.', 24, '18/09/2026');
 
 INSERT INTO custom_services (shop_id, service_name, price, duration_text, description, is_popular, sold_month) VALUES
                                                                                                                    (2, 'Lube cơ bản', 450000, '3–4 ngày làm việc', 'Lube housing + lò xo toàn bộ switch; Lắp ráp và test từng phím; Bảo hành 3 tháng', 0, 14),
-                                                                                                                   (2, 'Full lube + tune', 750000, '5–7 ngày làm việc', 'Toàn bộ gói Lube cơ bản; Film switch (Deskeys/TX); Clip + lube + band-aid stabilizer; Tape mod & PE foam theo yêu cầu; Bảo hành 6 tháng', 1, 19),
-                                                                                                                   (2, 'Premium — mod đầy đủ', 1250000, '7–10 ngày làm việc', 'Toàn bộ gói Full lube + tune; Force break mod, holee mod; Cân chỉnh âm thanh theo yêu cầu; Quay video test bàn giao; Bảo hành 12 tháng', 0, 5);
+                                                                                                                   (2, 'Full lube + tune', 750000, '5–7 ngày làm việc', 'Toàn bộ gói Lube cơ bản; Film switch; Clip + lube + band-aid stabilizer; Tape mod', 1, 19),
+                                                                                                                   (2, 'Premium — mod đầy đủ', 1250000, '7–10 ngày làm việc', 'Toàn bộ gói Full lube + tune; Force break mod, holee mod; Cân chỉnh âm thanh', 0, 5);
+
+INSERT INTO cart_items (user_id, product_id, quantity) VALUES
+                                                           (1, 1, 1),
+                                                           (1, 2, 2);
+
+INSERT INTO orders (id, order_code, user_id, shop_id, receiver_name, receiver_phone, shipping_address, is_custom_order, subtotal, custom_fee, shipping_fee, discount_amount, total_amount, payment_method, order_status, progress_percent, customer_note, committed_days) VALUES
+                                                                                                                                                                                                                                                                              (1, 'KH-20261015-001', 1, 1, 'Nguyễn Văn Anh', '0987654321', '123 Nguyễn Trãi, Quận 5, TP.HCM', 1, 2690000, 450000, 30000, 100000, 3070000, 'VNPAY-QR', 'PROCESSING', 40, 'Nhờ shop lube kỹ stab giúp mình nhé.', 5),
+                                                                                                                                                                                                                                                                              (2, 'KH-20261010-002', 1, 2, 'Nguyễn Văn Anh', '0987654321', '123 Nguyễn Trãi, Quận 5, TP.HCM', 0, 1780000, 0, 25000, 0, 1805000, 'COD', 'COMPLETED', 100, 'Giao giờ hành chính.', 3);
+
+INSERT INTO order_items (order_id, product_id, product_name, quantity, unit_price, line_total) VALUES
+                                                                                                   (1, 1, 'Kit Tofu60 2.0 Aluminium — Hotswap, gasket mount, foam sẵn', 1, 2690000, 2690000),
+                                                                                                   (2, 2, 'Switch Gateron Oil King — Linear 55g (bịch 70 nút)', 2, 890000, 1780000);
+
+INSERT INTO order_progress (order_id, step_number, step_title, step_desc, status, updated_time) VALUES
+                                                                                                    (1, 1, 'Đã nhận đơn', 'Đơn hàng đã được xác nhận và chuyển sang bộ phận kỹ thuật.', 'COMPLETED', '15/10/2026 09:00'),
+                                                                                                    (1, 2, 'Kiểm tra linh kiện', 'Đã kiểm tra Kit Tofu60 2.0 và PCB hotswap hoạt động bình thường.', 'COMPLETED', '15/10/2026 14:30'),
+                                                                                                    (1, 3, 'Gia công & Lube', 'Đang thực hiện lube switch và căn chỉnh stabilizer.', 'IN_PROGRESS', '15/10/2026 16:00'),
+                                                                                                    (1, 4, 'Kiểm tra chất lượng (QC)', 'Test phím, kiểm tra âm thanh và đóng gói.', 'PENDING', NULL),
+                                                                                                    (1, 5, 'Bàn giao vận chuyển', 'Đơn hàng sẵn sàng giao cho đơn vị vận chuyển.', 'PENDING', NULL);

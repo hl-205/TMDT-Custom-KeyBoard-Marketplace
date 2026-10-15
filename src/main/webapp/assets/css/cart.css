@@ -1,11 +1,162 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
 
-.cart-empty {
+body {
+    background-color: #f8fafc;
+    color: #1e293b;
+    padding: 40px 20px;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.page-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 24px;
+}
+
+/* Card Container */
+.card {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    border: 1px solid #f1f5f9;
+    overflow: hidden;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+th {
+    background-color: #f8fafc;
+    padding: 16px 24px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+td {
+    padding: 20px 24px;
+    font-size: 14px;
+    color: #334155;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+tr:hover td {
+    background-color: #f8fafc;
+}
+
+.order-code {
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.2px;
+}
+
+.order-date {
+    color: #64748b;
+    font-size: 13px;
+}
+
+.price {
+    font-weight: 700;
+    color: #ea580c;
+    font-size: 15px;
+}
+
+/* Status Badge */
+.status-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.status-PENDING {
+    background-color: #fef3c7;
+    color: #d97706;
+}
+
+.status-PROCESSING {
+    background-color: #dbeafe;
+    color: #1d4ed8;
+}
+
+.status-COMPLETED {
+    background-color: #dcfce7;
+    color: #15803d;
+}
+
+.status-CANCELLED {
+    background-color: #fee2e2;
+    color: #b91c1c;
+}
+
+.btn-detail {
+    display: inline-block;
+    padding: 8px 16px;
+    background-color: #ffffff;
+    color: #1b64f2;
+    border: 1px solid #1b64f2;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.btn-detail:hover {
+    background-color: #1b64f2;
+    color: #ffffff;
+}
+
+/* Empty State / Cart Empty */
+.cart-empty,
+.empty-state {
     text-align: center;
     padding: 60px 20px;
 }
+
 .cart-empty-text {
     font-size: 40px;
     font-weight: 800;
     color: var(--ink, #172033);
     margin: 0 0 24px;
+}
+
+.btn-home {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #1b64f2;
+    color: #ffffff;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    transition: background-color 0.2s ease;
+}
+
+.btn-home:hover {
+    background-color: #144bc0;
 }

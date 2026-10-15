@@ -6,13 +6,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Giỏ hàng</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/features.css">
-    <link rel="stylesheet" href="assets/css/style.css">
-    <link rel="stylesheet" href="assets/css/cart.css">
+    <link rel="stylesheet" href="assets/css/features.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
 </head>
 <body>
 <jsp:include page="includes/header.jsp" />
-<main class="container">
 
     <%
         String err = (String) session.getAttribute("flashError");

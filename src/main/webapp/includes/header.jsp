@@ -4,12 +4,17 @@
   User headerUser = (User) session.getAttribute("user");
   java.util.Map<?, ?> headerCart = (java.util.Map<?, ?>) session.getAttribute("cart");
   int headerCartCount = (headerCart == null) ? 0 : headerCart.size();
+
+  // Kiểm tra chính xác vai trò
+  boolean isAdminRole  = (headerUser != null && "ADMIN".equalsIgnoreCase(headerUser.getRole()));
   boolean isSellerRole = (headerUser != null && "SELLER".equalsIgnoreCase(headerUser.getRole()));
 %>
 <div class="topbar">
   <div class="container topbar-content">
     <div class="topbar-left">
+      <% if (isSellerRole) { %>
       <a href="seller-orders"><strong>Kênh người bán</strong></a> <span class="dot">·</span>
+      <% } %>
       <a href="#">Tải ứng dụng</a> <span class="dot">·</span>
       <a href="#">Kết nối cộng đồng</a>
     </div>
@@ -20,9 +25,17 @@
       <a href="register"><strong>Đăng ký</strong></a>
       <a href="login"><strong>Đăng nhập</strong></a>
       <% } else { %>
-      <% if (isSellerRole) { %>
-      <a href="seller-services" style="color:#60A5FA;"><strong>🏪 Quản lý Xưởng</strong></a>
+
+      <%-- CHỈ CHỦ TÀI KHOẢN ADMIN MỚI THẤY LINK NÀY --%>
+      <% if (isAdminRole) { %>
+      <a href="${pageContext.request.contextPath}/admin" style="color:#EF4444; font-weight:700;">⚡ Trang Admin</a>
       <% } %>
+
+      <%-- CHỈ SELLER MỚI THẤY LINK NÀY --%>
+      <% if (isSellerRole) { %>
+      <a href="seller-services" style="color:#60A5FA; font-weight:700;">🏪 Quản lý Xưởng</a>
+      <% } %>
+
       <a href="my-orders"><strong>Tài khoản</strong></a>
       <a href="logout"><strong>Đăng xuất</strong></a>
       <% } %>
@@ -74,11 +87,22 @@
             <strong><%= headerUser.getFullName() %></strong>
             <span><%= headerUser.getEmail() %> (<%= headerUser.getRole() %>)</span>
           </div>
-          <% if (isSellerRole) { %>
-          <a href="seller-orders" class="dropdown-item" style="color:#1B64F2;font-weight:700;">🏪 Quản lý đơn hàng Xưởng</a>
-          <a href="seller-services" class="dropdown-item" style="color:#1B64F2;font-weight:700;">🔧 Quản lý dịch vụ Custom</a>
+
+          <%-- DÀNH RIÊNG CHO ADMIN --%>
+          <% if (isAdminRole) { %>
+          <a href="${pageContext.request.contextPath}/admin" class="dropdown-item" style="color:#DC2626; font-weight:700;">
+            ⚡ Quản lý Admin
+          </a>
           <div class="dropdown-divider"></div>
           <% } %>
+
+          <%-- DÀNH RIÊNG CHO SELLER --%>
+          <% if (isSellerRole) { %>
+          <a href="seller-orders" class="dropdown-item" style="color:#1B64F2; font-weight:700;">🏪 Quản lý đơn hàng Xưởng</a>
+          <a href="seller-services" class="dropdown-item" style="color:#1B64F2; font-weight:700;">🔧 Quản lý dịch vụ Custom</a>
+          <div class="dropdown-divider"></div>
+          <% } %>
+
           <a href="my-orders" class="dropdown-item">📦 Đơn hàng của tôi</a>
           <a href="my-reviews" class="dropdown-item">⭐ Đánh giá của tôi</a>
           <a href="custom-builder" class="dropdown-item" style="color:#1B64F2;font-weight:700;">⚙️ Custom Builder</a>

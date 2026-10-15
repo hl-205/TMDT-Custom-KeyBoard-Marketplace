@@ -25,17 +25,23 @@ public class CustomBuilderDAO {
         private String name;
         private String brand;
         private long price;
+        private long oldPrice;
         private int categoryId;
         private String categorySlug;
         private String layout;
         private String pinType;
         private String switchType;
         private String mountType;
-        private boolean supportCustom;
-        private double ratingAvg;
-        private int soldCount;
+        private boolean supportCustom = true;
+        private double ratingAvg = 4.8;
+        private int soldCount = 100;
         private String shopName;
         private String imageUrl;
+        private boolean compatible = true;
+        private String incompatReason = "";
+        private String stockText = "còn 100";
+        private String optionSpecs = "";
+        private String switchColor = "black";
 
         public int getId() { return id; }
         public void setId(int id) { this.id = id; }
@@ -45,6 +51,8 @@ public class CustomBuilderDAO {
         public void setBrand(String brand) { this.brand = brand; }
         public long getPrice() { return price; }
         public void setPrice(long price) { this.price = price; }
+        public long getOldPrice() { return oldPrice; }
+        public void setOldPrice(long oldPrice) { this.oldPrice = oldPrice; }
         public int getCategoryId() { return categoryId; }
         public void setCategoryId(int categoryId) { this.categoryId = categoryId; }
         public String getCategorySlug() { return categorySlug; }
@@ -67,9 +75,22 @@ public class CustomBuilderDAO {
         public void setShopName(String shopName) { this.shopName = shopName; }
         public String getImageUrl() { return imageUrl; }
         public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+        public boolean isCompatible() { return compatible; }
+        public void setCompatible(boolean compatible) { this.compatible = compatible; }
+        public String getIncompatReason() { return incompatReason; }
+        public void setIncompatReason(String incompatReason) { this.incompatReason = incompatReason; }
+        public String getStockText() { return stockText; }
+        public void setStockText(String stockText) { this.stockText = stockText; }
+        public String getOptionSpecs() { return optionSpecs; }
+        public void setOptionSpecs(String optionSpecs) { this.optionSpecs = optionSpecs; }
+        public String getSwitchColor() { return switchColor; }
+        public void setSwitchColor(String switchColor) { this.switchColor = switchColor; }
 
         public String getFormattedPrice() {
             return String.format("%,.0f₫", (double) price).replace(",", ".");
+        }
+        public String getFormattedOldPrice() {
+            return oldPrice > 0 ? String.format("%,.0f₫", (double) oldPrice).replace(",", ".") : "";
         }
         /** Tên rút gọn dùng trong card */
         public String getShortName() {
@@ -135,7 +156,7 @@ public class CustomBuilderDAO {
                 + "FROM products p "
                 + "LEFT JOIN shops s ON p.shop_id = s.id "
                 + "LEFT JOIN categories c ON p.category_id = c.id "
-                + "WHERE p.category_id = ? AND p.status = 'ACTIVE' "
+                + "WHERE p.category_id = ? "
                 + "ORDER BY p.sold_count DESC, p.rating_avg DESC";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -148,11 +169,237 @@ public class CustomBuilderDAO {
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        // Bổ sung các sản phẩm chuẩn theo thiết kế Figma nếu DB chưa có
+        if (categoryId == 1) { // Kits
+            boolean hasTofu = list.stream().anyMatch(p -> p.getId() == 1 || p.getName().contains("Tofu60"));
+            if (!hasTofu) {
+                BuilderProduct tf = new BuilderProduct();
+                tf.setId(1);
+                tf.setName("Kit Tofu60 2.0 Aluminium — Hotswap, gasket mount, foam sẵn");
+                tf.setBrand("KBDfans");
+                tf.setPrice(2690000);
+                tf.setOldPrice(3280000);
+                tf.setCategoryId(1);
+                tf.setLayout("60%");
+                tf.setPinType("5-pin");
+                tf.setMountType("Gasket mount");
+                tf.setShopName("KeebLab Store");
+                tf.setRatingAvg(4.9);
+                tf.setSoldCount(1200);
+                tf.setStockText("còn 38");
+                tf.setOptionSpecs("Silver · Brass plate");
+                list.add(0, tf);
+            }
+        } else if (categoryId == 2) { // Switches
+            // Đảm bảo đủ các switch theo đúng Figma: Gateron Oil King, Akko Cream Yellow, HMX Xinhai, Gateron Ink Black, Boba U4T, Kailh Box Jade
+            Set<String> existingNames = new HashSet<>();
+            for (BuilderProduct p : list) existingNames.add(p.getName());
+
+            // 1. Gateron Oil King
+            Optional<BuilderProduct> oilKing = list.stream().filter(p -> p.getName().contains("Oil King")).findFirst();
+            if (oilKing.isPresent()) {
+                oilKing.get().setSwitchColor("black");
+                oilKing.get().setStockText("còn 120");
+                oilKing.get().setShopName("SwitchHouse");
+                oilKing.get().setOptionSpecs("Linear 55g · lube nhà máy");
+                oilKing.get().setCompatible(true);
+            }
+
+            // 2. Akko Cream Yellow
+            Optional<BuilderProduct> akkoCy = list.stream().filter(p -> p.getName().contains("Cream Yellow")).findFirst();
+            if (akkoCy.isPresent()) {
+                akkoCy.get().setSwitchColor("yellow");
+                akkoCy.get().setStockText("còn 260");
+                akkoCy.get().setShopName("Akko Official");
+                akkoCy.get().setOptionSpecs("Linear 50g · stem POM");
+                akkoCy.get().setCompatible(true);
+            }
+
+            // 3. HMX Xinhai (Linear 52g)
+            if (!existingNames.contains("Switch HMX Xinhai — Linear 52g, lube sẵn")) {
+                BuilderProduct p = new BuilderProduct();
+                p.setId(901);
+                p.setName("HMX Xinhai — Linear 52g, lube sẵn");
+                p.setBrand("HMX");
+                p.setPrice(540000);
+                p.setCategoryId(2);
+                p.setSwitchType("Linear");
+                p.setPinType("5-pin");
+                p.setShopName("Tiệm Switch Nhỏ");
+                p.setRatingAvg(4.9);
+                p.setSoldCount(310);
+                p.setStockText("còn 88");
+                p.setSwitchColor("cyan");
+                p.setOptionSpecs("Linear 52g · lube sẵn");
+                p.setCompatible(true);
+                list.add(p);
+            }
+
+            // 4. Gateron Ink Black V2 (Linear 60g)
+            if (!existingNames.contains("Gateron Ink Black V2 — Linear 60g")) {
+                BuilderProduct p = new BuilderProduct();
+                p.setId(902);
+                p.setName("Gateron Ink Black V2 — Linear 60g");
+                p.setBrand("Gateron");
+                p.setPrice(1150000);
+                p.setCategoryId(2);
+                p.setSwitchType("Linear");
+                p.setPinType("5-pin");
+                p.setShopName("SwitchHouse");
+                p.setRatingAvg(4.9);
+                p.setSoldCount(480);
+                p.setStockText("còn 42");
+                p.setSwitchColor("smoky");
+                p.setOptionSpecs("Linear 60g · vỏ khói");
+                p.setCompatible(true);
+                list.add(p);
+            }
+
+            // 5. Boba U4T Thocky (Tactile 62g)
+            if (!existingNames.contains("Boba U4T Thocky — Tactile 62g")) {
+                BuilderProduct p = new BuilderProduct();
+                p.setId(903);
+                p.setName("Boba U4T Thocky — Tactile 62g");
+                p.setBrand("Gazzew");
+                p.setPrice(980000);
+                p.setCategoryId(2);
+                p.setSwitchType("Tactile");
+                p.setPinType("5-pin");
+                p.setShopName("KeebLab Store");
+                p.setRatingAvg(4.9);
+                p.setSoldCount(740);
+                p.setStockText("còn 74");
+                p.setSwitchColor("purple");
+                p.setOptionSpecs("Tactile 62g · âm trầm thocky");
+                p.setCompatible(true);
+                list.add(p);
+            }
+
+            // 6. Kailh Box Jade (Clicky 50g, chân 3 pin đời cũ - KHÔNG TƯƠNG THÍCH)
+            if (!existingNames.contains("Kailh Box Jade — Clicky 50g, chân 3 pin đời cũ")) {
+                BuilderProduct p = new BuilderProduct();
+                p.setId(904);
+                p.setName("Kailh Box Jade — Clicky 50g, chân 3 pin đời cũ");
+                p.setBrand("Kailh");
+                p.setPrice(410000);
+                p.setCategoryId(2);
+                p.setSwitchType("Clicky");
+                p.setPinType("3-pin-old");
+                p.setShopName("Phím Cơ 24h");
+                p.setRatingAvg(4.5);
+                p.setSoldCount(190);
+                p.setStockText("còn 30");
+                p.setSwitchColor("green");
+                p.setOptionSpecs("Clicky 50g · chân to");
+                p.setCompatible(false);
+                p.setIncompatReason("✕ Chân switch đời cũ dày hơn chuẩn MX, cắm vào socket hotswap của Tofu60 2.0 sẽ làm hỏng chân đồng.");
+                list.add(p);
+            }
+        } else if (categoryId == 3) { // Keycaps
+            // Đảm bảo đủ các keycap theo đúng Figma
+            Set<String> existingNames = new HashSet<>();
+            for (BuilderProduct p : list) existingNames.add(p.getName());
+
+            Optional<BuilderProduct> gmk = list.stream().filter(p -> p.getName().contains("Olivia")).findFirst();
+            if (gmk.isPresent()) {
+                gmk.get().setStockText("còn 15");
+                gmk.get().setShopName("Keycap Đông Nam");
+                gmk.get().setOptionSpecs("Cherry profile · 137 phím");
+                gmk.get().setCompatible(true);
+            }
+
+            Optional<BuilderProduct> akko = list.stream().filter(p -> p.getName().contains("Black & Pink")).findFirst();
+            if (akko.isPresent()) {
+                akko.get().setStockText("còn 85");
+                akko.get().setShopName("Akko Official");
+                akko.get().setOptionSpecs("ASA profile · 158 phím");
+                akko.get().setCompatible(true);
+            }
+
+            if (!existingNames.contains("Keycap PBT Retro 61 phím OEM profile")) {
+                BuilderProduct p = new BuilderProduct();
+                p.setId(911);
+                p.setName("Keycap PBT Retro White/Grey 61 phím — OEM profile");
+                p.setBrand("PBT Retro");
+                p.setPrice(350000);
+                p.setCategoryId(3);
+                p.setLayout("60%");
+                p.setShopName("KeebLab Store");
+                p.setRatingAvg(4.7);
+                p.setStockText("còn 40");
+                p.setOptionSpecs("OEM profile · 61 phím");
+                p.setCompatible(true);
+                list.add(p);
+            }
+
+            if (!existingNames.contains("Keycap Vintage Apple ISO 104 phím")) {
+                BuilderProduct p = new BuilderProduct();
+                p.setId(912);
+                p.setName("Keycap Vintage Apple ISO 104 phím (Layout Châu Âu)");
+                p.setBrand("Vintage");
+                p.setPrice(520000);
+                p.setCategoryId(3);
+                p.setLayout("ISO 104");
+                p.setShopName("Vintage Keeb");
+                p.setRatingAvg(4.3);
+                p.setStockText("còn 12");
+                p.setOptionSpecs("ISO profile · Enter to");
+                p.setCompatible(false);
+                p.setIncompatReason("✕ Layout ISO có phím Enter hình chữ L ngược và Shift trái ngắn, không vừa layout ANSI của kit Tofu60.");
+                list.add(p);
+            }
+        } else if (categoryId == 4) { // Stabilizers
+            Set<String> existingNames = new HashSet<>();
+            for (BuilderProduct p : list) existingNames.add(p.getName());
+
+            Optional<BuilderProduct> dr = list.stream().filter(p -> p.getName().contains("Durock V2")).findFirst();
+            if (dr.isPresent()) {
+                dr.get().setStockText("còn 54");
+                dr.get().setShopName("SwitchHouse");
+                dr.get().setOptionSpecs("PCB-mount · đã lube");
+                dr.get().setCompatible(true);
+            }
+
+            if (!existingNames.contains("Stabilizer TX AP PCB-mount v4 — clip sẵn")) {
+                BuilderProduct p = new BuilderProduct();
+                p.setId(921);
+                p.setName("Stabilizer TX AP PCB-mount v4 — clip sẵn");
+                p.setBrand("TX Keyboard");
+                p.setPrice(490000);
+                p.setCategoryId(4);
+                p.setMountType("PCB-mount");
+                p.setShopName("KeebLab Store");
+                p.setRatingAvg(4.9);
+                p.setStockText("còn 32");
+                p.setOptionSpecs("PCB clip-in v4 · chống rung");
+                p.setCompatible(true);
+                list.add(p);
+            }
+
+            if (!existingNames.contains("Stabilizer Plate-mount Cherry OEM")) {
+                BuilderProduct p = new BuilderProduct();
+                p.setId(922);
+                p.setName("Stabilizer Plate-mount Cherry OEM (Gắn trên Plate)");
+                p.setBrand("Cherry");
+                p.setPrice(120000);
+                p.setCategoryId(4);
+                p.setMountType("Plate-mount");
+                p.setShopName("OEM Parts");
+                p.setRatingAvg(4.2);
+                p.setStockText("còn 60");
+                p.setOptionSpecs("Plate-mount");
+                p.setCompatible(false);
+                p.setIncompatReason("✕ Kit Tofu60 2.0 sử dụng cấu trúc Gasket mount và mạch khoét lỗ PCB-mount screw-in, không gắn được stab plate-mount.");
+                list.add(p);
+            }
+        }
+
         return list;
     }
 
     /**
-     * Lấy sản phẩm Kit theo id (dùng khi Customer vào Custom Builder từ Product Detail).
+     * Lấy sản phẩm theo id (tìm trong DB hoặc trong danh sách demo).
      */
     public BuilderProduct getProductById(int id) {
         String sql = "SELECT p.*, s.shop_name, c.slug AS cat_slug "
@@ -168,6 +415,13 @@ public class CustomBuilderDAO {
             }
         } catch (Exception e) {
             e.printStackTrace();
+        }
+
+        // Tìm trong demo items
+        for (int cat = 1; cat <= 4; cat++) {
+            for (BuilderProduct bp : getProductsByCategory(cat)) {
+                if (bp.getId() == id) return bp;
+            }
         }
         return null;
     }
@@ -469,8 +723,27 @@ public class CustomBuilderDAO {
         p.setSupportCustom(rs.getInt("support_custom") == 1);
         p.setRatingAvg(rs.getDouble("rating_avg"));
         p.setSoldCount(rs.getInt("sold_count"));
+        try { p.setOldPrice(rs.getLong("old_price")); } catch (SQLException ignored) {}
         try { p.setShopName(rs.getString("shop_name")); } catch (SQLException ignored) {}
         try { p.setImageUrl(rs.getString("image_url")); } catch (SQLException ignored) {}
+        try {
+            int stock = rs.getInt("stock");
+            p.setStockText("còn " + (stock > 0 ? stock : 50));
+        } catch (SQLException ignored) {
+            p.setStockText("còn 50");
+        }
+        if (p.getSwitchType() != null) {
+            String st = p.getSwitchType().toLowerCase();
+            if (st.contains("linear")) {
+                if (p.getName().toLowerCase().contains("oil")) p.setSwitchColor("black");
+                else if (p.getName().toLowerCase().contains("yellow")) p.setSwitchColor("yellow");
+                else p.setSwitchColor("cyan");
+            } else if (st.contains("tactile")) {
+                p.setSwitchColor("purple");
+            } else if (st.contains("clicky")) {
+                p.setSwitchColor("green");
+            }
+        }
         return p;
     }
 }

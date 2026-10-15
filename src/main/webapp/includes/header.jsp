@@ -101,6 +101,7 @@
       <li><a href="category?cat=5">Phụ kiện</a></li>
       <li><a href="category?cat=6">Dịch vụ gia công</a></li>
       <li><a href="category">Build sẵn</a></li>
+      <li><a href="shops">🏪 Gian hàng</a></li>
     </ul>
     <a href="category" class="nav-group-buy">
       🔥 Group buy đang mở

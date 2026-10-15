@@ -25,6 +25,7 @@ public class Product {
     private boolean supportCustom;
     private String layout;
     private String mountType;
+    private String imageUrl;
 
     // Thông tin Shop đi kèm sản phẩm
     private String shopName;
@@ -36,6 +37,15 @@ public class Product {
     private int shopFollowers;
     private int shopResponseRate;
     private String shopResponseTime;
+
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
 
     public static String formatVND(long amount) {
         DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.getDefault());

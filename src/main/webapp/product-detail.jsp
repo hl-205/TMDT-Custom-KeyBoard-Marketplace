@@ -192,7 +192,7 @@
                 <button type="submit" name="buyNow" value="1" class="btn-buy-now">Mua ngay</button>
             </form>
 
-            <a href="custom-builder.jsp?kitId=<%= product.getId() %>" class="btn-custom-builder-wide">
+            <a href="custom-builder?kitId=<%= product.getId() %>" class="btn-custom-builder-wide">
                 ⚙️ Dùng kit này để build custom trong Custom Builder
             </a>
 
@@ -403,7 +403,7 @@
             <div class="sidebar-blue-promo">
                 <h4>⚙️ Build trọn bộ với kit này</h4>
                 <p>Chọn switch, keycap và gói gia công phù hợp — hệ thống tự loại linh kiện không lắp vừa.</p>
-                <a href="custom-builder.jsp?kitId=<%= product.getId() %>" class="btn-full-blue">Mở Custom Builder</a>
+                <a href="custom-builder?kitId=<%= product.getId() %>" class="btn-full-blue">Mở Custom Builder</a>
             </div>
 
             <div class="sidebar-box-card">

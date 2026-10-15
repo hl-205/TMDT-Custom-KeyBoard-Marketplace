@@ -30,13 +30,8 @@ public class CustomBuilderServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        // Kiểm tra đăng nhập
         HttpSession session = request.getSession();
         User currentUser = (User) session.getAttribute("user");
-        if (currentUser == null) {
-            response.sendRedirect("login?redirect=custom-builder");
-            return;
-        }
 
         // Nếu vào từ product-detail thì pre-select kit
         int preKitId = 0;
@@ -53,22 +48,24 @@ public class CustomBuilderServlet extends HttpServlet {
 
         // Load danh sách shop xưởng & gói dịch vụ
         List<Shop> workshops = builderDAO.getWorkshopShops();
-        // Gom services của tất cả workshop vào map shopId -> list services
         Map<Integer, List<Shop.CustomServiceItem>> servicesMap = new LinkedHashMap<>();
         for (Shop ws : workshops) {
             servicesMap.put(ws.getId(), builderDAO.getServicesByShop(ws.getId()));
         }
 
-        // Nếu user đã chọn linh kiện (từ query param), tính tương thích ngay
-        int selKit    = parseIntSafe(request.getParameter("selKit"),    preKitId);
-        int selSwitch = parseIntSafe(request.getParameter("selSwitch"), 0);
-        int selKeycap = parseIntSafe(request.getParameter("selKeycap"), 0);
-        int selStab   = parseIntSafe(request.getParameter("selStab"),   0);
+        // Linh kiện được chọn (mặc định chọn Kit Tofu60 và Switch Oil King nếu chưa có để khớp Figma mockup)
+        int defaultKit = (preKitId > 0) ? preKitId : 1;
+        int selKit     = parseIntSafe(request.getParameter("selKit"),     defaultKit);
+        int selSwitch  = parseIntSafe(request.getParameter("selSwitch"),  2); // Gateron Oil King
+        int selKeycap  = parseIntSafe(request.getParameter("selKeycap"),  0);
+        int selStab    = parseIntSafe(request.getParameter("selStab"),    6); // Durock V2
+        int selService = parseIntSafe(request.getParameter("selService"), 0);
 
-        List<CompatResult> compatResults = null;
-        if (selKit > 0 || selSwitch > 0) {
-            compatResults = builderDAO.checkCompatibility(selKit, selSwitch, selKeycap, selStab);
-        }
+        // Bước hiện tại (1: Kit, 2: Switch, 3: Keycap, 4: Gia công & Stab, 5: Xem lại & Đặt hàng)
+        int step = parseIntSafe(request.getParameter("step"), (selKit > 0 ? 2 : 1));
+
+        // Kiểm tra tương thích
+        List<CompatResult> compatResults = builderDAO.checkCompatibility(selKit, selSwitch, selKeycap, selStab);
 
         // Đặt attributes
         request.setAttribute("kits",          kits);
@@ -83,12 +80,14 @@ public class CustomBuilderServlet extends HttpServlet {
         request.setAttribute("selSwitch",     selSwitch);
         request.setAttribute("selKeycap",     selKeycap);
         request.setAttribute("selStab",       selStab);
+        request.setAttribute("selService",    selService);
+        request.setAttribute("currentStep",   step);
 
         request.getRequestDispatcher("custom-builder.jsp").forward(request, response);
     }
 
     // ──────────────────────────────────────────────
-    // POST: Kiểm tra tương thích hoặc Tạo đơn
+    // POST: Lưu nháp, Kiểm tra tương thích, hoặc Tạo đơn
     // ──────────────────────────────────────────────
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
@@ -97,25 +96,41 @@ public class CustomBuilderServlet extends HttpServlet {
         request.setCharacterEncoding("UTF-8");
         HttpSession session = request.getSession();
         User currentUser = (User) session.getAttribute("user");
-        if (currentUser == null) {
-            response.sendRedirect("login?redirect=custom-builder");
-            return;
-        }
 
         String action = request.getParameter("action");
 
-        // ── A) Chỉ kiểm tra tương thích, redirect lại trang với kết quả ──
+        // ── A) Lưu nháp cấu hình ──
+        if ("save-draft".equals(action)) {
+            session.setAttribute("builderSuccess", "Đã lưu bản nháp cấu hình thành công vào phiên làm việc!");
+            int k = parseIntSafe(request.getParameter("kitId"), 1);
+            int s = parseIntSafe(request.getParameter("switchId"), 2);
+            int kc = parseIntSafe(request.getParameter("keycapId"), 0);
+            int st = parseIntSafe(request.getParameter("stabId"), 6);
+            int svc = parseIntSafe(request.getParameter("serviceId"), 0);
+            int step = parseIntSafe(request.getParameter("step"), 2);
+            response.sendRedirect(String.format("custom-builder?selKit=%d&selSwitch=%d&selKeycap=%d&selStab=%d&selService=%d&step=%d", k, s, kc, st, svc, step));
+            return;
+        }
+
+        // ── B) Chỉ kiểm tra tương thích, redirect lại trang ──
         if ("check-compat".equals(action)) {
-            int kitId    = parseIntSafe(request.getParameter("kitId"),    0);
-            int switchId = parseIntSafe(request.getParameter("switchId"), 0);
-            int keycapId = parseIntSafe(request.getParameter("keycapId"), 0);
-            int stabId   = parseIntSafe(request.getParameter("stabId"),   0);
+            int kitId     = parseIntSafe(request.getParameter("kitId"),     1);
+            int switchId  = parseIntSafe(request.getParameter("switchId"),  2);
+            int keycapId  = parseIntSafe(request.getParameter("keycapId"),  0);
+            int stabId    = parseIntSafe(request.getParameter("stabId"),    6);
             int serviceId = parseIntSafe(request.getParameter("serviceId"), 0);
+            int step      = parseIntSafe(request.getParameter("step"),      2);
 
             String redirectUrl = String.format(
-                    "custom-builder?selKit=%d&selSwitch=%d&selKeycap=%d&selStab=%d&selService=%d",
-                    kitId, switchId, keycapId, stabId, serviceId);
+                    "custom-builder?selKit=%d&selSwitch=%d&selKeycap=%d&selStab=%d&selService=%d&step=%d",
+                    kitId, switchId, keycapId, stabId, serviceId, step);
             response.sendRedirect(redirectUrl);
+            return;
+        }
+
+        // Kiểm tra đăng nhập trước khi đặt đơn
+        if (currentUser == null) {
+            response.sendRedirect("login?redirect=custom-builder");
             return;
         }
 

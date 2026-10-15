@@ -33,7 +33,7 @@
                 <h2>Tự build bàn phím<br>đúng gu của bạn</h2>
                 <p class="desc">Chọn kit, switch, keycap và gói gia công trong một luồng duy nhất. Hệ thống tự kiểm tra tương thích trước khi bạn đặt hàng.</p>
                 <div class="banner-buttons">
-                    <a href="custom-builder.jsp" class="btn btn-orange">⚙️ Bắt đầu build ngay</a>
+                    <a href="custom-builder" class="btn btn-orange">⚙️ Bắt đầu build ngay</a>
                     <a href="product-detail?id=1" class="btn btn-white">Xem build mẫu</a>
                 </div>
                 <div class="banner-stats">
@@ -157,7 +157,7 @@
                 <span>5 · <strong>Xem lại</strong></span>
             </div>
             <div class="builder-promo-actions">
-                <a href="custom-builder.jsp" class="btn btn-blue">Mở Custom Builder</a>
+                <a href="custom-builder" class="btn btn-blue">Mở Custom Builder</a>
                 <a href="guide.jsp" class="btn btn-outline-gray">Xem hướng dẫn</a>
             </div>
         </div>

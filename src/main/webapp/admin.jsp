@@ -12,15 +12,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/features.css">
 
-    <!-- CSS Hệ thống & CSS Admin riêng -->
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/features.css">
+    <!-- Chart.js CDN để vẽ biểu đồ tròn -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-
 <jsp:include page="includes/header.jsp" />
-
 <main class="wrap">
     <!-- Header Admin -->
     <div class="admin-header">
@@ -65,7 +64,64 @@
         </div>
     </div>
 
-    <!-- 2. THANH CHUYỂN TAB CÁC CHỨC NĂNG QUẢN LÝ -->
+    <!-- 2. BIỂU ĐỒ TRÒN THỐNG KÊ ĐỘNG (ROLES & TRẠNG THÁI ĐƠN HÀNG) -->
+    <div class="charts-grid">
+        <!-- Biểu đồ 1: Cơ cấu tất cả Roles (Động cho CUSTOM, SELLER, ADMIN, MODERATOR...) -->
+        <div class="panel" style="margin: 0;">
+            <div class="panel-header">
+                <h2>👥 Tỉ lệ Vai trò (Role) người dùng</h2>
+            </div>
+            <div class="chart-layout">
+                <div class="chart-box">
+                    <canvas id="userRoleChart"></canvas>
+                </div>
+                <ul class="legend-list">
+                    <c:choose>
+                        <c:when test="${not empty stats.roleStats}">
+                            <c:forEach items="${stats.roleStats}" var="r">
+                                <li>
+                                    <span>🔷 Vai trò <strong>${r.key}</strong></span>
+                                    <strong>${r.value} tài khoản</strong>
+                                </li>
+                            </c:forEach>
+                        </c:when>
+                        <c:otherwise>
+                            <li><span>Chưa có dữ liệu vai trò</span><strong>0</strong></li>
+                        </c:otherwise>
+                    </c:choose>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Biểu đồ 2: Trạng thái Đơn hàng (Động) -->
+        <div class="panel" style="margin: 0;">
+            <div class="panel-header">
+                <h2>🛒 Tỉ lệ Trạng thái Đơn hàng</h2>
+            </div>
+            <div class="chart-layout">
+                <div class="chart-box">
+                    <canvas id="orderStatusChart"></canvas>
+                </div>
+                <ul class="legend-list">
+                    <c:choose>
+                        <c:when test="${not empty stats.orderStatusStats}">
+                            <c:forEach items="${stats.orderStatusStats}" var="s">
+                                <li>
+                                    <span>📙 Trạng thái <strong>${s.key}</strong></span>
+                                    <strong>${s.value} đơn</strong>
+                                </li>
+                            </c:forEach>
+                        </c:when>
+                        <c:otherwise>
+                            <li><span>Chưa có dữ liệu đơn hàng</span><strong>0</strong></li>
+                        </c:otherwise>
+                    </c:choose>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. THANH CHUYỂN TAB CÁC CHỨC NĂNG QUẢN LÝ -->
     <div class="admin-tabs">
         <button class="tab-btn active" onclick="switchTab('users', this)">
             👥 Quản lý người dùng
@@ -103,7 +159,7 @@
                             <td><c:out value="${u.first_name}"/> <c:out value="${u.last_name}"/></td>
                             <td><c:out value="${u.email}"/></td>
                             <td>
-                                <span class="badge-status ${u.role == 'ADMIN' ? 'status-CONFIRMED' : 'status-ACTIVE'}">
+                                <span class="badge-status ${u.role == 'ADMIN' ? 'status-CANCELLED' : (u.role == 'SELLER' ? 'status-CONFIRMED' : 'status-ACTIVE')}">
                                         ${u.role}
                                 </span>
                             </td>
@@ -250,21 +306,92 @@
         </section>
     </div>
 </main>
-
 <jsp:include page="includes/footer.jsp" />
 
-<!-- JAVASCRIPT CHUYỂN TAB MƯỢT MÀ -->
+<!-- SCRIPT VẼ BIỂU ĐỒ & XỬ LÝ CHUYỂN TAB -->
 <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const colorPalette = [
+            '#2563eb', '#16a34a', '#dc2626', '#7c3aed',
+            '#ea580c', '#0891b2', '#ec4899', '#84cc16'
+        ];
+
+        // 1. Biểu đồ vai trò người dùng (Tự động thích ứng với CUSTOM, ADMIN, SELLER...)
+        const roleLabels = [
+            <c:forEach items="${stats.roleStats}" var="r" varStatus="loop">
+            "${r.key}"${!loop.last ? ',' : ''}
+            </c:forEach>
+        ];
+
+        const roleData = [
+            <c:forEach items="${stats.roleStats}" var="r" varStatus="loop">
+            ${r.value}${!loop.last ? ',' : ''}
+            </c:forEach>
+        ];
+
+        const ctxRole = document.getElementById('userRoleChart');
+        if (ctxRole && roleLabels.length > 0) {
+            new Chart(ctxRole.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: roleLabels,
+                    datasets: [{
+                        data: roleData,
+                        backgroundColor: colorPalette.slice(0, roleLabels.length),
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    cutout: '65%'
+                }
+            });
+        }
+
+        // 2. Biểu đồ trạng thái đơn hàng (PENDING, COMPLETED, CANCELLED...)
+        const orderStatusLabels = [
+            <c:forEach items="${stats.orderStatusStats}" var="s" varStatus="loop">
+            "${s.key}"${!loop.last ? ',' : ''}
+            </c:forEach>
+        ];
+
+        const orderStatusData = [
+            <c:forEach items="${stats.orderStatusStats}" var="s" varStatus="loop">
+            ${s.value}${!loop.last ? ',' : ''}
+            </c:forEach>
+        ];
+
+        const ctxOrder = document.getElementById('orderStatusChart');
+        if (ctxOrder && orderStatusLabels.length > 0) {
+            new Chart(ctxOrder.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: orderStatusLabels,
+                    datasets: [{
+                        data: orderStatusData,
+                        backgroundColor: ['#f59e0b', '#2563eb', '#16a34a', '#dc2626', '#8b5cf6', '#64748b'].slice(0, orderStatusLabels.length),
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    cutout: '65%'
+                }
+            });
+        }
+    });
+
+    // Chuyển Tab
     function switchTab(tabName, element) {
-        // 1. Dừng hiển thị tất cả các tab
-        const tabPanes = document.querySelectorAll('.tab-pane');
-        tabPanes.forEach(pane => pane.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
 
-        // 2. Bỏ trạng thái active của tất cả các nút
-        const tabBtns = document.querySelectorAll('.tab-btn');
-        tabBtns.forEach(btn => btn.classList.remove('active'));
-
-        // 3. Bật Tab được chọn & nút tương ứng
         document.getElementById('tab-' + tabName).classList.add('active');
         element.classList.add('active');
     }

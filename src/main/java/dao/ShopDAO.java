@@ -59,7 +59,65 @@ public class ShopDAO {
         }
         return getShopById(2);
     }
+    public List<Shop> getAllShops() {
+        return searchShops(null, null, null, "popular");
+    }
 
+    /**
+     * Tìm kiếm và lọc danh sách gian hàng.
+     * @param keyword   Từ khóa tìm theo tên shop hoặc mô tả
+     * @param type      "workshop" | "verified" | null (tất cả)
+     * @param minRating Điểm đánh giá tối thiểu (null = bỏ qua)
+     * @param sort      "popular" | "rating" | "newest" | "followers"
+     */
+    public List<Shop> searchShops(String keyword, String type, Double minRating, String sort) {
+        List<Shop> list = new ArrayList<>();
+        StringBuilder sql = new StringBuilder("SELECT * FROM shops WHERE 1=1 ");
+        List<Object> params = new ArrayList<>();
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql.append("AND (shop_name LIKE ? OR description LIKE ? OR address LIKE ?) ");
+            String kw = "%" + keyword.trim() + "%";
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+        }
+        if ("workshop".equals(type)) {
+            sql.append("AND is_workshop = 1 ");
+        } else if ("verified".equals(type)) {
+            sql.append("AND is_verified = 1 ");
+        }
+        if (minRating != null && minRating > 0) {
+            sql.append("AND rating_avg >= ? ");
+            params.add(minRating);
+        }
+
+        if ("rating".equals(sort)) {
+            sql.append("ORDER BY rating_avg DESC, rating_count DESC");
+        } else if ("newest".equals(sort)) {
+            sql.append("ORDER BY id DESC");
+        } else if ("followers".equals(sort)) {
+            sql.append("ORDER BY follower_count DESC");
+        } else {
+            // popular: số sản phẩm + follower
+            sql.append("ORDER BY product_count DESC, follower_count DESC");
+        }
+
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapShop(rs));
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
     public List<CustomServiceItem> getServicesByShopId(int shopId) {
         List<CustomServiceItem> list = new ArrayList<>();
         String sql = "SELECT * FROM custom_services WHERE shop_id = ? AND status = 'ACTIVE' ORDER BY price ASC";

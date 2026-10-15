@@ -1,7 +1,10 @@
 package dao;
 
 import model.Product;
-import model.Product.*;
+import model.Product.ProductOption;
+import model.Product.ProductSpec;
+import model.Product.ProductCompatibility;
+import model.Product.Review;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -35,37 +38,14 @@ public class ProductDAO {
             this.reviewDate = reviewDate;
         }
 
-        public int getReviewId() {
-            return reviewId;
-        }
-
-        public int getProductId() {
-            return productId;
-        }
-
-        public String getProductName() {
-            return productName;
-        }
-
-        public String getShopName() {
-            return shopName;
-        }
-
-        public int getRating() {
-            return rating;
-        }
-
-        public String getVariantInfo() {
-            return variantInfo;
-        }
-
-        public String getComment() {
-            return comment;
-        }
-
-        public String getReviewDate() {
-            return reviewDate;
-        }
+        public int getReviewId() { return reviewId; }
+        public int getProductId() { return productId; }
+        public String getProductName() { return productName; }
+        public String getShopName() { return shopName; }
+        public int getRating() { return rating; }
+        public String getVariantInfo() { return variantInfo; }
+        public String getComment() { return comment; }
+        public String getReviewDate() { return reviewDate; }
     }
 
     public Product getProductById(int id) {
@@ -73,8 +53,8 @@ public class ProductDAO {
                 + "s.shop_name, s.avatar_text, s.avatar_color, s.address, s.is_verified, "
                 + "s.rating_avg AS shop_rating, s.follower_count, s.response_rate, s.response_time "
                 + "FROM products p "
-                + "JOIN categories c ON p.category_id = c.id "
-                + "JOIN shops s ON p.shop_id = s.id "
+                + "LEFT JOIN categories c ON p.category_id = c.id "
+                + "LEFT JOIN shops s ON p.shop_id = s.id "
                 + "WHERE p.id = ?";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -87,7 +67,7 @@ public class ProductDAO {
                     p.setShopAvatarText(rs.getString("avatar_text"));
                     p.setShopAvatarColor(rs.getString("avatar_color"));
                     p.setShopAddress(rs.getString("address"));
-                    p.setShopVerified(rs.getInt("is_verified") == 1);
+                    p.setShopVerified(rs.getObject("is_verified") != null && rs.getInt("is_verified") == 1);
                     p.setShopRating(rs.getDouble("shop_rating"));
                     p.setShopFollowers(rs.getInt("follower_count"));
                     p.setShopResponseRate(rs.getInt("response_rate"));
@@ -108,8 +88,8 @@ public class ProductDAO {
         List<Product> list = new ArrayList<>();
         StringBuilder sql = new StringBuilder(
                 "SELECT p.*, s.shop_name, c.name AS category_name FROM products p "
-                        + "JOIN shops s ON p.shop_id = s.id "
-                        + "JOIN categories c ON p.category_id = c.id "
+                        + "LEFT JOIN shops s ON p.shop_id = s.id "
+                        + "LEFT JOIN categories c ON p.category_id = c.id "
                         + "WHERE p.status = 'ACTIVE' "
         );
         List<Object> params = new ArrayList<>();
@@ -220,7 +200,7 @@ public class ProductDAO {
         List<Product> list = new ArrayList<>();
         StringBuilder sql = new StringBuilder(
                 "SELECT p.*, s.shop_name FROM products p "
-                        + "JOIN shops s ON p.shop_id = s.id "
+                        + "LEFT JOIN shops s ON p.shop_id = s.id "
                         + "WHERE p.shop_id = ? "
         );
         if (categoryId != null && categoryId > 0) {
@@ -298,8 +278,8 @@ public class ProductDAO {
         List<UserReviewItem> list = new ArrayList<>();
         String sql = "SELECT r.*, p.name AS product_name, s.shop_name "
                 + "FROM reviews r "
-                + "JOIN products p ON r.product_id = p.id "
-                + "JOIN shops s ON p.shop_id = s.id "
+                + "LEFT JOIN products p ON r.product_id = p.id "
+                + "LEFT JOIN shops s ON p.shop_id = s.id "
                 + "WHERE r.user_id = ? ORDER BY r.id DESC";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -443,7 +423,7 @@ public class ProductDAO {
     public List<Product> getSimilarProducts(int excludeProductId, int limit) {
         List<Product> list = new ArrayList<>();
         String sql = "SELECT p.*, s.shop_name FROM products p "
-                + "JOIN shops s ON p.shop_id = s.id "
+                + "LEFT JOIN shops s ON p.shop_id = s.id "
                 + "WHERE p.id <> ? ORDER BY p.id ASC LIMIT ?";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

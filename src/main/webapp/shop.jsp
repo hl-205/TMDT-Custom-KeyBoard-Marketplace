@@ -145,15 +145,17 @@
     <section class="home-section">
         <div class="section-head">
             <h3>Sản phẩm của shop <span style="font-weight:400;color:#64748B;">(<%= shopProducts.size() %>)</span></h3>
-            <div style="display:flex;gap:8px;">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
                 <a href="shop?id=<%= shop.getId() %><%= selectedCat != null ? "&cat=" + selectedCat : "" %>&sort=popular"
-                   class="sort-pill-btn <%= "popular".equals(sort) ? "active" : "" %>">Phổ biến</a>
+                   class="sort-pill-btn <%= "popular".equals(sort) ? "active" : "" %>">🔥 Phổ biến</a>
                 <a href="shop?id=<%= shop.getId() %><%= selectedCat != null ? "&cat=" + selectedCat : "" %>&sort=newest"
-                   class="sort-pill-btn <%= "newest".equals(sort) ? "active" : "" %>">Mới nhất</a>
+                   class="sort-pill-btn <%= "newest".equals(sort) ? "active" : "" %>">🆕 Mới nhất</a>
                 <a href="shop?id=<%= shop.getId() %><%= selectedCat != null ? "&cat=" + selectedCat : "" %>&sort=best_selling"
-                   class="sort-pill-btn <%= "best_selling".equals(sort) ? "active" : "" %>">Bán chạy</a>
+                    class="sort-pill-btn <%= "best_selling".equals(sort) ? "active" : "" %>">📦 Bán chạy</a>
                 <a href="shop?id=<%= shop.getId() %><%= selectedCat != null ? "&cat=" + selectedCat : "" %>&sort=price_asc"
-                   class="sort-pill-btn <%= "price_asc".equals(sort) ? "active" : "" %>">Giá ↑</a>
+                   class="sort-pill-btn <%= "price_asc".equals(sort) ? "active" : "" %>">💰 Giá thấp → cao</a>
+                                   <a href="shop?id=<%= shop.getId() %><%= selectedCat != null ? "&cat=" + selectedCat : "" %>&sort=price_desc"
+                                      class="sort-pill-btn <%= "price_desc".equals(sort) ? "active" : "" %>">💎 Giá cao → thấp</a>
             </div>
         </div>
 

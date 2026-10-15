@@ -2,6 +2,7 @@ package dao;
 
 import model.Product;
 import model.Product.*;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -33,14 +34,38 @@ public class ProductDAO {
             this.comment = comment;
             this.reviewDate = reviewDate;
         }
-        public int getReviewId() { return reviewId; }
-        public int getProductId() { return productId; }
-        public String getProductName() { return productName; }
-        public String getShopName() { return shopName; }
-        public int getRating() { return rating; }
-        public String getVariantInfo() { return variantInfo; }
-        public String getComment() { return comment; }
-        public String getReviewDate() { return reviewDate; }
+
+        public int getReviewId() {
+            return reviewId;
+        }
+
+        public int getProductId() {
+            return productId;
+        }
+
+        public String getProductName() {
+            return productName;
+        }
+
+        public String getShopName() {
+            return shopName;
+        }
+
+        public int getRating() {
+            return rating;
+        }
+
+        public String getVariantInfo() {
+            return variantInfo;
+        }
+
+        public String getComment() {
+            return comment;
+        }
+
+        public String getReviewDate() {
+            return reviewDate;
+        }
     }
 
     public Product getProductById(int id) {
@@ -207,8 +232,10 @@ public class ProductDAO {
             sql.append("ORDER BY p.sold_count DESC");
         } else if ("price_asc".equals(sort)) {
             sql.append("ORDER BY p.price ASC");
+        } else if ("price_desc".equals(sort)) {
+            sql.append("ORDER BY p.price DESC");
         } else {
-            sql.append("ORDER BY p.sold_count DESC");
+            sql.append("ORDER BY p.sold_count DESC, p.rating_avg DESC");
         }
 
         try (Connection conn = DBContext.getConnection();

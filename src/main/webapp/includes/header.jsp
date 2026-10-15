@@ -2,6 +2,8 @@
 <%@ page import="model.User" %>
 <%
   User headerUser = (User) session.getAttribute("user");
+  java.util.Map<?, ?> headerCart = (java.util.Map<?, ?>) session.getAttribute("cart");
+  int headerCartCount = (headerCart == null) ? 0 : headerCart.size();
   boolean isSellerRole = (headerUser != null && "SELLER".equalsIgnoreCase(headerUser.getRole()));
 %>
 <div class="topbar">
@@ -52,8 +54,8 @@
       <a href="<%= headerUser != null ? "my-orders" : "login" %>" class="action-icon badge-wrap" title="Thông báo">
         🔔<span class="badge">0</span>
       </a>
-      <a href="cart.jsp" class="action-icon badge-wrap" title="Giỏ hàng">
-        🛒<span class="badge badge-orange">0</span>
+      <a href="cart" class="action-icon badge-wrap" title="Giỏ hàng">
+        🛒<span class="badge badge-orange"><%= headerCartCount %></span>
       </a>
 
       <% if (headerUser == null) { %>

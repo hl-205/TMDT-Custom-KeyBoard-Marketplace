@@ -17,7 +17,7 @@ CREATE TABLE users (
                        is_verified TINYINT(1) DEFAULT 1,
                        status VARCHAR(20) DEFAULT 'ACTIVE',
                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE shops (
                        id INT AUTO_INCREMENT PRIMARY KEY,
@@ -41,8 +41,8 @@ CREATE TABLE shops (
                        cancel_rate DECIMAL(4,1) DEFAULT 0.8,
                        return_rate DECIMAL(4,1) DEFAULT 1.2,
                        joined_date VARCHAR(20) DEFAULT '03/2019',
-                       FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL
-);
+                       CONSTRAINT fk_shops_owner FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
 
 CREATE TABLE categories (
                             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -50,7 +50,7 @@ CREATE TABLE categories (
                             slug VARCHAR(100) NOT NULL,
                             icon VARCHAR(50),
                             product_count INT DEFAULT 0
-);
+) ENGINE=InnoDB;
 
 CREATE TABLE products (
                           id INT AUTO_INCREMENT PRIMARY KEY,
@@ -78,9 +78,9 @@ CREATE TABLE products (
                           image_url VARCHAR(255),
                           status VARCHAR(20) DEFAULT 'ACTIVE',
                           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                          FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE,
-                          FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
-);
+                          CONSTRAINT fk_products_shop FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE,
+                          CONSTRAINT fk_products_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
 
 CREATE TABLE product_options (
                                  id INT AUTO_INCREMENT PRIMARY KEY,
@@ -89,8 +89,8 @@ CREATE TABLE product_options (
                                  option_name VARCHAR(100) NOT NULL,
                                  extra_price DECIMAL(12,0) DEFAULT 0,
                                  is_available TINYINT(1) DEFAULT 1,
-                                 FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-);
+                                 CONSTRAINT fk_options_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
 
 CREATE TABLE product_specs (
                                id INT AUTO_INCREMENT PRIMARY KEY,
@@ -98,8 +98,8 @@ CREATE TABLE product_specs (
                                spec_name VARCHAR(100) NOT NULL,
                                spec_value VARCHAR(255) NOT NULL,
                                display_order INT DEFAULT 1,
-                               FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-);
+                               CONSTRAINT fk_specs_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
 
 CREATE TABLE product_compatibilities (
                                          id INT AUTO_INCREMENT PRIMARY KEY,
@@ -107,8 +107,8 @@ CREATE TABLE product_compatibilities (
                                          title VARCHAR(150) NOT NULL,
                                          description VARCHAR(255) NOT NULL,
                                          is_compatible TINYINT(1) DEFAULT 1,
-                                         FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-);
+                                         CONSTRAINT fk_compat_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
 
 CREATE TABLE reviews (
                          id INT AUTO_INCREMENT PRIMARY KEY,
@@ -122,8 +122,8 @@ CREATE TABLE reviews (
                          helpful_count INT DEFAULT 0,
                          review_date VARCHAR(20),
                          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                         FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-);
+                         CONSTRAINT fk_reviews_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
 
 CREATE TABLE custom_services (
                                  id INT AUTO_INCREMENT PRIMARY KEY,
@@ -135,8 +135,8 @@ CREATE TABLE custom_services (
                                  is_popular TINYINT(1) DEFAULT 0,
                                  sold_month INT DEFAULT 0,
                                  status VARCHAR(20) DEFAULT 'ACTIVE',
-                                 FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
-);
+                                 CONSTRAINT fk_services_shop FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
 
 CREATE TABLE orders (
                         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -158,9 +158,22 @@ CREATE TABLE orders (
                         customer_note TEXT,
                         committed_days INT DEFAULT 7,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        FOREIGN KEY (user_id) REFERENCES users(id),
-                        FOREIGN KEY (shop_id) REFERENCES shops(id)
-);
+                        CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users(id),
+                        CONSTRAINT fk_orders_shop FOREIGN KEY (shop_id) REFERENCES shops(id)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS order_items (
+                                           id INT AUTO_INCREMENT PRIMARY KEY,
+                                           order_id INT NOT NULL,
+                                           product_id INT NOT NULL,
+                                           product_name VARCHAR(255) NOT NULL,
+    quantity INT NOT NULL,
+    unit_price DECIMAL(12,0) NOT NULL,
+    line_total DECIMAL(12,0) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    CONSTRAINT fk_order_items_product FOREIGN KEY (product_id) REFERENCES products(id)
+    ) ENGINE=InnoDB;
 
 CREATE TABLE order_progress (
                                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -170,8 +183,8 @@ CREATE TABLE order_progress (
                                 step_desc TEXT,
                                 status VARCHAR(20) DEFAULT 'PENDING',
                                 updated_time VARCHAR(50),
-                                FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
-);
+                                CONSTRAINT fk_progress_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
 
 INSERT INTO users (id, first_name, last_name, email, phone, password, gender, dob, avatar_text, role, points) VALUES
                                                                                                                   (1, 'Nguyễn Văn', 'Anh', 'nva@gmail.com', '0987654321', '123456', 'Nam', '2005-05-20', 'NVA', 'CUSTOMER', 1240),

@@ -1,154 +1,292 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+
 <%@ page import="model.User" %>
+
 <%
+
   User headerUser = (User) session.getAttribute("user");
+
   java.util.Map<?, ?> headerCart = (java.util.Map<?, ?>) session.getAttribute("cart");
+
   int headerCartCount = (headerCart == null) ? 0 : headerCart.size();
 
-  // Kiểm tra chính xác vai trò
-  boolean isAdminRole  = (headerUser != null && "ADMIN".equalsIgnoreCase(headerUser.getRole()));
+
+
+// Kiểm tra chính xác vai trò
+
+  boolean isAdminRole = (headerUser != null && "ADMIN".equalsIgnoreCase(headerUser.getRole()));
+
   boolean isSellerRole = (headerUser != null && "SELLER".equalsIgnoreCase(headerUser.getRole()));
+
 %>
+
 <div class="topbar">
+
   <div class="container topbar-content">
+
     <div class="topbar-left">
+
       <% if (isSellerRole) { %>
+
       <a href="seller-orders"><strong>Kênh người bán</strong></a> <span class="dot">·</span>
+
       <% } %>
+
       <a href="#">Tải ứng dụng</a> <span class="dot">·</span>
+
       <a href="#">Kết nối cộng đồng</a>
+
     </div>
+
     <div class="topbar-right">
+
       <a href="#">Thông báo</a>
+
       <a href="#">Trợ giúp</a>
+
       <% if (headerUser == null) { %>
+
       <a href="register"><strong>Đăng ký</strong></a>
+
       <a href="login"><strong>Đăng nhập</strong></a>
+
       <% } else { %>
+
+
 
       <%-- CHỈ CHỦ TÀI KHOẢN ADMIN MỚI THẤY LINK NÀY --%>
+
       <% if (isAdminRole) { %>
+
       <a href="${pageContext.request.contextPath}/admin" style="color:#EF4444; font-weight:700;">⚡ Trang Admin</a>
+
       <% } %>
+
+
 
       <%-- CHỈ SELLER MỚI THẤY LINK NÀY --%>
+
       <% if (isSellerRole) { %>
+
       <a href="seller-services" style="color:#60A5FA; font-weight:700;">🏪 Quản lý Xưởng</a>
+
       <% } %>
+
+
 
       <a href="my-orders"><strong>Tài khoản</strong></a>
+
       <a href="logout"><strong>Đăng xuất</strong></a>
+
       <% } %>
+
     </div>
+
   </div>
+
 </div>
 
+
+
 <header class="header">
+
   <div class="container header-content">
+
     <a href="index.jsp" class="logo">
+
       <div class="logo-icon">K</div>
+
       <h1>Keeb<span>Hub</span></h1>
+
     </a>
 
+
+
     <form action="search" method="GET" class="search-wrapper">
+
       <span class="search-icon-left">🔍</span>
+
       <input type="text" name="keyword" class="search-input" placeholder="Tìm kit bàn phím, switch, keycap, xưởng gia công...">
+
       <button type="submit" class="search-btn">Tìm kiếm</button>
+
     </form>
 
+
+
     <div class="header-actions">
+
       <% if (isSellerRole) { %>
+
       <a href="seller-orders" class="btn-header-register" style="background:#EA580C;font-size:12px;padding:7px 12px;">
+
         🛠️ Kênh Seller
+
       </a>
+
       <% } %>
 
+
+
       <a href="<%= headerUser != null ? "my-orders" : "login" %>" class="action-icon" title="Yêu thích">♡</a>
+
       <a href="<%= headerUser != null ? "my-orders" : "login" %>" class="action-icon badge-wrap" title="Thông báo">
+
         🔔<span class="badge">0</span>
+
       </a>
+
       <a href="cart" class="action-icon badge-wrap" title="Giỏ hàng">
+
         🛒<span class="badge badge-orange"><%= headerCartCount %></span>
+
       </a>
+
+
 
       <% if (headerUser == null) { %>
+
       <div class="auth-header-btns">
+
         <a href="login" class="btn-header-login">Đăng nhập</a>
+
         <a href="register" class="btn-header-register">Đăng ký</a>
+
       </div>
+
       <% } else { %>
+
       <div class="user-dropdown-wrap">
+
         <div class="user-profile" id="userDropdownBtn">
-          <div class="avatar"><%= isAdminRole ? "ADMIN" : headerUser.getAvatarText() %></div>
+
+          <div class="avatar"><%= headerUser.getAvatarText() %></div>
+
           <span class="user-name"><%= headerUser.getShortDisplayName() %> ▾</span>
+
         </div>
+
         <div class="user-dropdown-menu" id="userDropdownMenu">
+
           <div class="dropdown-user-info">
+
             <strong><%= headerUser.getFullName() %></strong>
+
             <span><%= headerUser.getEmail() %> (<%= headerUser.getRole() %>)</span>
+
           </div>
 
+
+
           <%-- DÀNH RIÊNG CHO ADMIN --%>
+
           <% if (isAdminRole) { %>
+
           <a href="${pageContext.request.contextPath}/admin" class="dropdown-item" style="color:#DC2626; font-weight:700;">
+
             ⚡ Quản lý Admin
+
           </a>
+
           <div class="dropdown-divider"></div>
+
           <% } %>
 
+
+
           <%-- DÀNH RIÊNG CHO SELLER --%>
+
           <% if (isSellerRole) { %>
+
           <a href="seller-orders" class="dropdown-item" style="color:#1B64F2; font-weight:700;">🏪 Quản lý đơn hàng Xưởng</a>
+
           <a href="seller-services" class="dropdown-item" style="color:#1B64F2; font-weight:700;">🔧 Quản lý dịch vụ Custom</a>
+
           <div class="dropdown-divider"></div>
+
           <% } %>
 
           <a href="my-orders" class="dropdown-item">📦 Đơn hàng của tôi</a>
+
           <a href="my-reviews" class="dropdown-item">⭐ Đánh giá của tôi</a>
+
           <a href="custom-builder" class="dropdown-item" style="color:#1B64F2;font-weight:700;">⚙️ Custom Builder</a>
+
           <div class="dropdown-divider"></div>
+
           <a href="logout" class="dropdown-item logout-link">↪ Đăng xuất</a>
+
         </div>
+
       </div>
+
       <% } %>
+
     </div>
+
   </div>
+
 </header>
 
+
+
 <nav class="main-nav">
+
   <div class="container nav-content">
+
     <a href="category" class="nav-all-categories">
+
       ☰ Tất cả danh mục
     </a>
+
     <ul class="nav-links">
+
       <li><a href="category?cat=1">Kit bàn phím</a></li>
+
       <li><a href="category?cat=2">Switch</a></li>
+
       <li><a href="category?cat=3">Keycap</a></li>
+
       <li><a href="category?cat=4">Stabilizer</a></li>
+
       <li><a href="category?cat=5">Phụ kiện</a></li>
+
       <li><a href="category?cat=6">Dịch vụ gia công</a></li>
+
       <li><a href="category">Build sẵn</a></li>
+
       <li><a href="shops">🏪 Gian hàng</a></li>
       <li><a href="custom-builder" style="color:#1B64F2;font-weight:700;">⚙️ Custom Builder</a></li>
     </ul>
     <a href="category" class="nav-group-buy">
-      🔥 Group buy đang mở
+     🔥 Group buy đang mở
     </a>
+
   </div>
+
 </nav>
 
+
+
 <script>
+
   document.addEventListener("DOMContentLoaded", function() {
+
     var btn = document.getElementById("userDropdownBtn");
+
     var menu = document.getElementById("userDropdownMenu");
+
     if (btn && menu) {
       btn.addEventListener("click", function(e) {
         e.stopPropagation();
         menu.classList.toggle("show");
+
       });
+
       document.addEventListener("click", function() {
         menu.classList.remove("show");
       });
     }
   });
+
 </script>

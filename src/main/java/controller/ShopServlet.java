@@ -8,12 +8,14 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 @WebServlet("/shop")
 public class ShopServlet extends HttpServlet {
     private final ShopDAO shopDAO = new ShopDAO();
     private final ProductDAO productDAO = new ProductDAO();
+    private static final int PAGE_SIZE = 20;
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -41,12 +43,31 @@ public class ShopServlet extends HttpServlet {
             shopId = 1;
         }
 
-        // Chỉ lấy đúng sản phẩm thuộc shopId này trong CSDL, tuyệt đối không lấy trộn từ shop khác
-        List<Product> shopProducts = productDAO.getProductsByShop(shopId, catId, sort);
+        List<Product> allShopProducts = productDAO.getProductsByShop(shopId, catId, sort);
+        int totalProducts = allShopProducts.size();
+        int totalPages = Math.max(1, (int) Math.ceil((double) totalProducts / PAGE_SIZE));
+
+        int currentPage = 1;
+        try {
+            if (request.getParameter("page") != null) {
+                currentPage = Integer.parseInt(request.getParameter("page"));
+            }
+        } catch (NumberFormatException ignored) {}
+        if (currentPage < 1) currentPage = 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+
+        int fromIndex = (currentPage - 1) * PAGE_SIZE;
+        int toIndex = Math.min(fromIndex + PAGE_SIZE, totalProducts);
+        List<Product> pagedShopProducts = (totalProducts > 0)
+                ? allShopProducts.subList(fromIndex, toIndex)
+                : new ArrayList<>();
 
         request.setAttribute("shop", shop);
         request.setAttribute("services", shopDAO.getServicesByShopId(shopId));
-        request.setAttribute("shopProducts", shopProducts);
+        request.setAttribute("shopProducts", pagedShopProducts);
+        request.setAttribute("totalShopProducts", totalProducts);
+        request.setAttribute("currentPage", currentPage);
+        request.setAttribute("totalPages", totalPages);
         request.setAttribute("selectedCat", catId);
         request.setAttribute("sort", sort);
 

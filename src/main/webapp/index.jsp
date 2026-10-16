@@ -2,18 +2,28 @@
 <%@ page import="dao.ProductDAO" %>
 <%@ page import="dao.ProductDAO.CategoryStat" %>
 <%@ page import="dao.ShopDAO" %>
+<%@ page import="dao.CustomOrderDAO" %>
 <%@ page import="model.Product" %>
 <%@ page import="model.Shop" %>
 <%@ page import="java.util.List" %>
 <%
     ProductDAO homeProductDAO = new ProductDAO();
     ShopDAO homeShopDAO = new ShopDAO();
+    CustomOrderDAO homeOrderDAO = new CustomOrderDAO();
 
     List<CategoryStat> categories = homeProductDAO.getAllCategoriesWithCount();
-    int totalProducts = homeProductDAO.getTotalActiveProductsCount();
-    List<Shop> allShops = homeShopDAO.searchShops(null, null, null, "popular");
-    List<Shop> topWorkshops = homeShopDAO.searchShops(null, "workshop", null, "rating");
-    List<Product> bestSellers = homeProductDAO.filterProducts(null, null, null, null, null, null, null, null, null, null, null, null, "best_selling");
+    int totalProductsCount = homeProductDAO.getTotalActiveProductsCount();
+    List<Shop> allShops = homeShopDAO.getAllShops();
+    List<Shop> workshopShops = homeShopDAO.searchShops(null, "workshop", null, "rating");
+    int totalOrdersCount = homeOrderDAO.countOrdersByStatus("ALL", false);
+
+    List<Product> bestSellingList = homeProductDAO.filterProducts(
+            null, null, null, null, null, null, null, null, null, false, false, null, "best_selling"
+    );
+    List<Product> topProducts = bestSellingList.size() > 12 ? bestSellingList.subList(0, 12) : bestSellingList;
+    List<Shop> featuredWorkshops = workshopShops.size() > 8 ? workshopShops.subList(0, 8) : workshopShops;
+
+    String[] circleColors = {"blue", "orange", "yellow", "green", "purple", "gray"};
 %>
 <!DOCTYPE html>
 <html lang="vi">
@@ -29,22 +39,38 @@
 
 <main class="container home-page">
     <div class="hero-top-grid">
-        <!-- Cột trái: Danh mục lấy trực tiếp từ bảng categories & products -->
+        <!-- Cột danh mục bên trái lấy số lượng thật từ bảng categories & products -->
         <aside class="sidebar-categories">
             <ul class="sidebar-list">
                 <% for (int i = 0; i < categories.size(); i++) {
-                    CategoryStat c = categories.get(i);
+                    CategoryStat cs = categories.get(i);
                 %>
                 <li class="<%= i == 0 ? "active" : "" %>">
-                    <a href="category?cat=<%= c.getId() %>">
-                        <span class="icon"><%= c.getIcon() %></span>
-                        <%= c.getName() %>
-                        <span class="count"><%= c.getProductCount() %></span>
+                    <a href="category?cat=<%= cs.getId() %>">
+                        <span class="icon"><%= cs.getIcon() %></span>
+                        <%= cs.getName() %>
+                        <span class="count"><%= cs.getProductCount() %></span>
                     </a>
                 </li>
                 <% } %>
-                <li><a href="category?custom=1"><span class="icon">📦</span> Hỗ trợ gia công <span class="count"><%= totalProducts %></span></a></li>
-                <li class="highlight"><a href="shops?type=workshop"><span class="icon">🛠️</span> Xưởng gia công <span class="count"><%= topWorkshops.size() %></span></a></li>
+                <li>
+                    <a href="shops">
+                        <span class="icon">🏪</span> Hệ thống Gian hàng
+                        <span class="count"><%= allShops.size() %></span>
+                    </a>
+                </li>
+                <li>
+                    <a href="shops?type=workshop">
+                        <span class="icon">🛠️</span> Xưởng nhận Build
+                        <span class="count"><%= workshopShops.size() %></span>
+                    </a>
+                </li>
+                <li class="highlight">
+                    <a href="custom-builder">
+                        <span class="icon">⚙️</span> Custom Builder
+                        <span class="count">5 bước</span>
+                    </a>
+                </li>
             </ul>
         </aside>
 
@@ -58,9 +84,9 @@
                     <a href="product-detail?id=1" class="btn btn-white">Xem build mẫu</a>
                 </div>
                 <div class="banner-stats">
-                    <div class="stat-item"><strong><%= totalProducts %></strong><span>Sản phẩm trên sàn</span></div>
+                    <div class="stat-item"><strong><%= totalProductsCount %></strong><span>Sản phẩm trong DB</span></div>
                     <div class="stat-item"><strong><%= allShops.size() %></strong><span>Gian hàng & Xưởng</span></div>
-                    <div class="stat-item"><strong>100%</strong><span>Kiểm tra tương thích</span></div>
+                    <div class="stat-item"><strong><%= totalOrdersCount %></strong><span>Đơn trên hệ thống</span></div>
                 </div>
             </div>
             <div class="banner-keeb-graphic">
@@ -84,12 +110,12 @@
         <div class="side-banners">
             <div class="small-banner group-buy-banner">
                 <h4>Keycap Cao Cấp<br>GMK Olivia++</h4>
-                <p>Hàng chính hãng Đức tại KeebHub</p>
+                <p>Hàng chính hãng Đức tại Keycap Đông Nam</p>
                 <a href="product-detail?id=3" class="link-arrow">Xem chi tiết →</a>
             </div>
             <div class="small-banner service-banner">
-                <h4>Gói lube trọn bộ<br>chỉ 750.000đ</h4>
-                <p>Xưởng thẩm định, bảo hành 6 tháng</p>
+                <h4>Gói Full Lube + Tune<br>chỉ 750.000đ</h4>
+                <p>Xưởng SwitchHouse thẩm định, BH 6 tháng</p>
                 <a href="product-detail?id=94" class="link-arrow green">Đặt dịch vụ →</a>
             </div>
         </div>
@@ -121,27 +147,26 @@
             <div class="trust-icon blue-bg">🛠️</div>
             <div>
                 <strong>Xưởng gia công thẩm định</strong>
-                <p><%= allShops.size() %> gian hàng đã xác minh</p>
+                <p><%= workshopShops.size() %> xưởng chuyên nghiệp</p>
             </div>
         </div>
     </div>
 
-    <!-- Danh mục nổi bật lấy động từ Database -->
+    <!-- Danh mục nổi bật lấy trực tiếp từ bảng categories -->
     <section class="home-section">
         <div class="section-head">
             <h3>Danh mục nổi bật</h3>
-            <a href="category" class="view-all-link">Xem tất cả (<%= totalProducts %> sản phẩm) →</a>
+            <a href="category" class="view-all-link">Xem tất cả (<%= totalProductsCount %> sản phẩm) →</a>
         </div>
         <div class="featured-cat-grid">
-            <% String[] circleColors = {"blue", "orange", "yellow", "green", "purple", "gray"};
-                for (int i = 0; i < categories.size(); i++) {
-                    CategoryStat c = categories.get(i);
-                    String colorCls = circleColors[i % circleColors.length];
+            <% for (int i = 0; i < categories.size(); i++) {
+                CategoryStat cs = categories.get(i);
+                String colorCls = circleColors[i % circleColors.length];
             %>
-            <a href="category?cat=<%= c.getId() %>" class="cat-box">
-                <div class="cat-icon-circle <%= colorCls %>"><%= c.getIcon() %></div>
-                <strong><%= c.getName() %></strong>
-                <span><%= c.getProductCount() %> sản phẩm</span>
+            <a href="category?cat=<%= cs.getId() %>" class="cat-box">
+                <div class="cat-icon-circle <%= colorCls %>"><%= cs.getIcon() %></div>
+                <strong><%= cs.getName() %></strong>
+                <span><%= cs.getProductCount() %> sản phẩm</span>
             </a>
             <% } %>
         </div>
@@ -161,13 +186,13 @@
             </div>
             <div class="builder-promo-actions">
                 <a href="custom-builder" class="btn btn-blue">Mở Custom Builder</a>
-                <a href="category?custom=1" class="btn btn-outline-gray">Xem linh kiện tương thích</a>
+                <a href="category?custom=1" class="btn btn-outline-gray">Xem linh kiện hỗ trợ Custom</a>
             </div>
         </div>
         <div class="builder-promo-right">
             <div class="mini-build-card">
                 <div class="mini-build-head">
-                    <strong>Cấu hình mẫu gợi ý</strong>
+                    <strong>Cấu hình mẫu #1</strong>
                     <span class="compat-ok">✓ Tương thích</span>
                 </div>
                 <ul class="mini-build-list">
@@ -188,32 +213,29 @@
         </div>
     </section>
 
-    <!-- Flash Sale có đồng hồ đếm ngược chạy thực tế -->
+    <!-- Flash Sale có đồng hồ đếm ngược thực tế từng giây -->
     <div class="flash-sale-banner">
         <div>
             <span class="fs-subtitle">FLASH SALE ĐANG DIỄN RA</span>
-            <h3>Ưu đãi giảm tới 24% Kit nhôm, Switch & Keycap</h3>
+            <h3>Ưu đãi giảm giá linh kiện Switch, Keycap & Kit nhôm CNC</h3>
         </div>
         <div class="fs-right">
             <span class="fs-label">Kết thúc sau</span>
             <div class="fs-timer">
-                <span id="fsHour">04</span> : <span id="fsMin">12</span> : <span id="fsSec">38</span>
+                <span id="fsHours">04</span> <span id="fsMinutes">12</span> <span id="fsSeconds">38</span>
             </div>
-            <a href="category?sort=price_asc" class="btn btn-white-orange">Xem deal ngay</a>
+            <a href="category?sort=popular" class="btn btn-white-orange">Xem deal ngay</a>
         </div>
     </div>
 
-    <!-- Sản phẩm bán chạy lấy trực tiếp từ bảng products trong Database -->
+    <!-- Sản phẩm bán chạy lấy trực tiếp Top 12 từ Database -->
     <section class="home-section">
         <div class="section-head">
-            <h3>Sản phẩm bán chạy trên sàn</h3>
-            <a href="category?sort=best_selling" class="view-all-link">Xem tất cả <%= totalProducts %> sản phẩm →</a>
+            <h3>Sản phẩm bán chạy nhất</h3>
+            <a href="category?sort=best_selling" class="view-all-link">Xem tất cả <%= totalProductsCount %> sản phẩm →</a>
         </div>
         <div class="product-grid-6">
-            <% int maxDisplay = Math.min(12, bestSellers.size());
-                for (int i = 0; i < maxDisplay; i++) {
-                    Product p = bestSellers.get(i);
-            %>
+            <% for (Product p : topProducts) { %>
             <a href="product-detail?id=<%= p.getId() %>" class="p-card">
                 <% if (p.getBadge() != null && !p.getBadge().isEmpty()) { %>
                 <span class="p-badge <%= p.getBadge().contains("%") ? "discount" : "new" %>"><%= p.getBadge() %></span>
@@ -247,19 +269,16 @@
         </div>
     </section>
 
-    <!-- Danh sách Xưởng gia công uy tín lấy trực tiếp từ 30 shops trong Database -->
+    <!-- Xưởng gia công uy tín lấy trực tiếp từ bảng shops -->
     <section class="home-section">
         <div class="section-head">
-            <h3>Xưởng gia công uy tín (<%= topWorkshops.size() %> xưởng)</h3>
-            <a href="shops" class="view-all-link">Xem tất cả <%= allShops.size() %> gian hàng →</a>
+            <h3>Xưởng gia công & Gian hàng tiêu biểu</h3>
+            <a href="shops" class="view-all-link">Xem toàn bộ <%= allShops.size() %> gian hàng →</a>
         </div>
         <div class="shop-cards-grid">
-            <% int maxShops = Math.min(8, topWorkshops.size());
-                for (int i = 0; i < maxShops; i++) {
-                    Shop s = topWorkshops.get(i);
-            %>
+            <% for (Shop s : featuredWorkshops) { %>
             <a href="shop?id=<%= s.getId() %>" class="shop-mini-card">
-                <div class="shop-avatar" style="background:<%= s.getAvatarColor() != null ? s.getAvatarColor() : "#1B64F2" %>;"><%= s.getAvatarText() %></div>
+                <div class="shop-avatar" style="background:<%= s.getAvatarColor() %>;"><%= s.getAvatarText() %></div>
                 <div class="shop-mini-info">
                     <strong><%= s.getShopName() %></strong>
                     <p>★ <%= s.getRatingAvg() %> · <%= s.getFormattedFollowers() %> theo dõi · <%= s.getProductCount() %> SP</p>
@@ -281,38 +300,34 @@
 <jsp:include page="includes/footer.jsp" />
 
 <script>
-    // 1. Đồng hồ đếm ngược Flash Sale chạy thực tế
-    (function() {
-        let fsTotalSeconds = 4 * 3600 + 12 * 60 + 38;
-        const hEl = document.getElementById('fsHour');
-        const mEl = document.getElementById('fsMin');
-        const sEl = document.getElementById('fsSec');
-        if (hEl && mEl && sEl) {
-            setInterval(() => {
-                if (fsTotalSeconds > 0) fsTotalSeconds--;
-                else fsTotalSeconds = 4 * 3600;
-                const h = Math.floor(fsTotalSeconds / 3600);
-                const m = Math.floor((fsTotalSeconds % 3600) / 60);
-                const s = fsTotalSeconds % 60;
-                hEl.textContent = String(h).padStart(2, '0');
-                mEl.textContent = String(m).padStart(2, '0');
-                sEl.textContent = String(s).padStart(2, '0');
-            }, 1000);
-        }
+    // Đồng hồ đếm ngược Flash Sale và Giữ chỗ tồn kho chạy thực tế từng giây
+    document.addEventListener("DOMContentLoaded", function() {
+        let fsTotalSec = 4 * 3600 + 12 * 60 + 38;
+        const hEl = document.getElementById("fsHours");
+        const mEl = document.getElementById("fsMinutes");
+        const sEl = document.getElementById("fsSeconds");
 
-        // 2. Đồng hồ giữ chỗ tồn kho trên thẻ Cấu hình mẫu
-        let holdSeconds = 14 * 60 + 22;
-        const holdEl = document.getElementById('homeHoldTimer');
-        if (holdEl) {
-            setInterval(() => {
-                if (holdSeconds > 0) holdSeconds--;
-                else holdSeconds = 15 * 60;
-                const m = Math.floor(holdSeconds / 60);
-                const s = holdSeconds % 60;
-                holdEl.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
-            }, 1000);
-        }
-    })();
+        let holdTotalSec = 14 * 60 + 22;
+        const holdEl = document.getElementById("homeHoldTimer");
+
+        setInterval(function() {
+            if (fsTotalSec > 0) {
+                fsTotalSec--;
+                const h = Math.floor(fsTotalSec / 3600);
+                const m = Math.floor((fsTotalSec % 3600) / 60);
+                const s = fsTotalSec % 60;
+                if (hEl) hEl.textContent = String(h).padStart(2, '0');
+                if (mEl) mEl.textContent = String(m).padStart(2, '0');
+                if (sEl) sEl.textContent = String(s).padStart(2, '0');
+            }
+            if (holdTotalSec > 0) {
+                holdTotalSec--;
+                const hm = Math.floor(holdTotalSec / 60);
+                const hs = holdTotalSec % 60;
+                if (holdEl) holdEl.textContent = String(hm).padStart(2, '0') + ":" + String(hs).padStart(2, '0');
+            }
+        }, 1000);
+    });
 </script>
 </body>
 </html>

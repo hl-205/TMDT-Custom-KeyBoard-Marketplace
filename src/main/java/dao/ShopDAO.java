@@ -5,29 +5,12 @@ import model.Shop.CustomServiceItem;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ShopDAO {
 
-    private static boolean shopOwnerNormalized = false;
-
-    private synchronized void ensureShopOwnerNormalized() {
-        if (shopOwnerNormalized) return;
-        try (Connection conn = DBContext.getConnection();
-             Statement st = conn.createStatement()) {
-            // Chuẩn hóa để user_id = 2 sở hữu chính xác xưởng gia công SwitchHouse (id = 2)
-            st.executeUpdate("UPDATE shops SET owner_id = NULL WHERE id <> 2 AND owner_id = 2");
-            st.executeUpdate("UPDATE shops SET owner_id = 2 WHERE id = 2");
-            shopOwnerNormalized = true;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
     public Shop getShopById(int id) {
-        ensureShopOwnerNormalized();
         String sql = "SELECT * FROM shops WHERE id = ?";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -44,7 +27,6 @@ public class ShopDAO {
     }
 
     public Shop getShopByOwnerId(int ownerId) {
-        ensureShopOwnerNormalized();
         String sql = "SELECT * FROM shops WHERE owner_id = ? LIMIT 1";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -59,17 +41,11 @@ public class ShopDAO {
         }
         return getShopById(2);
     }
+
     public List<Shop> getAllShops() {
         return searchShops(null, null, null, "popular");
     }
 
-    /**
-     * Tìm kiếm và lọc danh sách gian hàng.
-     * @param keyword   Từ khóa tìm theo tên shop hoặc mô tả
-     * @param type      "workshop" | "verified" | null (tất cả)
-     * @param minRating Điểm đánh giá tối thiểu (null = bỏ qua)
-     * @param sort      "popular" | "rating" | "newest" | "followers"
-     */
     public List<Shop> searchShops(String keyword, String type, Double minRating, String sort) {
         List<Shop> list = new ArrayList<>();
         StringBuilder sql = new StringBuilder("SELECT * FROM shops WHERE 1=1 ");
@@ -99,7 +75,6 @@ public class ShopDAO {
         } else if ("followers".equals(sort)) {
             sql.append("ORDER BY follower_count DESC");
         } else {
-            // popular: số sản phẩm + follower
             sql.append("ORDER BY product_count DESC, follower_count DESC");
         }
 
@@ -118,6 +93,7 @@ public class ShopDAO {
         }
         return list;
     }
+
     public List<CustomServiceItem> getServicesByShopId(int shopId) {
         List<CustomServiceItem> list = new ArrayList<>();
         String sql = "SELECT * FROM custom_services WHERE shop_id = ? AND status = 'ACTIVE' ORDER BY price ASC";

@@ -7,62 +7,62 @@
           <div class="logo-icon">K</div>
           <h2>Keeb<span>Hub</span></h2>
         </a>
-        <p class="footer-desc">Sàn thương mại điện tử bàn phím cơ custom. Kết nối người chơi với xưởng gia công uy tín trên toàn quốc.</p>
+        <p class="footer-desc">Sàn thương mại điện tử bàn phím cơ custom. Kết nối người chơi với 30+ xưởng gia công uy tín trên toàn quốc.</p>
         <div class="payment-tags">
           <span>VNPAY</span>
           <span>MOMO</span>
           <span>ZALOPAY</span>
           <span>VISA</span>
-          <span>ATM</span>
+          <span>COD</span>
         </div>
       </div>
       <div class="footer-col">
         <h4>Khám phá</h4>
         <ul>
-          <li><a href="category.jsp?cat=1">Kit bàn phím</a></li>
-          <li><a href="category.jsp?cat=2">Switch</a></li>
-          <li><a href="category.jsp?cat=3">Keycap</a></li>
-          <li><a href="category.jsp?cat=6">Dịch vụ gia công</a></li>
-          <li><a href="#">Group buy</a></li>
+          <li><a href="category?cat=1">Kit bàn phím</a></li>
+          <li><a href="category?cat=2">Switch</a></li>
+          <li><a href="category?cat=3">Keycap</a></li>
+          <li><a href="category?cat=4">Stabilizer</a></li>
+          <li><a href="category?cat=6">Dịch vụ gia công</a></li>
         </ul>
       </div>
       <div class="footer-col">
-        <h4>Hỗ trợ</h4>
+        <h4>Hỗ trợ khách hàng</h4>
         <ul>
-          <li><a href="guide.jsp">Hướng dẫn mua hàng</a></li>
-          <li><a href="policy.jsp">Chính sách đổi trả</a></li>
-          <li><a href="#">Chính sách bảo hành</a></li>
-          <li><a href="my-orders.jsp">Tra cứu đơn hàng</a></li>
-          <li><a href="#">Câu hỏi thường gặp</a></li>
+          <li><a href="custom-builder">Hướng dẫn Custom Builder</a></li>
+          <li><a href="my-orders">Tra cứu đơn hàng</a></li>
+          <li><a href="my-reviews">Đánh giá sản phẩm</a></li>
+          <li><a href="shops">Danh sách gian hàng</a></li>
+          <li><a href="category?custom=1">Linh kiện hỗ trợ custom</a></li>
         </ul>
       </div>
       <div class="footer-col">
-        <h4>Người bán</h4>
+        <h4>Kênh người bán</h4>
         <ul>
-          <li><a href="#">Đăng ký bán hàng</a></li>
-          <li><a href="#">Quy chế hoạt động</a></li>
-          <li><a href="#">Chính sách phí</a></li>
-          <li><a href="#">Trung tâm người bán</a></li>
+          <li><a href="seller-orders">Quản lý đơn hàng xưởng</a></li>
+          <li><a href="seller-confirm-custom">Tiếp nhận yêu cầu gia công</a></li>
+          <li><a href="seller-progress">Cập nhật tiến độ gia công</a></li>
+          <li><a href="seller-services">Quản lý gói dịch vụ custom</a></li>
         </ul>
       </div>
       <div class="footer-col">
         <h4>Liên hệ</h4>
         <ul>
-          <li>1900 6868</li>
-          <li>hotro@keebhub.vn</li>
-          <li>Tầng 8, toà nhà A, Q.1, TP.HCM</li>
+          <li>Hotline: 1900 6868</li>
+          <li>Email: hotro@keebhub.vn</li>
+          <li>Tầng 8, Tòa nhà A, Quận 1, TP.HCM</li>
         </ul>
         <div class="social-links">
-          <a href="#">f</a>
-          <a href="#">ig</a>
-          <a href="#">yt</a>
+          <a href="https://www.facebook.com" target="_blank" rel="noopener noreferrer" title="Facebook">f</a>
+          <a href="https://www.instagram.com" target="_blank" rel="noopener noreferrer" title="Instagram">ig</a>
+          <a href="https://www.youtube.com" target="_blank" rel="noopener noreferrer" title="YouTube">yt</a>
         </div>
       </div>
     </div>
     <div class="footer-bottom">
       <span>© 2026 KeebHub. Đồ án Thương mại điện tử.</span>
       <span>
-                <a href="#">Điều khoản</a> · <a href="#">Bảo mật</a> · <a href="#">Cookie</a>
+                <a href="index.jsp">Trang chủ</a> · <a href="shops">Gian hàng</a> · <a href="category">Sản phẩm</a>
             </span>
     </div>
   </div>

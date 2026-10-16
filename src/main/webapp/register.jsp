@@ -222,7 +222,7 @@
             </form>
 
             <div class="otp-spam-warning">
-                ⚠️ Không nhận được mã? Kiểm tra hộp thư Spam hoặc Quảng cáo (hoặc cửa sổ Console của Tomcat nếu chưa cấu hình SMTP). Nếu email sai, <a href="register">nhập lại email khác.</a>
+                ⚠️ Không nhận được mã? Kiểm tra hộp thư Spam hoặc Quảng cáo. Nếu email sai, <a href="register">nhập lại email khác.</a>
             </div>
 
             <% } else if (step == 3) { %>

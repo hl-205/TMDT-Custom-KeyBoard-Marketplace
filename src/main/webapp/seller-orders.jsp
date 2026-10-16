@@ -38,7 +38,6 @@
         <div class="seller-topbar">
             <div class="seller-page-title">
                 <h1>Quản lý đơn hàng</h1>
-                <p>Tổng cộng ${totalOrdersCount} đơn trong Database · Click vào đơn Chờ xác nhận để tiếp nhận yêu cầu gia công</p>
             </div>
             <div class="seller-top-right">
                 <div class="seller-user-pill">

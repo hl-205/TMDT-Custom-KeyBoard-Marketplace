@@ -13,6 +13,7 @@ import java.util.List;
 @WebServlet(urlPatterns = {"/category", "/search"})
 public class CategoryServlet extends HttpServlet {
     private final ProductDAO productDAO = new ProductDAO();
+    private static final int PAGE_SIZE = 20;
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -32,13 +33,28 @@ public class CategoryServlet extends HttpServlet {
         String sort = request.getParameter("sort");
         if (sort == null || sort.isEmpty()) sort = "popular";
 
-        List<Product> products = productDAO.filterProducts(
+        List<Product> allMatched = productDAO.filterProducts(
                 catId, keyword, brands, switchTypes, forces, layouts, mounts,
                 minPrice, maxPrice, inStock, supportCustom, minRating, sort
         );
 
-        // Tạo danh sách các tag "Đang lọc" hiển thị trên đầu trang (như Frame 04)
+        int totalProducts = allMatched.size();
+        int totalPages = Math.max(1, (int) Math.ceil((double) totalProducts / PAGE_SIZE));
+
+        Integer pageParam = parseIntOrNull(request.getParameter("page"));
+        int currentPage = (pageParam != null && pageParam > 0) ? pageParam : 1;
+        if (currentPage > totalPages) {
+            currentPage = totalPages;
+        }
+
+        int fromIndex = (currentPage - 1) * PAGE_SIZE;
+        int toIndex = Math.min(fromIndex + PAGE_SIZE, totalProducts);
+        List<Product> pagedProducts = (totalProducts > 0)
+                ? allMatched.subList(fromIndex, toIndex)
+                : new ArrayList<>();
+
         List<String> activeTags = new ArrayList<>();
+        if (catId != null && catId > 0) activeTags.add("Danh mục #" + catId);
         if (brands != null) activeTags.addAll(Arrays.asList(brands));
         if (switchTypes != null) activeTags.addAll(Arrays.asList(switchTypes));
         if (forces != null) activeTags.addAll(Arrays.asList(forces));
@@ -50,7 +66,10 @@ public class CategoryServlet extends HttpServlet {
             activeTags.add("Giá: " + (minPrice != null ? minPrice / 1000 + "k" : "0") + " - " + (maxPrice != null ? maxPrice / 1000 + "k" : "Max"));
         }
 
-        request.setAttribute("products", products);
+        request.setAttribute("products", pagedProducts);
+        request.setAttribute("totalProducts", totalProducts);
+        request.setAttribute("currentPage", currentPage);
+        request.setAttribute("totalPages", totalPages);
         request.setAttribute("catId", catId);
         request.setAttribute("keyword", keyword);
         request.setAttribute("selectedBrands", brands != null ? Arrays.asList(brands) : new ArrayList<>());

@@ -61,9 +61,9 @@ public class SellerServiceServlet extends HttpServlet {
         request.setAttribute("totalSoldMonth", totalSoldMonth);
         request.setAttribute("formattedCustomRevenue", CustomOrderDAO.formatVND(totalCustomRevenue));
         request.setAttribute("activePkgCount", activePkgCount);
-        request.setAttribute("totalOrdersCount", customDAO.countOrdersByStatus("ALL", false));
-        request.setAttribute("pendingCustomCount", customDAO.countOrdersByStatus("PENDING", true));
-        request.setAttribute("processingCustomCount", customDAO.countOrdersByStatus("PROCESSING", true));
+        request.setAttribute("totalOrdersCount", customDAO.countOrdersByShopAndStatus(shopId, "ALL", false));
+        request.setAttribute("pendingCustomCount", customDAO.countOrdersByShopAndStatus(shopId, "PENDING", true));
+        request.setAttribute("processingCustomCount", customDAO.countOrdersByShopAndStatus(shopId, "PROCESSING", true));
 
         request.getRequestDispatcher("seller-services.jsp").forward(request, response);
     }
@@ -71,6 +71,7 @@ public class SellerServiceServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        request.setCharacterEncoding("UTF-8");
         HttpSession session = request.getSession();
         User currentUser = (User) session.getAttribute("user");
         if (currentUser == null) {

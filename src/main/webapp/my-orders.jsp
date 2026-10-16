@@ -46,14 +46,10 @@
                 </div>
             </div>
 
-            <div class="acc-nav-group-title">Tài khoản</div>
-            <a href="my-orders" class="acc-nav-link"><span>👤 Hồ sơ cá nhân</span></a>
-            <a href="my-orders" class="acc-nav-link"><span>📍 Sổ địa chỉ</span></a>
-            <a href="my-orders" class="acc-nav-link"><span>🔒 Bảo mật</span></a>
-
             <div class="acc-nav-group-title">Mua hàng</div>
             <a href="my-orders" class="acc-nav-link active"><span>📦 Đơn hàng của tôi</span><span class="badge"><%= userOrders.size() %></span></a>
             <a href="my-reviews" class="acc-nav-link"><span>⭐ Đánh giá của tôi</span></a>
+            <a href="cart" class="acc-nav-link"><span>🛒 Giỏ hàng</span></a>
 
             <div class="acc-nav-group-title">Hỗ trợ</div>
             <a href="logout" class="acc-nav-link" style="color:#EF4444;font-weight:700;"><span>↪ Đăng xuất</span></a>
@@ -64,14 +60,14 @@
             <div class="order-card-box" style="text-align:center;padding:48px 24px;">
                 <h3 style="font-size:18px;margin-bottom:8px;">Bạn chưa có đơn hàng nào</h3>
                 <p style="font-size:13px;color:#64748B;margin-bottom:18px;">Tài khoản <strong><%= currentUser.getFullName() %></strong> hiện chưa phát sinh giao dịch mua hàng trong hệ thống.</p>
-                <a href="category" class="btn btn-blue">Khám phá sản phẩm ngay</a>
+                <a href="category" class="btn btn-blue">Khám phá 100+ sản phẩm ngay</a>
             </div>
             <% } else { %>
             <% for (CustomOrder ord : userOrders) { %>
             <div class="order-card-box">
                 <div class="order-card-head">
                     <div>
-                        <strong style="margin-right:8px;"><%= ord.getShopName() %></strong>
+                        <a href="shop?id=<%= ord.getShopId() %>" style="font-weight:800;margin-right:8px;color:#0F172A;"><%= ord.getShopName() %></a>
                         <% if (ord.isCustomOrder()) { %>
                         <span class="shop-badge-pill workshop">Đơn custom</span>
                         <% } %>
@@ -82,7 +78,7 @@
                     <% } else if ("COMPLETED".equals(ord.getOrderStatus())) { %>
                     <span style="background:#DCFCE7;color:#15803D;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;">✓ Hoàn thành</span>
                     <% } else if ("PENDING".equals(ord.getOrderStatus())) { %>
-                    <span style="background:#FEF2F2;color:#DC2626;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;">🕒 Chờ xác nhận</span>
+                    <span style="background:#FEF2F2;color:#DC2626;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;">🕒 Chờ xưởng xác nhận & báo giá</span>
                     <% } else { %>
                     <span style="background:#EFF6FF;color:#1B64F2;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;"><%= ord.getOrderStatus() %></span>
                     <% } %>
@@ -96,14 +92,17 @@
                     <strong><%= ord.getFormattedTotal() %></strong>
                 </div>
 
+                <% if (ord.getShopNote() != null && !ord.getShopNote().isBlank()) { %>
+                <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:10px 14px;margin-top:8px;font-size:12px;color:#166534;">
+                    <strong>📋 Phiếu báo giá / Phản hồi từ <%= ord.getShopName() %>:</strong> <%= ord.getShopNote() %>
+                </div>
+                <% } %>
+
                 <div class="order-card-foot">
-                    <div>Tổng tiền: <strong style="font-size:16px;color:#EA580C;"><%= ord.getFormattedTotal() %></strong></div>
+                    <div>Tổng thanh toán chốt: <strong style="font-size:16px;color:#EA580C;"><%= ord.getFormattedTotal() %></strong></div>
                     <div style="display:flex;gap:10px;">
-                        <% if (ord.isCustomOrder()) { %>
-                        <a href="order-detail?code=<%= ord.getOrderCode() %>" class="btn btn-blue">Xem tiến độ gia công</a>
-                        <% } else { %>
+                        <a href="order-detail?id=<%= ord.getId() %>" class="btn btn-blue">Xem chi tiết & Tiến độ</a>
                         <a href="product-detail?id=<%= ord.getProductId() %>" class="btn btn-outline-gray">Xem sản phẩm</a>
-                        <% } %>
 
                         <% if ("COMPLETED".equals(ord.getOrderStatus())) { %>
                         <% if (reviewedIds.contains(ord.getProductId())) { %>

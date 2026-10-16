@@ -10,19 +10,17 @@
         response.sendRedirect("login");
         return;
     }
-    CustomOrder order = (CustomOrder) request.getAttribute("order");
-    if (order == null) {
-        response.sendRedirect("seller-progress");
-        return;
-    }
     Shop sellerShop = (Shop) request.getAttribute("sellerShop");
     String shopName = (sellerShop != null) ? sellerShop.getShopName() : "SwitchHouse";
+    CustomOrder order = (CustomOrder) request.getAttribute("order");
     List<ProgressStep> steps = (List<ProgressStep>) request.getAttribute("steps");
     List<CustomOrder> workshopQueue = (List<CustomOrder>) request.getAttribute("workshopQueue");
 
     int completedCount = 0;
-    for (ProgressStep s : steps) {
-        if ("COMPLETED".equals(s.getStatus())) completedCount++;
+    if (steps != null) {
+        for (ProgressStep s : steps) {
+            if ("COMPLETED".equals(s.getStatus())) completedCount++;
+        }
     }
 %>
 <!DOCTYPE html>
@@ -30,7 +28,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tiến độ gia công #<%= order.getOrderCode() %> - <%= shopName %></title>
+    <title>Tiến độ gia công - <%= shopName %></title>
     <link rel="stylesheet" href="assets/css/seller.css">
 </head>
 <body>
@@ -43,11 +41,10 @@
     <main class="seller-main-area">
         <div class="seller-topbar">
             <div class="seller-page-title">
-                <h1>Tiến độ gia công</h1>
-                <p>${processingCustomCount} đơn custom đang gia công trong xưởng</p>
+                <h1>Tiến độ gia công xưởng</h1>
+                <p>Xưởng: <strong><%= shopName %></strong></p>
             </div>
             <div class="seller-top-right">
-                <a href="order-detail?code=<%= order.getOrderCode() %>" class="btn-seller-outline">👁️ Xem góc nhìn Khách hàng</a>
                 <div class="seller-user-pill">
                     <div class="sh-square" style="width:26px;height:26px;border-radius:50%;font-size:11px;"><%= currentUser.getAvatarText() %></div>
                     <span><%= currentUser.getFullName() %> · Chủ shop (<%= shopName %>)</span>
@@ -57,10 +54,18 @@
 
         <% if (request.getParameter("msg") != null) { %>
         <div style="background:#DCFCE7;border:1px solid #BBF7D0;color:#15803D;padding:10px 16px;border-radius:8px;margin-bottom:16px;font-size:13px;font-weight:600;">
-            ✓ Đã lưu cập nhật tiến độ gia công vào bảng <code>order_progress</code>! Tiến độ hiện tại của đơn #<%= order.getOrderCode() %> là <%= order.getProgressPercent() %>%.
+            ✓ Đã lưu cập nhật tiến độ gia công thành công!
         </div>
         <% } %>
 
+        <% if (order == null) { %>
+        <div class="white-panel-card" style="text-align:center;padding:56px 24px;">
+            <div style="font-size:42px;margin-bottom:12px;">🛠️</div>
+            <h3 style="font-size:18px;font-weight:800;margin-bottom:6px;">Hiện tại không có đơn custom nào đang gia công trong xưởng</h3>
+            <p style="color:#64748B;font-size:13px;margin-bottom:20px;">Khi bạn nhận đơn ở mục "Đơn custom chờ xác nhận", đơn sẽ tự động xuất hiện tại đây.</p>
+            <a href="seller-orders" class="btn-seller-primary">Quay lại Quản lý đơn hàng</a>
+        </div>
+        <% } else { %>
         <div class="confirm-layout-2col">
             <div class="white-panel-card">
                 <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -75,12 +80,13 @@
                     <div class="progress-bar-Full" style="flex:1;">
                         <div class="progress-bar-Fill" style="width:<%= order.getProgressPercent() %>%;"></div>
                     </div>
-                    <strong style="font-size:13px;"><%= completedCount %>/<%= steps.size() %> công đoạn</strong>
+                    <strong style="font-size:13px;"><%= completedCount %>/<%= steps != null ? steps.size() : 5 %> công đoạn</strong>
                 </div>
 
-                <% for (ProgressStep st : steps) {
-                    boolean isDone = "COMPLETED".equals(st.getStatus());
-                    boolean isCurrent = "IN_PROGRESS".equals(st.getStatus());
+                <% if (steps != null) {
+                    for (ProgressStep st : steps) {
+                        boolean isDone = "COMPLETED".equals(st.getStatus());
+                        boolean isCurrent = "IN_PROGRESS".equals(st.getStatus());
                 %>
                 <div class="timeline-step-row">
                     <div class="step-bullet <%= isDone ? "done" : (isCurrent ? "active" : "pending") %>">
@@ -118,7 +124,7 @@
                         <% } %>
                     </div>
                 </div>
-                <% } %>
+                <% } } %>
             </div>
 
             <div>
@@ -131,7 +137,6 @@
                         <tr><td>Phí gia công</td><td><%= order.getFormattedCustomFee() %></td></tr>
                         <tr><td>Tổng đơn</td><td><%= order.getFormattedTotal() %></td></tr>
                     </table>
-                    <button type="button" class="btn-seller-outline" style="width:100%;margin-top:12px;" onclick="window.print()">📄 In Build Sheet cho thợ</button>
                 </div>
             </div>
         </div>
@@ -164,6 +169,7 @@
                 </tbody>
             </table>
         </section>
+        <% } %>
     </main>
 </div>
 

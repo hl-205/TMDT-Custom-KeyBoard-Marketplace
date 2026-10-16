@@ -10,6 +10,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 @WebServlet(urlPatterns = {"/seller-progress", "/order-detail"})
@@ -28,10 +29,12 @@ public class SellerProgressServlet extends HttpServlet {
         }
 
         Shop sellerShop = shopDAO.getShopByOwnerId(currentUser.getId());
+        int shopId = (sellerShop != null) ? sellerShop.getId() : 2;
+
         request.setAttribute("sellerShop", sellerShop);
-        request.setAttribute("totalOrdersCount", customDAO.countOrdersByStatus("ALL", false));
-        request.setAttribute("pendingCustomCount", customDAO.countOrdersByStatus("PENDING", true));
-        request.setAttribute("processingCustomCount", customDAO.countOrdersByStatus("PROCESSING", true));
+        request.setAttribute("totalOrdersCount", customDAO.countOrdersByShopAndStatus(shopId, "ALL", false));
+        request.setAttribute("pendingCustomCount", customDAO.countOrdersByShopAndStatus(shopId, "PENDING", true));
+        request.setAttribute("processingCustomCount", customDAO.countOrdersByShopAndStatus(shopId, "PROCESSING", true));
 
         String path = request.getServletPath();
         CustomOrder order = null;
@@ -46,12 +49,12 @@ public class SellerProgressServlet extends HttpServlet {
             order = customDAO.getOrderByCode(codeParam);
         }
 
-        if (order == null) {
-            order = customDAO.getOrderByCode("KH-284193");
+        List<CustomOrder> workshopQueue = customDAO.getOrdersForSellerByShop(shopId, "PROCESSING", true);
+        if (order == null && !workshopQueue.isEmpty()) {
+            order = workshopQueue.get(0);
         }
 
-        List<ProgressStep> steps = customDAO.getProgressSteps(order.getId());
-        List<CustomOrder> workshopQueue = customDAO.getOrdersForSeller("PROCESSING", true);
+        List<ProgressStep> steps = (order != null) ? customDAO.getProgressSteps(order.getId()) : new ArrayList<>();
 
         request.setAttribute("order", order);
         request.setAttribute("steps", steps);
@@ -67,6 +70,7 @@ public class SellerProgressServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        request.setCharacterEncoding("UTF-8");
         int orderId = Integer.parseInt(request.getParameter("orderId"));
         int stepNumber = Integer.parseInt(request.getParameter("stepNumber"));
         String stepDesc = request.getParameter("stepDesc");

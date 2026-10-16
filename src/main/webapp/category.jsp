@@ -7,6 +7,13 @@
         return;
     }
     List<Product> products = (List<Product>) request.getAttribute("products");
+    Integer totalProductsObj = (Integer) request.getAttribute("totalProducts");
+    int totalProducts = (totalProductsObj != null) ? totalProductsObj : products.size();
+    Integer currentPageObj = (Integer) request.getAttribute("currentPage");
+    int currentPage = (currentPageObj != null) ? currentPageObj : 1;
+    Integer totalPagesObj = (Integer) request.getAttribute("totalPages");
+    int totalPages = (totalPagesObj != null) ? totalPagesObj : 1;
+
     Integer catId = (Integer) request.getAttribute("catId");
     String keyword = (String) request.getAttribute("keyword");
     List<String> selectedBrands = (List<String>) request.getAttribute("selectedBrands");
@@ -42,23 +49,21 @@
     </div>
 
     <% if (keyword != null && !keyword.isEmpty()) { %>
-    <!-- Giao diện Header Tìm kiếm chuẩn Frame 04 -->
     <div class="search-title-block">
         <h2>Kết quả cho “<%= keyword %>”</h2>
-        <p>Tìm thấy <strong><%= products.size() %></strong> sản phẩm · <a href="#" style="color:#1B64F2;font-weight:700;">Lưu tìm kiếm này</a></p>
+        <p>Tìm thấy <strong><%= totalProducts %></strong> sản phẩm trong cơ sở dữ liệu (Hiển thị tối đa 20 sản phẩm/trang)</p>
     </div>
     <% } else { %>
-    <!-- Giao diện Banner Danh mục chuẩn Frame 03 -->
     <div class="cat-hero-banner">
         <div>
-            <h2>Kit bàn phím cơ & Linh kiện Custom</h2>
-            <p>1.240 sản phẩm từ 86 shop đã xác minh. Mọi kit đều có dữ liệu tương thích để dùng ngay trong Custom Builder.</p>
+            <h2>Kho Linh Kiện Bàn Phím Cơ & Dịch Vụ Custom</h2>
+            <p>Hiển thị trực tiếp từ cơ sở dữ liệu KeebHub. Mọi linh kiện đều có thông số đối chiếu tương thích tự động trong Custom Builder.</p>
             <div class="cat-hero-pills">
-                <span>Hotswap</span>
+                <span>Hotswap 5-pin</span>
                 <span>Gasket mount</span>
                 <span>Có sẵn tại VN</span>
                 <span>Hỗ trợ QMK/VIA</span>
-                <span>Tri-mode</span>
+                <span>Tri-mode Wireless</span>
             </div>
         </div>
         <div class="keeb-mockup">
@@ -73,7 +78,7 @@
     <div class="active-filter-bar">
         <span class="af-label">Đang lọc:</span>
         <% for (String tag : activeTags) { %>
-        <span class="af-tag"><%= tag %> ✕</span>
+        <span class="af-tag"><%= tag %></span>
         <% } %>
         <a href="category" class="af-clear">Xoá tất cả</a>
     </div>
@@ -87,6 +92,7 @@
         <input type="hidden" name="cat" value="<%= catId %>">
         <% } %>
         <input type="hidden" name="sort" id="sortHiddenInput" value="<%= sort %>">
+        <input type="hidden" name="page" id="pageHiddenInput" value="<%= currentPage %>">
 
         <div class="filter-page-grid">
             <!-- Cột Trái: Bộ lọc đa tiêu chí -->
@@ -96,28 +102,50 @@
                     <a href="category">Xoá tất cả</a>
                 </div>
 
+                <!-- Danh mục -->
+                <div class="f-section">
+                    <h4>Nhóm sản phẩm</h4>
+                    <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;">
+                        <a href="category" style="color:<%= catId == null ? "#1B64F2;font-weight:700" : "#334155" %>;">• Tất cả danh mục</a>
+                        <a href="category?cat=1" style="color:<%= (catId != null && catId == 1) ? "#1B64F2;font-weight:700" : "#334155" %>;">• Kit bàn phím</a>
+                        <a href="category?cat=2" style="color:<%= (catId != null && catId == 2) ? "#1B64F2;font-weight:700" : "#334155" %>;">• Switch</a>
+                        <a href="category?cat=3" style="color:<%= (catId != null && catId == 3) ? "#1B64F2;font-weight:700" : "#334155" %>;">• Keycap</a>
+                        <a href="category?cat=4" style="color:<%= (catId != null && catId == 4) ? "#1B64F2;font-weight:700" : "#334155" %>;">• Stabilizer</a>
+                        <a href="category?cat=5" style="color:<%= (catId != null && catId == 5) ? "#1B64F2;font-weight:700" : "#334155" %>;">• Phụ kiện</a>
+                        <a href="category?cat=6" style="color:<%= (catId != null && catId == 6) ? "#1B64F2;font-weight:700" : "#334155" %>;">• Dịch vụ gia công</a>
+                    </div>
+                </div>
+
                 <!-- Tiêu chí 1: Thương hiệu -->
                 <div class="f-section">
                     <h4>Thương hiệu</h4>
                     <label class="f-check-row">
                         <input type="checkbox" name="brand" value="KBDfans" <%= selectedBrands.contains("KBDfans") ? "checked" : "" %>>
-                        <span>KBDfans</span><span class="f-cnt">128</span>
+                        <span>KBDfans</span>
                     </label>
                     <label class="f-check-row">
                         <input type="checkbox" name="brand" value="Gateron" <%= selectedBrands.contains("Gateron") ? "checked" : "" %>>
-                        <span>Gateron</span><span class="f-cnt">210</span>
+                        <span>Gateron</span>
                     </label>
                     <label class="f-check-row">
                         <input type="checkbox" name="brand" value="Akko" <%= selectedBrands.contains("Akko") ? "checked" : "" %>>
-                        <span>Akko</span><span class="f-cnt">340</span>
+                        <span>Akko</span>
                     </label>
                     <label class="f-check-row">
                         <input type="checkbox" name="brand" value="Keychron" <%= selectedBrands.contains("Keychron") ? "checked" : "" %>>
-                        <span>Keychron</span><span class="f-cnt">95</span>
+                        <span>Keychron</span>
                     </label>
                     <label class="f-check-row">
                         <input type="checkbox" name="brand" value="GMK" <%= selectedBrands.contains("GMK") ? "checked" : "" %>>
-                        <span>GMK</span><span class="f-cnt">42</span>
+                        <span>GMK</span>
+                    </label>
+                    <label class="f-check-row">
+                        <input type="checkbox" name="brand" value="HMX" <%= selectedBrands.contains("HMX") ? "checked" : "" %>>
+                        <span>HMX</span>
+                    </label>
+                    <label class="f-check-row">
+                        <input type="checkbox" name="brand" value="Qwertykeys" <%= selectedBrands.contains("Qwertykeys") ? "checked" : "" %>>
+                        <span>Qwertykeys</span>
                     </label>
                 </div>
 
@@ -126,15 +154,15 @@
                     <h4>Loại switch</h4>
                     <label class="f-check-row">
                         <input type="checkbox" name="switchType" value="Linear" <%= selectedSwitchTypes.contains("Linear") ? "checked" : "" %>>
-                        <span>Linear</span><span class="f-cnt">412</span>
+                        <span>Linear</span>
                     </label>
                     <label class="f-check-row">
                         <input type="checkbox" name="switchType" value="Tactile" <%= selectedSwitchTypes.contains("Tactile") ? "checked" : "" %>>
-                        <span>Tactile</span><span class="f-cnt">298</span>
+                        <span>Tactile</span>
                     </label>
                     <label class="f-check-row">
                         <input type="checkbox" name="switchType" value="Clicky" <%= selectedSwitchTypes.contains("Clicky") ? "checked" : "" %>>
-                        <span>Clicky</span><span class="f-cnt">96</span>
+                        <span>Clicky</span>
                     </label>
                 </div>
 
@@ -143,15 +171,19 @@
                     <h4>Layout</h4>
                     <label class="f-check-row">
                         <input type="checkbox" name="layout" value="60%" <%= selectedLayouts.contains("60%") ? "checked" : "" %>>
-                        <span>60% / 61 phím</span><span class="f-cnt">286</span>
+                        <span>60% / 61 phím</span>
+                    </label>
+                    <label class="f-check-row">
+                        <input type="checkbox" name="layout" value="65%" <%= selectedLayouts.contains("65%") ? "checked" : "" %>>
+                        <span>65% / 68 phím</span>
                     </label>
                     <label class="f-check-row">
                         <input type="checkbox" name="layout" value="75%" <%= selectedLayouts.contains("75%") ? "checked" : "" %>>
-                        <span>75% / 82 phím</span><span class="f-cnt">197</span>
+                        <span>75% / 82 phím</span>
                     </label>
                     <label class="f-check-row">
                         <input type="checkbox" name="layout" value="TKL" <%= selectedLayouts.contains("TKL") ? "checked" : "" %>>
-                        <span>TKL / 87 phím</span><span class="f-cnt">154</span>
+                        <span>TKL / 87 phím</span>
                     </label>
                 </div>
 
@@ -161,7 +193,7 @@
                     <div class="price-range-inputs">
                         <input type="text" name="minPrice" placeholder="Từ 0" value="<%= minPrice != null ? minPrice : "" %>">
                         <span>—</span>
-                        <input type="text" name="maxPrice" placeholder="Đến 5.000.000" value="<%= maxPrice != null ? maxPrice : "" %>">
+                        <input type="text" name="maxPrice" placeholder="Đến 8.000.000" value="<%= maxPrice != null ? maxPrice : "" %>">
                     </div>
                 </div>
 
@@ -170,11 +202,15 @@
                     <h4>Lực nhấn</h4>
                     <label class="f-check-row">
                         <input type="checkbox" name="force" value="Dưới 45g" <%= selectedForces.contains("Dưới 45g") ? "checked" : "" %>>
-                        <span>Dưới 45g</span><span class="f-cnt">88</span>
+                        <span>Dưới 45g</span>
                     </label>
                     <label class="f-check-row">
                         <input type="checkbox" name="force" value="45-55g" <%= selectedForces.contains("45-55g") ? "checked" : "" %>>
-                        <span>45–55g</span><span class="f-cnt">204</span>
+                        <span>45–55g</span>
+                    </label>
+                    <label class="f-check-row">
+                        <input type="checkbox" name="force" value="Trên 55g" <%= selectedForces.contains("Trên 55g") ? "checked" : "" %>>
+                        <span>Trên 55g</span>
                     </label>
                 </div>
 
@@ -183,11 +219,11 @@
                     <h4>Tình trạng & Dịch vụ</h4>
                     <label class="f-check-row">
                         <input type="checkbox" name="inStock" value="1" <%= (inStock != null && inStock) ? "checked" : "" %>>
-                        <span>Còn hàng</span><span class="f-cnt">984</span>
+                        <span>Còn hàng</span>
                     </label>
                     <label class="f-check-row">
                         <input type="checkbox" name="custom" value="1" <%= (supportCustom != null && supportCustom) ? "checked" : "" %>>
-                        <span>Hỗ trợ gia công</span><span class="f-cnt">318</span>
+                        <span>Hỗ trợ gia công</span>
                     </label>
                 </div>
 
@@ -195,16 +231,16 @@
                 <div class="f-section">
                     <h4>Đánh giá</h4>
                     <label class="f-check-row">
-                        <input type="radio" name="rating" value="4.8" <%= (minRating != null && minRating == 4.8) ? "checked" : "" %>>
-                        <span style="color:#F59E0B;">★★★★★</span> <span>từ 4.8 sao</span>
+                        <input type="radio" name="rating" value="4.9" <%= (minRating != null && minRating == 4.9) ? "checked" : "" %>>
+                        <span style="color:#F59E0B;">★★★★★</span> <span>từ 4.9 sao</span>
                     </label>
                     <label class="f-check-row">
-                        <input type="radio" name="rating" value="4.5" <%= (minRating != null && minRating == 4.5) ? "checked" : "" %>>
-                        <span style="color:#F59E0B;">★★★★☆</span> <span>từ 4.5 sao</span>
+                        <input type="radio" name="rating" value="4.8" <%= (minRating != null && minRating == 4.8) ? "checked" : "" %>>
+                        <span style="color:#F59E0B;">★★★★☆</span> <span>từ 4.8 sao</span>
                     </label>
                 </div>
 
-                <button type="submit" class="btn-apply-filter">Áp dụng bộ lọc</button>
+                <button type="submit" class="btn-apply-filter" onclick="document.getElementById('pageHiddenInput').value='1'">Áp dụng bộ lọc</button>
             </aside>
 
             <!-- Cột Phải: Kết quả sản phẩm -->
@@ -212,15 +248,17 @@
                 <div class="sort-header-bar">
                     <span class="s-label">Sắp xếp theo</span>
                     <button type="button" class="sort-pill-btn <%= "popular".equals(sort) ? "active" : "" %>" onclick="submitSort('popular')">🔥 Phổ biến</button>
-                                        <button type="button" class="sort-pill-btn <%= "newest".equals(sort) ? "active" : "" %>" onclick="submitSort('newest')">🆕 Mới nhất</button>
-                                        <button type="button" class="sort-pill-btn <%= "best_selling".equals(sort) ? "active" : "" %>" onclick="submitSort('best_selling')">📦 Bán chạy</button>
-                                        <button type="button" class="sort-pill-btn <%= "price_asc".equals(sort) ? "active" : "" %>" onclick="submitSort('price_asc')">💰 Giá thấp → cao</button>
-                                        <button type="button" class="sort-pill-btn <%= "price_desc".equals(sort) ? "active" : "" %>" onclick="submitSort('price_desc')">💎 Giá cao → thấp</button>
-                    <span class="sort-right-count"><strong><%= products.size() %></strong> sản phẩm</span>
+                    <button type="button" class="sort-pill-btn <%= "newest".equals(sort) ? "active" : "" %>" onclick="submitSort('newest')">🆕 Mới nhất</button>
+                    <button type="button" class="sort-pill-btn <%= "best_selling".equals(sort) ? "active" : "" %>" onclick="submitSort('best_selling')">📦 Bán chạy</button>
+                    <button type="button" class="sort-pill-btn <%= "price_asc".equals(sort) ? "active" : "" %>" onclick="submitSort('price_asc')">💰 Giá thấp → cao</button>
+                    <button type="button" class="sort-pill-btn <%= "price_desc".equals(sort) ? "active" : "" %>" onclick="submitSort('price_desc')">💎 Giá cao → thấp</button>
+                    <span class="sort-right-count">
+                        Hiển thị <strong><%= products.size() %></strong> / <strong><%= totalProducts %></strong> sản phẩm (Trang <%= currentPage %>/<%= totalPages %>)
+                    </span>
                 </div>
 
                 <div class="compat-banner-alert">
-                    💡 Bạn đang tìm linh kiện cho kit <strong>Tofu60 2.0</strong> đã lưu? <a href="category?custom=1">Bật lọc tương thích</a> để chỉ hiện linh kiện lắp vừa kit này (UC27).
+                    💡 Bạn đang tìm linh kiện cho kit <strong>Tofu60 2.0</strong>? <a href="category?custom=1">Bật lọc hỗ trợ gia công</a> hoặc mở <a href="custom-builder">Custom Builder</a> để kiểm tra tương thích tự động.
                 </div>
 
                 <% if (products.isEmpty()) { %>
@@ -263,15 +301,27 @@
                     </a>
                     <% } %>
                 </div>
-                <% } %>
 
+                <!-- Thanh phân trang động: Nếu <= 20 sản phẩm (totalPages == 1) chỉ hiện đúng số 1 -->
                 <div class="pagination-bar">
-                    <span class="pg-item">‹</span>
-                    <span class="pg-item active">1</span>
-                    <span class="pg-item">2</span>
-                    <span class="pg-item">3</span>
-                    <span class="pg-item">›</span>
+                    <% if (totalPages > 1 && currentPage > 1) { %>
+                    <button type="button" class="pg-item" style="cursor:pointer;" onclick="goToPage(<%= currentPage - 1 %>)">‹</button>
+                    <% } %>
+
+                    <% for (int pg = 1; pg <= totalPages; pg++) { %>
+                    <button type="button"
+                            class="pg-item <%= pg == currentPage ? "active" : "" %>"
+                            style="cursor:pointer;"
+                            onclick="goToPage(<%= pg %>)">
+                        <%= pg %>
+                    </button>
+                    <% } %>
+
+                    <% if (totalPages > 1 && currentPage < totalPages) { %>
+                    <button type="button" class="pg-item" style="cursor:pointer;" onclick="goToPage(<%= currentPage + 1 %>)">›</button>
+                    <% } %>
                 </div>
+                <% } %>
             </section>
         </div>
     </form>
@@ -282,6 +332,12 @@
 <script>
     function submitSort(sortValue) {
         document.getElementById('sortHiddenInput').value = sortValue;
+        document.getElementById('pageHiddenInput').value = '1';
+        document.getElementById('filterForm').submit();
+    }
+
+    function goToPage(pageNum) {
+        document.getElementById('pageHiddenInput').value = pageNum;
         document.getElementById('filterForm').submit();
     }
 </script>

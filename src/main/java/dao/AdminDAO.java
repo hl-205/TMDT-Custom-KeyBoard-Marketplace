@@ -5,15 +5,16 @@ import context.DBContext;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 public class AdminDAO extends DBContext {
 
-    // 1. Lấy danh sách tất cả người dùng
+    // 1. LẤY DANH SÁCH NGƯỜI DÙNG
     public List<Map<String, Object>> getUsers() {
         List<Map<String, Object>> list = new ArrayList<>();
         String sql = "SELECT id, first_name, last_name, email, role, status FROM users ORDER BY id DESC";
@@ -38,10 +39,10 @@ public class AdminDAO extends DBContext {
         return list;
     }
 
-    // 2. Lấy danh sách tất cả đơn hàng (kèm email người mua)
+    // 2. LẤY DANH SÁCH ĐƠN HÀNG
     public List<Map<String, Object>> getOrders() {
         List<Map<String, Object>> list = new ArrayList<>();
-        String sql = "SELECT o.id, o.order_code, o.receiver_name, u.email AS customer_email, " +
+        String sql = "SELECT o.id, o.order_code, o.receiver_name, COALESCE(u.email, '') AS customer_email, " +
                 "o.total_amount, o.order_status " +
                 "FROM orders o LEFT JOIN users u ON o.user_id = u.id ORDER BY o.id DESC";
 
@@ -65,10 +66,11 @@ public class AdminDAO extends DBContext {
         return list;
     }
 
-    // 3. Lấy danh sách tất cả sản phẩm (kèm tên cửa hàng)
+    // 3. LẤY DANH SÁCH SẢN PHẨM
     public List<Map<String, Object>> getProducts() {
         List<Map<String, Object>> list = new ArrayList<>();
-        String sql = "SELECT p.id, p.name, p.sku, s.shop_name, p.price, p.stock, p.status " +
+        String sql = "SELECT p.id, p.name, p.sku, COALESCE(s.shop_name, 'KeebHub Store') AS shop_name, " +
+                "p.price, p.stock, p.status " +
                 "FROM products p LEFT JOIN shops s ON p.shop_id = s.id ORDER BY p.id DESC";
 
         try (Connection conn = getConnection();
@@ -92,66 +94,50 @@ public class AdminDAO extends DBContext {
         return list;
     }
 
-    // 4. Lấy số liệu thống kê tổng quan (Stats) - Tự động nhóm ĐỘNG cho tất cả các Role & Trạng thái đơn
+    // 4. LẤY THỐNG KÊ DASHBOARD
     public Map<String, Object> getStats() {
         Map<String, Object> stats = new HashMap<>();
-
-        String sqlUser = "SELECT COUNT(*) FROM users";
-        String sqlOrder = "SELECT COUNT(*) FROM orders";
-        String sqlProduct = "SELECT COUNT(*) FROM products";
-        String sqlTotalValue = "SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE order_status != 'CANCELLED'";
-
-        // Gom nhóm động toàn bộ các Role thực tế trong Database (kể cả CUSTOM, MODERATOR,...)
-        String sqlRoles = "SELECT COALESCE(role, 'GUEST') AS role_name, COUNT(*) AS count " +
-                "FROM users GROUP BY role ORDER BY count DESC";
-
-        // Gom nhóm động toàn bộ các Trạng thái đơn hàng thực tế trong Database
-        String sqlStatuses = "SELECT COALESCE(order_status, 'UNKNOWN') AS status_name, COUNT(*) AS count " +
-                "FROM orders GROUP BY order_status ORDER BY count DESC";
-
         try (Connection conn = getConnection()) {
-            // Đếm tổng số người dùng
-            try (PreparedStatement ps = conn.prepareStatement(sqlUser); ResultSet rs = ps.executeQuery()) {
+            // Đếm users
+            try (PreparedStatement ps = conn.prepareStatement("SELECT COUNT(*) FROM users");
+                 ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) stats.put("userCount", rs.getInt(1));
             }
 
-            // Đếm tổng số đơn hàng
-            try (PreparedStatement ps = conn.prepareStatement(sqlOrder); ResultSet rs = ps.executeQuery()) {
+            // Đếm orders
+            try (PreparedStatement ps = conn.prepareStatement("SELECT COUNT(*) FROM orders");
+                 ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) stats.put("orderCount", rs.getInt(1));
             }
 
-            // Đếm tổng số sản phẩm
-            try (PreparedStatement ps = conn.prepareStatement(sqlProduct); ResultSet rs = ps.executeQuery()) {
+            // Đếm products
+            try (PreparedStatement ps = conn.prepareStatement("SELECT COUNT(*) FROM products");
+                 ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) stats.put("productCount", rs.getInt(1));
             }
 
-            // Tính tổng giá trị đơn không hủy
-            try (PreparedStatement ps = conn.prepareStatement(sqlTotalValue); ResultSet rs = ps.executeQuery()) {
+            // Tổng doanh thu đơn không hủy
+            try (PreparedStatement ps = conn.prepareStatement("SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE order_status != 'CANCELLED'");
+                 ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) stats.put("totalOrdersValue", rs.getLong(1));
             }
 
-            // 1. Map lưu toàn bộ Role động (Dùng cho biểu đồ tròn & danh sách hiển thị)
-            Map<String, Integer> roleStats = new LinkedHashMap<>();
-            try (PreparedStatement ps = conn.prepareStatement(sqlRoles); ResultSet rs = ps.executeQuery()) {
+            // Thống kê Role
+            Map<String, Integer> roleStats = new HashMap<>();
+            try (PreparedStatement ps = conn.prepareStatement("SELECT role, COUNT(*) FROM users GROUP BY role");
+                 ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    String role = rs.getString("role_name").toUpperCase();
-                    int count = rs.getInt("count");
-                    roleStats.put(role, count);
-                    // Đưa key lẻ vào stats để tương thích với code cũ (ví dụ: stats.customCount, stats.customerCount)
-                    stats.put(role.toLowerCase() + "Count", count);
+                    roleStats.put(rs.getString(1), rs.getInt(2));
                 }
             }
             stats.put("roleStats", roleStats);
 
-            // 2. Map lưu toàn bộ Trạng thái đơn động
-            Map<String, Integer> orderStatusStats = new LinkedHashMap<>();
-            try (PreparedStatement ps = conn.prepareStatement(sqlStatuses); ResultSet rs = ps.executeQuery()) {
+            // Thống kê Trạng thái đơn hàng
+            Map<String, Integer> orderStatusStats = new HashMap<>();
+            try (PreparedStatement ps = conn.prepareStatement("SELECT order_status, COUNT(*) FROM orders GROUP BY order_status");
+                 ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    String status = rs.getString("status_name").toUpperCase();
-                    int count = rs.getInt("count");
-                    orderStatusStats.put(status, count);
-                    // Đưa key lẻ vào stats (ví dụ: stats.pendingCount, stats.completedCount)
-                    stats.put(status.toLowerCase() + "Count", count);
+                    orderStatusStats.put(rs.getString(1), rs.getInt(2));
                 }
             }
             stats.put("orderStatusStats", orderStatusStats);
@@ -162,54 +148,225 @@ public class AdminDAO extends DBContext {
         return stats;
     }
 
-    // 5. Cập nhật trạng thái Người dùng
-    public void updateUserStatus(int id, String status) {
-        String sql = "UPDATE users SET status = ? WHERE id = ?";
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, status);
-            ps.setInt(2, id);
-            ps.executeUpdate();
-        } catch (Exception e) {
-            e.printStackTrace();
+    // =========================================================================
+    // CRUD - các hàm bên dưới KHÔNG nuốt lỗi nữa: có lỗi SQL là ném ra ngoài
+    // để AdminServlet trả success=false cho giao diện (trước đây vẫn báo "thành công").
+    // =========================================================================
+
+    private int firstKey(PreparedStatement ps) throws SQLException {
+        try (ResultSet rs = ps.getGeneratedKeys()) {
+            return rs.next() ? rs.getInt(1) : 0;
         }
     }
 
-    // 6. Cập nhật trạng thái Đơn hàng
-    public void updateOrderStatus(int id, String status) {
-        String sql = "UPDATE orders SET order_status = ? WHERE id = ?";
+    // ---------------------------- USER ---------------------------------------
+    public int saveUser(int id, String firstName, String lastName, String email,
+                        String password, String role, String status) throws SQLException {
+        if (id <= 0) {
+            String sql = "INSERT INTO users (first_name, last_name, email, password, role, status) VALUES (?, ?, ?, ?, ?, ?)";
+            try (Connection conn = getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                ps.setString(1, firstName);
+                ps.setString(2, lastName);
+                ps.setString(3, email);
+                ps.setString(4, (password != null && !password.isEmpty()) ? password : "123456");
+                ps.setString(5, role);
+                ps.setString(6, status);
+                ps.executeUpdate();
+                return firstKey(ps);
+            }
+        }
+
+        boolean updatePassword = (password != null && !password.trim().isEmpty());
+        String sql = updatePassword
+                ? "UPDATE users SET first_name=?, last_name=?, email=?, password=?, role=?, status=? WHERE id=?"
+                : "UPDATE users SET first_name=?, last_name=?, email=?, role=?, status=? WHERE id=?";
         try (Connection conn = getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, status);
-            ps.setInt(2, id);
-            ps.executeUpdate();
-        } catch (Exception e) {
-            e.printStackTrace();
+            int i = 1;
+            ps.setString(i++, firstName);
+            ps.setString(i++, lastName);
+            ps.setString(i++, email);
+            if (updatePassword) ps.setString(i++, password);
+            ps.setString(i++, role);
+            ps.setString(i++, status);
+            ps.setInt(i, id);
+            if (ps.executeUpdate() == 0) throw new SQLException("Không tìm thấy người dùng #" + id);
+            return id;
         }
     }
 
-    // 7. Cập nhật trạng thái Sản phẩm
-    public void updateProductStatus(int id, String status) {
-        String sql = "UPDATE products SET status = ? WHERE id = ?";
+    public void updateUserStatus(int id, String status) throws SQLException {
         try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+             PreparedStatement ps = conn.prepareStatement("UPDATE users SET status=? WHERE id=?")) {
             ps.setString(1, status);
             ps.setInt(2, id);
             ps.executeUpdate();
-        } catch (Exception e) {
-            e.printStackTrace();
         }
     }
 
-    // 8. Xóa sản phẩm
-    public void deleteProduct(int id) {
-        String sql = "DELETE FROM products WHERE id = ?";
+    public void deleteUser(int id) throws SQLException {
+        try (Connection conn = getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                // orders.user_id không có ON DELETE CASCADE -> phải xóa đơn trước
+                // (order_items, order_progress tự xóa theo vì có CASCADE)
+                try (PreparedStatement ps = conn.prepareStatement("DELETE FROM orders WHERE user_id=?")) {
+                    ps.setInt(1, id);
+                    ps.executeUpdate();
+                }
+                try (PreparedStatement ps = conn.prepareStatement("DELETE FROM users WHERE id=?")) {
+                    ps.setInt(1, id);
+                    ps.executeUpdate();
+                }
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            }
+        }
+    }
+
+    // ---------------------------- ORDER --------------------------------------
+    public int saveOrder(int id, String orderCode, String receiverName, String customerEmail,
+                         long totalAmount, String status) throws SQLException {
+        if (orderCode == null || orderCode.trim().isEmpty()) {
+            orderCode = "KH" + System.currentTimeMillis();
+        }
+
+        int userId;
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement("SELECT id FROM users WHERE email=?")) {
+            ps.setString(1, customerEmail);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) {
+                    throw new SQLException("Email \"" + customerEmail + "\" chưa có tài khoản người dùng nào.");
+                }
+                userId = rs.getInt("id");
+            }
+        }
+
+        if (id <= 0) {
+            String sql = "INSERT INTO orders (order_code, user_id, shop_id, receiver_name, receiver_phone, shipping_address, subtotal, total_amount, order_status) "
+                    + "VALUES (?, ?, 1, ?, '0987654321', 'Mặc định', ?, ?, ?)";
+            try (Connection conn = getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                ps.setString(1, orderCode);
+                ps.setInt(2, userId);
+                ps.setString(3, receiverName);
+                ps.setLong(4, totalAmount);
+                ps.setLong(5, totalAmount);
+                ps.setString(6, status);
+                ps.executeUpdate();
+                return firstKey(ps);
+            }
+        }
+
+        String sql = "UPDATE orders SET order_code=?, receiver_name=?, user_id=?, total_amount=?, subtotal=?, order_status=? WHERE id=?";
         try (Connection conn = getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, orderCode);
+            ps.setString(2, receiverName);
+            ps.setInt(3, userId);
+            ps.setLong(4, totalAmount);
+            ps.setLong(5, totalAmount);
+            ps.setString(6, status);
+            ps.setInt(7, id);
+            if (ps.executeUpdate() == 0) throw new SQLException("Không tìm thấy đơn hàng #" + id);
+            return id;
+        }
+    }
+
+    public void updateOrderStatus(int id, String status) throws SQLException {
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement("UPDATE orders SET order_status=? WHERE id=?")) {
+            ps.setString(1, status);
+            ps.setInt(2, id);
+            ps.executeUpdate();
+        }
+    }
+
+    public void deleteOrder(int id) throws SQLException {
+        // order_items / order_progress có ON DELETE CASCADE nên chỉ cần xóa orders
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement("DELETE FROM orders WHERE id=?")) {
             ps.setInt(1, id);
             ps.executeUpdate();
-        } catch (Exception e) {
-            e.printStackTrace();
+        }
+    }
+
+    // ---------------------------- PRODUCT ------------------------------------
+    public int saveProduct(int id, String name, String sku, String shopName,
+                           long price, int stock, String status) throws SQLException {
+        int shopId;
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement("SELECT id FROM shops WHERE shop_name = ? ORDER BY id LIMIT 1")) {
+            ps.setString(1, shopName);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) {
+                    throw new SQLException("Không có cửa hàng tên \"" + shopName + "\". Hãy nhập đúng tên cửa hàng (vd: KeebLab Store).");
+                }
+                shopId = rs.getInt("id");
+            }
+        }
+
+        if (id <= 0) {
+            String sql = "INSERT INTO products (shop_id, category_id, sku, name, price, stock, status) VALUES (?, 1, ?, ?, ?, ?, ?)";
+            try (Connection conn = getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                ps.setInt(1, shopId);
+                ps.setString(2, sku);
+                ps.setString(3, name);
+                ps.setLong(4, price);
+                ps.setInt(5, stock);
+                ps.setString(6, status);
+                ps.executeUpdate();
+                return firstKey(ps);
+            }
+        }
+
+        String sql = "UPDATE products SET name=?, sku=?, shop_id=?, price=?, stock=?, status=? WHERE id=?";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, name);
+            ps.setString(2, sku);
+            ps.setInt(3, shopId);
+            ps.setLong(4, price);
+            ps.setInt(5, stock);
+            ps.setString(6, status);
+            ps.setInt(7, id);
+            if (ps.executeUpdate() == 0) throw new SQLException("Không tìm thấy sản phẩm #" + id);
+            return id;
+        }
+    }
+
+    public void updateProductStatus(int id, String status) throws SQLException {
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement("UPDATE products SET status=? WHERE id=?")) {
+            ps.setString(1, status);
+            ps.setInt(2, id);
+            ps.executeUpdate();
+        }
+    }
+
+    public void deleteProduct(int id) throws SQLException {
+        try (Connection conn = getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                // order_items.product_id không có CASCADE -> xóa dòng chi tiết đơn liên quan trước
+                try (PreparedStatement ps = conn.prepareStatement("DELETE FROM order_items WHERE product_id=?")) {
+                    ps.setInt(1, id);
+                    ps.executeUpdate();
+                }
+                try (PreparedStatement ps = conn.prepareStatement("DELETE FROM products WHERE id=?")) {
+                    ps.setInt(1, id);
+                    ps.executeUpdate();
+                }
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            }
         }
     }
 }

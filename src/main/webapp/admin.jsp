@@ -1,859 +1,565 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
-<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Bảng Quản Trị Hệ Thống - KeebHub</title>
-
-    <!-- Google Fonts -->
+    <title>Quản trị KeebHub</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/admin.css">
-
-    <style>
-        .topbar-content,
-        .header-content,
-        .nav-content {
-            max-width: 1240px;
-            margin: 0 auto;
-            padding: 0 20px;
-            box-sizing: border-box;
-        }
-
-        .clickable-card {
-            cursor: pointer;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        .clickable-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.12);
-        }
-        .chart-box {
-            cursor: pointer;
-            height: 260px;
-            position: relative;
-        }
-        .legend-list li {
-            transition: background-color 0.15s ease, padding-left 0.15s ease;
-            border-radius: 6px;
-            padding: 8px 6px;
-        }
-        .legend-list li:hover {
-            background-color: #f1f5f9;
-        }
-        .legend-badge {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 3px;
-            margin-right: 8px;
-            vertical-align: middle;
-        }
-        .role-ADMIN { background: #fee2e2; color: #dc2626; }
-        .role-SELLER { background: #f3e8ff; color: #7c3aed; }
-        .role-CUSTOMER, .role-USER { background: #dbeafe; color: #1d4ed8; }
-        .role-MODERATOR { background: #fef3c7; color: #b45309; }
-    </style>
-    <!-- Chart.js CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
-<jsp:include page="includes/header.jsp" />
-<main class="wrap">
-    <!-- Header Admin -->
-    <div class="admin-header">
-        <h1>Bảng Quản Trị Hệ Thống</h1>
-        <p>Thống kê số liệu tổng quan và quản lý Người dùng, Đơn hàng, Sản phẩm trên KeebHub.</p>
-    </div>
-
-    <!-- 1. THỐNG KÊ NHANH -->
-    <div class="stats-grid">
-        <div class="stat-card clickable-card" data-nav-tab="users" title="Bấm để xem danh sách Người dùng">
-            <div class="stat-details">
-                <div class="stat-title">Người dùng</div>
-                <div class="stat-value" id="stat-user-count">${stats.userCount}</div>
+<div class="admin-shell">
+    <aside class="sidebar">
+        <a class="brand" href="${pageContext.request.contextPath}/admin" aria-label="KeebHub Admin">
+            <span class="brand-mark">K</span>
+            <span><strong>KeebHub</strong><small>TRUNG TÂM QUẢN TRỊ</small></span>
+        </a>
+        <div class="sidebar-label">QUẢN LÝ</div>
+        <nav id="sidebar-nav" class="sidebar-nav">
+            <button type="button" class="nav-item active" data-page="dashboard"><span class="nav-icon">▦</span>Tổng quan</button>
+            <button type="button" class="nav-item" data-page="users"><span class="nav-icon">♙</span>Người dùng</button>
+            <button type="button" class="nav-item" data-page="products"><span class="nav-icon">⌨</span>Sản phẩm</button>
+            <button type="button" class="nav-item" data-page="orders"><span class="nav-icon">▤</span>Đơn hàng</button>
+        </nav>
+        <div class="sidebar-bottom">
+            <div class="admin-avatar">AD</div>
+            <div class="admin-account">
+                <strong><c:out value="${sessionScope.userFullName != null ? sessionScope.userFullName: 'Quản trị viên'}"/></strong>
+                <small>Quản trị</small>
             </div>
-            <div class="stat-icon icon-blue">👥</div>
+            <a class="sidebar-logout" href="${pageContext.request.contextPath}/logout" title="Đăng xuất" aria-label="Đăng xuất">↗</a>
         </div>
+    </aside>
 
-        <div class="stat-card clickable-card" data-nav-tab="orders" title="Bấm để xem danh sách Đơn hàng">
-            <div class="stat-details">
-                <div class="stat-title">Đơn hàng</div>
-                <div class="stat-value" id="stat-order-count">${stats.orderCount}</div>
+    <main class="main-panel">
+        <header class="topbar">
+            <div>
+                <div class="eyebrow">KEEBHUB / ADMIN</div>
+                <h1 id="page-title">Tổng quan</h1>
             </div>
-            <div class="stat-icon icon-purple">🛒</div>
-        </div>
+            <div class="topbar-actions">
+                <label class="search-field" for="quick-search"><span>⌕</span><input id="quick-search" type="search" placeholder="Tìm kiếm dữ liệu..." autocomplete="off"></label>
 
-        <div class="stat-card clickable-card" data-nav-tab="products" title="Bấm để xem danh sách Sản phẩm">
-            <div class="stat-details">
-                <div class="stat-title">Sản phẩm</div>
-                <div class="stat-value" id="stat-product-count">${stats.productCount}</div>
-            </div>
-            <div class="stat-icon icon-orange">📦</div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-details">
-                <div class="stat-title">Doanh thu đơn không hủy</div>
-                <div class="stat-value" id="stat-total-value">
-                    <fmt:formatNumber value="${stats.totalOrdersValue}" type="number" groupingUsed="true"/> ₫
+                <div class="admin-profile-menu" id="admin-profile-menu">
+                    <div class="top-avatar" title="Quản trị viên">AD</div>
+                    <div class="profile-dropdown">
+                        <div class="dropdown-header">
+                            <strong><c:out value="${sessionScope.userFullName != null ? sessionScope.userFullName: 'Quản trị viên'}"/></strong>
+                            <small>Quản trị viên</small>
+                        </div>
+                        <hr>
+                        <a href="${pageContext.request.contextPath}/" class="dropdown-item">🏠 Trở về trang chủ</a>
+                        <a href="${pageContext.request.contextPath}/logout" class="dropdown-item logout-item">↗ Đăng xuất</a>
+                    </div>
                 </div>
             </div>
-            <div class="stat-icon icon-green">💰</div>
-        </div>
-    </div>
-
-    <!-- 2. BIỂU ĐỒ CỘT & CHÚ THÍCH -->
-    <div class="charts-grid">
-        <!-- Biểu đồ Cột Roles -->
-        <div class="panel" style="margin: 0;">
-            <div class="panel-header">
-                <h2>👥 Tỉ lệ Vai trò (Role) người dùng</h2>
-            </div>
-            <div class="chart-layout">
-                <div class="chart-box" data-nav-tab="users" title="Bấm để chuyển sang Quản lý người dùng">
-                    <canvas id="userRoleChart"></canvas>
-                </div>
-                <ul class="legend-list" id="roleLegendList">
-                    <c:choose>
-                        <c:when test="${not empty stats.roleStats}">
-                            <c:forEach items="${stats.roleStats}" var="r">
-                                <c:set var="roleColor" value="${r.key == 'ADMIN' ? '#dc2626' : (r.key == 'SELLER' ? '#7c3aed' : (r.key == 'MODERATOR' ? '#f59e0b' : '#2563eb'))}" />
-                                <li data-nav-tab="users" style="cursor: pointer;" title="Bấm để xem danh sách Người dùng">
-                                    <span><span class="legend-badge" style="background-color: ${roleColor};"></span> Vai trò <strong>${r.key}</strong></span>
-                                    <strong>${r.value} tài khoản</strong>
-                                </li>
-                            </c:forEach>
-                        </c:when>
-                        <c:otherwise>
-                            <li><span>Chưa có dữ liệu vai trò</span><strong>0</strong></li>
-                        </c:otherwise>
-                    </c:choose>
-                </ul>
-            </div>
-        </div>
-
-        <!-- Biểu đồ Cột Đơn hàng -->
-        <div class="panel" style="margin: 0;">
-            <div class="panel-header">
-                <h2>🛒 Tỉ lệ Trạng thái Đơn hàng</h2>
-            </div>
-            <div class="chart-layout">
-                <div class="chart-box" data-nav-tab="orders" title="Bấm để chuyển sang Quản lý đơn hàng">
-                    <canvas id="orderStatusChart"></canvas>
-                </div>
-                <ul class="legend-list" id="orderStatusLegendList">
-                    <c:choose>
-                        <c:when test="${not empty stats.orderStatusStats}">
-                            <c:forEach items="${stats.orderStatusStats}" var="s">
-                                <c:set var="statusColor" value="${s.key == 'COMPLETED' ? '#16a34a' : (s.key == 'PROCESSING' ? '#2563eb' : (s.key == 'PENDING' ? '#f59e0b' : (s.key == 'CANCELLED' ? '#dc2626' : (s.key == 'SHIPPED' ? '#7c3aed' : '#0891b2'))))}" />
-                                <li data-nav-tab="orders" style="cursor: pointer;" title="Bấm để xem danh sách Đơn hàng">
-                                    <span><span class="legend-badge" style="background-color: ${statusColor};"></span> Trạng thái <strong>${s.key}</strong></span>
-                                    <strong>${s.value} đơn</strong>
-                                </li>
-                            </c:forEach>
-                        </c:when>
-                        <c:otherwise>
-                            <li><span>Chưa có dữ liệu đơn hàng</span><strong>0</strong></li>
-                        </c:otherwise>
-                    </c:choose>
-                </ul>
-            </div>
-        </div>
-    </div>
-
-    <!-- 3. THANH CHUYỂN TAB CÁC CHỨC NĂNG QUẢN LÝ -->
-    <div class="admin-tabs" id="adminTabsSection">
-        <button class="tab-btn active" data-tab="users" data-switch-tab="users">👥 Quản lý người dùng</button>
-        <button class="tab-btn" data-tab="orders" data-switch-tab="orders">🛒 Quản lý đơn hàng</button>
-        <button class="tab-btn" data-tab="products" data-switch-tab="products">📦 Quản lý sản phẩm</button>
-    </div>
-
-    <!-- ================= TAB 1: QUẢN LÝ NGƯỜI DÙNG ================= -->
-    <div id="tab-users" class="tab-pane active">
-        <section class="panel">
-            <div class="panel-header">
-                <h2>Danh sách người dùng</h2>
-                <button class="btn-action btn-update" type="button" data-add="user">+ Thêm người dùng</button>
-            </div>
-            <div class="table-responsive">
-                <table>
-                    <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Họ tên</th>
-                        <th>Email</th>
-                        <th>Vai trò</th>
-                        <th>Trạng thái</th>
-                        <th>Thao tác</th>
-                    </tr>
-                    </thead>
-                    <tbody id="userTableBody">
-                    <c:forEach items="${users}" var="u">
-                        <tr id="row-user-${u.id}" data-entity="user" data-id="${u.id}"
-                            data-first-name="<c:out value='${u.first_name}'/>" data-last-name="<c:out value='${u.last_name}'/>"
-                            data-email="<c:out value='${u.email}'/>" data-role="<c:out value='${u.role}'/>" data-status="<c:out value='${u.status}'/>">
-                            <td><strong>#${u.id}</strong></td>
-                            <td><c:out value="${u.first_name}"/> <c:out value="${u.last_name}"/></td>
-                            <td><c:out value="${u.email}"/></td>
-                            <td><span class="badge-status role-${u.role}">${u.role}</span></td>
-                            <td><span class="badge-status status-${u.status}">${u.status}</span></td>
-                            <td>
-                                <div style="display:inline-flex; gap:6px;">
-                                    <button type="button" class="btn-action btn-update" data-action="edit">Sửa</button>
-                                    <button type="button" class="btn-action btn-delete" data-action="delete">Xóa</button>
-                                </div>
-                            </td>
-                        </tr>
-                    </c:forEach>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-    </div>
-
-    <!-- ================= TAB 2: QUẢN LÝ ĐƠN HÀNG ================= -->
-    <div id="tab-orders" class="tab-pane">
-        <section class="panel">
-            <div class="panel-header">
-                <h2>Danh sách đơn hàng</h2>
-                <button class="btn-action btn-update" type="button" data-add="order">+ Tạo đơn hàng</button>
-            </div>
-            <div class="table-responsive">
-                <table>
-                    <thead>
-                    <tr>
-                        <th>Mã đơn</th>
-                        <th>Người nhận</th>
-                        <th>Email</th>
-                        <th>Tổng tiền</th>
-                        <th>Trạng thái</th>
-                        <th>Thao tác</th>
-                    </tr>
-                    </thead>
-                    <tbody id="orderTableBody">
-                    <c:forEach items="${orders}" var="o">
-                        <tr id="row-order-${o.id}" data-entity="order" data-id="${o.id}"
-                            data-order-code="<c:out value='${o.order_code}'/>" data-receiver-name="<c:out value='${o.receiver_name}'/>"
-                            data-customer-email="<c:out value='${o.customer_email}'/>" data-total-amount="${o.total_amount}"
-                            data-status="<c:out value='${o.order_status}'/>">
-                            <td><strong><c:out value="${o.order_code}"/></strong></td>
-                            <td><c:out value="${o.receiver_name}"/></td>
-                            <td><c:out value="${o.customer_email}"/></td>
-                            <td style="font-weight:700; color:#ea580c;">
-                                <fmt:formatNumber value="${o.total_amount}" type="number" groupingUsed="true"/> ₫
-                            </td>
-                            <td><span class="badge-status status-${o.order_status}">${o.order_status}</span></td>
-                            <td>
-                                <div style="display:inline-flex; gap:6px;">
-                                    <button type="button" class="btn-action btn-update" data-action="edit">Sửa</button>
-                                    <button type="button" class="btn-action btn-delete" data-action="delete">Xóa</button>
-                                </div>
-                            </td>
-                        </tr>
-                    </c:forEach>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-    </div>
-
-    <!-- ================= TAB 3: QUẢN LÝ SẢN PHẨM ================= -->
-    <div id="tab-products" class="tab-pane">
-        <section class="panel">
-            <div class="panel-header">
-                <h2>Danh sách sản phẩm</h2>
-                <button class="btn-action btn-update" type="button" data-add="product">+ Thêm sản phẩm</button>
-            </div>
-            <div class="table-responsive">
-                <table>
-                    <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Tên sản phẩm</th>
-                        <th>SKU</th>
-                        <th>Cửa hàng</th>
-                        <th>Giá</th>
-                        <th>Tồn kho</th>
-                        <th>Trạng thái</th>
-                        <th>Thao tác</th>
-                    </tr>
-                    </thead>
-                    <tbody id="productTableBody">
-                    <c:forEach items="${products}" var="p">
-                        <tr id="row-product-${p.id}" data-entity="product" data-id="${p.id}"
-                            data-name="<c:out value='${p.name}'/>" data-sku="<c:out value='${p.sku}'/>"
-                            data-shop-name="<c:out value='${p.shop_name}'/>" data-price="${p.price}" data-stock="${p.stock}"
-                            data-status="<c:out value='${p.status}'/>">
-                            <td><strong>#${p.id}</strong></td>
-                            <td><c:out value="${p.name}"/></td>
-                            <td><c:out value="${p.sku}"/></td>
-                            <td><c:out value="${p.shop_name}"/></td>
-                            <td style="font-weight:700; color:#ea580c;">
-                                <fmt:formatNumber value="${p.price}" type="number" groupingUsed="true"/> ₫
-                            </td>
-                            <td>${p.stock}</td>
-                            <td><span class="badge-status status-${p.status}">${p.status}</span></td>
-                            <td>
-                                <div style="display:inline-flex; gap:6px;">
-                                    <button type="button" class="btn-action btn-update" data-action="edit">Sửa</button>
-                                    <button type="button" class="btn-action btn-delete" data-action="delete">Xóa</button>
-                                </div>
-                            </td>
-                        </tr>
-                    </c:forEach>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-    </div>
-</main>
-
-<!-- ================= MODALS ================= -->
-<!-- Modal User -->
-<div id="userModal" class="modal-backdrop">
-    <div class="modal-box">
-        <div class="modal-header">
-            <h3 id="userModalTitle">Thêm người dùng</h3>
-            <button class="modal-close" data-close-modal="userModal">&times;</button>
-        </div>
-        <form id="formUser" data-entity="user">
-            <input type="hidden" name="action" value="saveUser">
-            <input type="hidden" name="id" id="userId">
-            <div class="form-group">
-                <label>Họ</label>
-                <input type="text" name="first_name" id="userFirstName" required>
-            </div>
-            <div class="form-group">
-                <label>Tên</label>
-                <input type="text" name="last_name" id="userLastName" required>
-            </div>
-            <div class="form-group">
-                <label>Email</label>
-                <input type="email" name="email" id="userEmail" required>
-            </div>
-            <div class="form-group">
-                <label>Mật khẩu (Để trống nếu giữ nguyên)</label>
-                <input type="password" name="password" id="userPassword">
-            </div>
-            <div class="form-group">
-                <label>Vai trò</label>
-                <select name="role" id="userRole">
-                    <option value="CUSTOMER">CUSTOMER</option>
-                    <option value="SELLER">SELLER</option>
-                    <option value="ADMIN">ADMIN</option>
-                    <option value="MODERATOR">MODERATOR</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Trạng thái</label>
-                <select name="status" id="userStatus">
-                    <option value="ACTIVE">ACTIVE</option>
-                    <option value="INACTIVE">INACTIVE</option>
-                    <option value="BLOCKED">BLOCKED</option>
-                </select>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn-action" style="background:#cbd5e1; color:#1e293b;" data-close-modal="userModal">Hủy</button>
-                <button type="submit" class="btn-action btn-update">Lưu thay đổi</button>
-            </div>
-        </form>
-    </div>
+        </header>
+        <section id="main-content" class="content-area" aria-live="polite"></section>
+        <footer class="page-footer">KeebHub Admin <span>·</span> Quản lý người dùng, sản phẩm và đơn hàng</footer>
+    </main>
 </div>
 
-<!-- Modal Order -->
-<div id="orderModal" class="modal-backdrop">
-    <div class="modal-box">
-        <div class="modal-header">
-            <h3 id="orderModalTitle">Tạo / Sửa Đơn Hàng</h3>
-            <button class="modal-close" data-close-modal="orderModal">&times;</button>
-        </div>
-        <form id="formOrder" data-entity="order">
-            <input type="hidden" name="action" value="saveOrder">
-            <input type="hidden" name="id" id="orderId">
-            <div class="form-group">
-                <label>Mã đơn hàng</label>
-                <input type="text" name="order_code" id="orderCode" placeholder="Mã tự động nếu để trống">
-            </div>
-            <div class="form-group">
-                <label>Tên người nhận</label>
-                <input type="text" name="receiver_name" id="orderReceiver" required>
-            </div>
-            <div class="form-group">
-                <label>Email khách hàng</label>
-                <input type="email" name="customer_email" id="orderEmail" required>
-            </div>
-            <div class="form-group">
-                <label>Tổng tiền (VNĐ)</label>
-                <input type="number" name="total_amount" id="orderTotal" required min="0" style="width: 100%; text-align: left;">
-            </div>
-            <div class="form-group">
-                <label>Trạng thái</label>
-                <select name="status" id="orderStatus">
-                    <option value="PENDING">PENDING</option>
-                    <option value="CONFIRMED">CONFIRMED</option>
-                    <option value="PROCESSING">PROCESSING</option>
-                    <option value="SHIPPED">SHIPPED</option>
-                    <option value="COMPLETED">COMPLETED</option>
-                    <option value="CANCELLED">CANCELLED</option>
-                </select>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn-action" style="background:#cbd5e1; color:#1e293b;" data-close-modal="orderModal">Hủy</button>
-                <button type="submit" class="btn-action btn-update">Lưu đơn hàng</button>
-            </div>
-        </form>
-    </div>
-</div>
+<div id="toast-container" class="toast-container" aria-live="polite"></div>
+<div id="modal-container"></div>
 
-<!-- Modal Product -->
-<div id="productModal" class="modal-backdrop">
-    <div class="modal-box">
-        <div class="modal-header">
-            <h3 id="productModalTitle">Thêm / Sửa Sản Phẩm</h3>
-            <button class="modal-close" data-close-modal="productModal">&times;</button>
-        </div>
-        <form id="formProduct" data-entity="product">
-            <input type="hidden" name="action" value="saveProduct">
-            <input type="hidden" name="id" id="productId">
-            <div class="form-group">
-                <label>Tên sản phẩm</label>
-                <input type="text" name="name" id="productName" required>
-            </div>
-            <div class="form-group">
-                <label>Mã SKU</label>
-                <input type="text" name="sku" id="productSku" required>
-            </div>
-            <div class="form-group">
-                <label>Tên Cửa Hàng / Thương Hiệu</label>
-                <input type="text" name="shop_name" id="productShop" required>
-            </div>
-            <div class="form-group">
-                <label>Giá bán (VNĐ)</label>
-                <input type="number" name="price" id="productPrice" required min="0" style="width: 100%; text-align: left;">
-            </div>
-            <div class="form-group">
-                <label>Số lượng tồn kho</label>
-                <input type="number" name="stock" id="productStock" required min="0" style="width: 100%; text-align: left;">
-            </div>
-            <div class="form-group">
-                <label>Trạng thái</label>
-                <select name="status" id="productStatus">
-                    <option value="ACTIVE">ACTIVE</option>
-                    <option value="INACTIVE">INACTIVE</option>
-                </select>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn-action" style="background:#cbd5e1; color:#1e293b;" data-close-modal="productModal">Hủy</button>
-                <button type="submit" class="btn-action btn-update">Lưu sản phẩm</button>
-            </div>
-        </form>
-    </div>
-</div>
+<!-- Nhúng JSON an toàn chống lỗi cú pháp & XSS -->
+<script id="data-users" type="application/json"><c:out value="${usersJson}" default="[]" escapeXml="false"/></script>
+<script id="data-orders" type="application/json"><c:out value="${ordersJson}" default="[]" escapeXml="false"/></script>
+<script id="data-products" type="application/json"><c:out value="${productsJson}" default="[]" escapeXml="false"/></script>
+<script id="data-shops" type="application/json"><c:out value="${shopsJson}" default="[]" escapeXml="false"/></script>
+<script id="data-categories" type="application/json"><c:out value="${categoriesJson}" default="[]" escapeXml="false"/></script>
+<script id="data-stats" type="application/json"><c:out value="${statsJson}" default="{}" escapeXml="false"/></script>
 
-<jsp:include page="includes/footer.jsp" />
-
-<!-- Du lieu khoi tao tu server cho JS ben duoi (trong JS khong duoc dung ky tu dollar + ngoac nhon) -->
 <script>
-    window.ADMIN_BOOT = {
-        contextPath: "<c:out value='${pageContext.request.contextPath}'/>",
-        stats: {
-            roleStats: {<c:forEach items="${stats.roleStats}" var="r" varStatus="loop">"<c:out value='${r.key}'/>": ${r.value}${loop.last ? '' : ','}</c:forEach>},
-            orderStatusStats: {<c:forEach items="${stats.orderStatusStats}" var="s" varStatus="loop">"<c:out value='${s.key}'/>": ${s.value}${loop.last ? '' : ','}</c:forEach>}
-        }
-    };
-</script>
-<script>
-    /* Trang quan tri KeebHub. JS nhung trong JSP: khong dung template string kieu dollar + ngoac nhon (JSP se coi la EL); dung noi chuoi bang dau + */
     (function () {
         'use strict';
+        function parseJson(id) {
+            try {
+                var el = document.getElementById(id);
+                return el ? JSON.parse(el.textContent) : (id === 'data-stats' ? {} : []);
+            } catch (e) {
+                return id === 'data-stats' ? {} : [];
+            }
+        }
 
-        var BOOT = window.ADMIN_BOOT || {};
-        var CTX = BOOT.contextPath || '';
-
-        var ROLE_COLORS = {
-            ADMIN: '#dc2626', SELLER: '#7c3aed', CUSTOMER: '#2563eb',
-            USER: '#2563eb', MODERATOR: '#f59e0b'
+        var $ = function (id) { return document.getElementById(id); };
+        var S = {
+            page: 'dashboard',
+            users: parseJson('data-users'),
+            orders: parseJson('data-orders'),
+            products: parseJson('data-products'),
+            shops: parseJson('data-shops'),
+            categories: parseJson('data-categories'),
+            stats: parseJson('data-stats')
         };
-        var STATUS_COLORS = {
-            COMPLETED: '#16a34a', PROCESSING: '#2563eb', PENDING: '#f59e0b',
-            SHIPPED: '#7c3aed', CANCELLED: '#dc2626', CONFIRMED: '#0891b2'
-        };
-        var FALLBACK_COLOR = '#64748b';
+        var ctxPath = "<c:out value='${pageContext.request.contextPath}'/>";
 
-        var roleChart = null;
-        var orderChart = null;
-
-        /* ---------------------------------------------------------------- */
-        /* Tiện ích                                                         */
-        /* ---------------------------------------------------------------- */
-        function $(id) { return document.getElementById(id); }
-
-        function esc(v) {
-            return String(v == null ? '' : v)
-                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-        }
-
-        function formatVND(n) {
-            return new Intl.NumberFormat('vi-VN').format(Number(n) || 0) + ' ₫';
-        }
-
-        function store(key, val) { try { localStorage.setItem(key, val); } catch (e) { /* bỏ qua */ } }
-        function load(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
-
-        /* ---------------------------------------------------------------- */
-        /* Tab                                                              */
-        /* ---------------------------------------------------------------- */
-        function switchTab(name) {
-            var pane = $('tab-' + name);
-            if (!pane) return;
-            document.querySelectorAll('.tab-pane').forEach(function (p) { p.classList.remove('active'); });
-            document.querySelectorAll('.tab-btn').forEach(function (b) {
-                b.classList.toggle('active', b.getAttribute('data-tab') === name);
-            });
-            pane.classList.add('active');
-            store('activeAdminTab', name);
-        }
-
-        function navigateToTab(name) {
-            switchTab(name);
-            var section = $('adminTabsSection');
-            if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-
-        /* ---------------------------------------------------------------- */
-        /* Biểu đồ TRÒN (doughnut) + chú thích                              */
-        /* ---------------------------------------------------------------- */
-        function drawPie(canvasId, oldChart, labels, data, colorMap, tabName) {
-            var canvas = $(canvasId);
-            if (!canvas) return null;
-            if (oldChart) oldChart.destroy();
-
-            var box = canvas.parentNode;
-            var note = box.querySelector('.chart-note');
-            if (note) note.remove();
-
-            if (typeof Chart === 'undefined') {            // CDN bị chặn / mất mạng
-                canvas.style.display = 'none';
-                note = document.createElement('div');
-                note.className = 'chart-note';
-                note.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;color:#64748b;font-size:13px;text-align:center;';
-                note.textContent = 'Không tải được thư viện biểu đồ (Chart.js).';
-                box.appendChild(note);
-                return null;
-            }
-            canvas.style.display = '';
-
-            if (!labels.length) return null;
-
-            return new Chart(canvas.getContext('2d'), {
-                type: 'doughnut',                           // đổi thành 'pie' nếu muốn tròn đặc
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: data,
-                        backgroundColor: labels.map(function (l) { return colorMap[l] || FALLBACK_COLOR; }),
-                        borderColor: '#ffffff',
-                        borderWidth: 2,
-                        hoverOffset: 8
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '58%',
-                    plugins: { legend: { display: false } }
-                }
-            });
-        }
-
-        function drawLegend(ulId, keys, values, colorMap, prefix, unit, tabName, emptyText) {
-            var ul = $(ulId);
-            if (!ul) return;
-            if (!keys.length) {
-                ul.innerHTML = '<li><span>' + esc(emptyText) + '</span><strong>0</strong></li>';
-                return;
-            }
-            ul.innerHTML = keys.map(function (k, i) {
-                return '<li data-nav-tab="' + tabName + '" style="cursor:pointer;">' +
-                    '<span><span class="legend-badge" style="background-color:' + (colorMap[k] || FALLBACK_COLOR) + ';"></span> ' +
-                    prefix + ' <strong>' + esc(k) + '</strong></span>' +
-                    '<strong>' + values[i] + ' ' + unit + '</strong></li>';
-            }).join('');
-        }
-
-        function renderCharts(stats) {
-            var roles = (stats && stats.roleStats) || {};
-            var orders = (stats && stats.orderStatusStats) || {};
-
-            var rKeys = Object.keys(roles);
-            var oKeys = Object.keys(orders);
-            var rVals = rKeys.map(function (k) { return roles[k]; });
-            var oVals = oKeys.map(function (k) { return orders[k]; });
-
-            roleChart = drawPie('userRoleChart', roleChart, rKeys, rVals, ROLE_COLORS, 'users');
-            orderChart = drawPie('orderStatusChart', orderChart, oKeys, oVals, STATUS_COLORS, 'orders');
-
-            drawLegend('roleLegendList', rKeys, rVals, ROLE_COLORS, 'Vai trò', 'tài khoản', 'users', 'Chưa có dữ liệu vai trò');
-            drawLegend('orderStatusLegendList', oKeys, oVals, STATUS_COLORS, 'Trạng thái', 'đơn', 'orders', 'Chưa có dữ liệu đơn hàng');
-        }
-
-        function syncStats(stats) {
-            if (!stats) return;
-            if (stats.userCount !== undefined) $('stat-user-count').textContent = stats.userCount;
-            if (stats.orderCount !== undefined) $('stat-order-count').textContent = stats.orderCount;
-            if (stats.productCount !== undefined) $('stat-product-count').textContent = stats.productCount;
-            if (stats.totalOrdersValue !== undefined) $('stat-total-value').textContent = formatVND(stats.totalOrdersValue);
-            renderCharts(stats);
-        }
-
-        /* ---------------------------------------------------------------- */
-        /* Cấu hình từng loại dữ liệu (user / order / product)              */
-        /* Khóa trong `d` là camelCase, trùng với data-* trên thẻ <tr>      */
-        /* ---------------------------------------------------------------- */
-        var ENTITY = {
-            user: {
-                modal: 'userModal', form: 'formUser', tbody: 'userTableBody', rowPrefix: 'row-user-',
-                addTitle: 'Thêm người dùng mới',
-                editTitle: function (d) { return 'Chỉnh sửa người dùng #' + d.id; },
-                deleteAction: 'deleteUser',
-                fields: { id: 'userId', firstName: 'userFirstName', lastName: 'userLastName',
-                    email: 'userEmail', role: 'userRole', status: 'userStatus' },
-                fromForm: function (f, id) {
-                    return { id: id, firstName: f.get('first_name'), lastName: f.get('last_name'),
-                        email: f.get('email'), role: f.get('role'), status: f.get('status') };
-                },
-                cells: function (d) {
-                    return '<td><strong>#' + esc(d.id) + '</strong></td>' +
-                        '<td>' + esc(d.firstName) + ' ' + esc(d.lastName) + '</td>' +
-                        '<td>' + esc(d.email) + '</td>' +
-                        '<td><span class="badge-status role-' + esc(d.role) + '">' + esc(d.role) + '</span></td>' +
-                        '<td><span class="badge-status status-' + esc(d.status) + '">' + esc(d.status) + '</span></td>';
-                }
-            },
-            order: {
-                modal: 'orderModal', form: 'formOrder', tbody: 'orderTableBody', rowPrefix: 'row-order-',
-                addTitle: 'Tạo đơn hàng mới',
-                editTitle: function (d) { return 'Chỉnh sửa đơn hàng #' + d.orderCode; },
-                deleteAction: 'deleteOrder',
-                fields: { id: 'orderId', orderCode: 'orderCode', receiverName: 'orderReceiver',
-                    customerEmail: 'orderEmail', totalAmount: 'orderTotal', status: 'orderStatus' },
-                fromForm: function (f, id, extra) {
-                    return { id: id, orderCode: (extra && extra.orderCode) || f.get('order_code'),
-                        receiverName: f.get('receiver_name'), customerEmail: f.get('customer_email'),
-                        totalAmount: f.get('total_amount'), status: f.get('status') };
-                },
-                cells: function (d) {
-                    return '<td><strong>' + esc(d.orderCode) + '</strong></td>' +
-                        '<td>' + esc(d.receiverName) + '</td>' +
-                        '<td>' + esc(d.customerEmail) + '</td>' +
-                        '<td style="font-weight:700;color:#ea580c;">' + formatVND(d.totalAmount) + '</td>' +
-                        '<td><span class="badge-status status-' + esc(d.status) + '">' + esc(d.status) + '</span></td>';
-                }
-            },
-            product: {
-                modal: 'productModal', form: 'formProduct', tbody: 'productTableBody', rowPrefix: 'row-product-',
-                addTitle: 'Thêm sản phẩm mới',
-                editTitle: function (d) { return 'Chỉnh sửa sản phẩm #' + d.id; },
-                deleteAction: 'deleteProduct',
-                fields: { id: 'productId', name: 'productName', sku: 'productSku', shopName: 'productShop',
-                    price: 'productPrice', stock: 'productStock', status: 'productStatus' },
-                fromForm: function (f, id) {
-                    return { id: id, name: f.get('name'), sku: f.get('sku'), shopName: f.get('shop_name'),
-                        price: f.get('price'), stock: f.get('stock'), status: f.get('status') };
-                },
-                cells: function (d) {
-                    return '<td><strong>#' + esc(d.id) + '</strong></td>' +
-                        '<td>' + esc(d.name) + '</td>' +
-                        '<td>' + esc(d.sku) + '</td>' +
-                        '<td>' + esc(d.shopName) + '</td>' +
-                        '<td style="font-weight:700;color:#ea580c;">' + formatVND(d.price) + '</td>' +
-                        '<td>' + esc(d.stock) + '</td>' +
-                        '<td><span class="badge-status status-' + esc(d.status) + '">' + esc(d.status) + '</span></td>';
-                }
-            }
+        var ORDER_STATUSES = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPING', 'SHIPPED', 'COMPLETED', 'CANCELLED'];
+        var USER_ROLES = ['CUSTOMER', 'USER', 'SELLER', 'ADMIN', 'MODERATOR'];
+        var USER_STATUSES = ['ACTIVE', 'INACTIVE', 'BLOCKED'];
+        var PRODUCT_STATUSES = ['ACTIVE', 'INACTIVE'];
+        var TITLES = {
+            dashboard: ['Tổng quan', 'Số liệu tổng hợp cơ sở dữ liệu.'],
+            users: ['Quản lý người dùng', 'Thêm, cập nhật vai trò và trạng thái tài khoản.'],
+            products: ['Quản lý sản phẩm', 'Quản lý thông tin, cửa hàng, danh mục và tồn kho.'],
+            orders: ['Quản lý đơn hàng', 'Theo dõi thông tin giao hàng và cập nhật trạng thái đơn.']
         };
 
-        var ACTION_CELL =
-            '<td><div style="display:inline-flex;gap:6px;">' +
-            '<button type="button" class="btn-action btn-update" data-action="edit">Sửa</button>' +
-            '<button type="button" class="btn-action btn-delete" data-action="delete">Xóa</button>' +
-            '</div></td>';
-
-        // đọc dữ liệu của 1 dòng từ data-* (JSP in sẵn / JS tự tạo đều dùng chung)
-        function rowData(tr) {
-            var d = {};
-            Object.keys(tr.dataset).forEach(function (k) { d[k] = tr.dataset[k]; });
-            return d;
-        }
-
-        function upsertRow(type, d) {
-            var cfg = ENTITY[type];
-            var tr = $(cfg.rowPrefix + d.id);
-            var isNew = !tr;
-            if (isNew) {
-                tr = document.createElement('tr');
-                tr.id = cfg.rowPrefix + d.id;
-            }
-            Object.keys(d).forEach(function (k) { tr.dataset[k] = d[k] == null ? '' : d[k]; });
-            tr.dataset.entity = type;                       // để nút Sửa/Xóa của dòng mới nhận ra loại dữ liệu
-            tr.innerHTML = cfg.cells(d) + ACTION_CELL;
-            if (isNew) {
-                var body = $(cfg.tbody);
-                body.insertBefore(tr, body.firstChild);     // bản ghi mới lên đầu (server cũng ORDER BY id DESC)
-            }
-        }
-
-        /* ---------------------------------------------------------------- */
-        /* Modal                                                            */
-        /* ---------------------------------------------------------------- */
-        function openModal(id) { $(id).style.display = 'flex'; }
-        function closeModal(id) { $(id).style.display = 'none'; }
-
-        function openAdd(type) {
-            var cfg = ENTITY[type];
-            $(cfg.form).reset();
-            $(cfg.fields.id).value = '';
-            document.querySelector('#' + cfg.modal + ' .modal-header h3').textContent = cfg.addTitle;
-            openModal(cfg.modal);
-        }
-
-        function openEdit(type, tr) {
-            var cfg = ENTITY[type];
-            var d = rowData(tr);
-            $(cfg.form).reset();
-            Object.keys(cfg.fields).forEach(function (k) {
-                var el = $(cfg.fields[k]);
-                if (!el) return;
-                var v = d[k] == null ? '' : d[k];
-                if (el.tagName === 'SELECT' && v !== '') {
-                    var has = Array.prototype.some.call(el.options, function (o) { return o.value === v; });
-                    if (!has) el.add(new Option(v, v));        // giá trị lạ trong DB: giữ nguyên, không bị mất khi lưu
-                }
-                el.value = v;
+        function esc(value) {
+            return String(value == null ? '': value).replace(/[&<>"']/g, function (ch) {
+                return {'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[ch];
             });
-            document.querySelector('#' + cfg.modal + ' .modal-header h3').textContent = cfg.editTitle(d);
-            openModal(cfg.modal);
         }
-
-        /* ---------------------------------------------------------------- */
-        /* Gọi server                                                       */
-        /* ---------------------------------------------------------------- */
-        function post(params) {
-            return fetch(CTX + '/admin', {
+        function money(value) { return (Number(value) || 0).toLocaleString('vi-VN') + ' ₫'; }
+        function nice(value) { return String(value || '').replace(/_/g, ' ').toLowerCase().replace(/(^|\s)\S/g, function (m) { return m.toUpperCase(); }); }
+        function byId(list, id) { return list.find(function (item) { return String(item.id) === String(id); }); }
+        function opts(values) {
+            return values.map(function (value) {
+                if (typeof value === 'string' || typeof value === 'number') return {value: String(value), label: String(value)};
+                return value;
+            });
+        }
+        function initials(firstName, lastName) {
+            var f = (firstName || '').trim().charAt(0) || 'K';
+            var l = (lastName || '').trim().charAt(0) || 'H';
+            return (f + l).toUpperCase();
+        }
+        function userOptions(selected) {
+            return S.users.filter(function (u) { return u.status === 'ACTIVE' || String(u.email) === String(selected); })
+                .map(function (u) { return {value: u.email, label: (u.first_name + ' ' + u.last_name + ' — ' + u.email)}; });
+        }
+        function productOptions(selected) {
+            return S.products.filter(function (p) { return p.status === 'ACTIVE' || String(p.id) === String(selected); })
+                .map(function (p) { return {value: p.id, label: p.name + ' · ' + money(p.price)}; });
+        }
+        function statusPill(value) {
+            var state = String(value || '').toLowerCase();
+            var css = 'status-neutral';
+            if (['active', 'completed', 'confirmed', 'shipped'].indexOf(state) >= 0) css = 'status-success';
+            else if (['pending', 'processing', 'shipping'].indexOf(state) >= 0) css = 'status-warning';
+            else if (['inactive', 'blocked', 'cancelled'].indexOf(state) >= 0) css = 'status-danger';
+            return '<span class="status-pill ' + css + '">' + esc(nice(value)) + '</span>';
+        }
+        function emptyRow(columns, message) {
+            return '<tr><td colspan="' + columns + '" class="empty-cell"><span class="empty-icon">⌕</span><strong>' + esc(message) + '</strong><small>Thử thay đổi từ khóa hoặc tạo bản ghi mới.</small></td></tr>';
+        }
+        function toast(message, error) {
+            var el = document.createElement('div');
+            el.className = 'toast-message' + (error ? ' toast-error': '');
+            el.textContent = message;
+            $('toast-container').appendChild(el);
+            window.setTimeout(function () { el.remove(); }, 3800);
+        }
+        function post(data) {
+            return fetch(ctxPath + '/admin', {
                 method: 'POST',
-                credentials: 'same-origin',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-                body: params
-            }).then(function (res) {
-                return res.text().then(function (text) {
-                    try { return JSON.parse(text); }
-                    catch (e) {
-                        // thường là bị đá về trang login / trang lỗi HTML
-                        throw new Error('Server không trả JSON (HTTP ' + res.status + '). Hãy đăng nhập lại bằng tài khoản ADMIN.');
-                    }
+                headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'},
+                body: new URLSearchParams(data)
+            }).then(function (response) {
+                return response.text().then(function (text) {
+                    var result;
+                    try { result = JSON.parse(text); }
+                    catch (e) { throw new Error('Máy chủ không trả về dữ liệu hợp lệ. Hãy đăng nhập lại.'); }
+                    if (!response.ok && result.success !== false) throw new Error('Yêu cầu thất bại (HTTP ' + response.status + ').');
+                    return result;
                 });
             });
         }
-
-        function submitForm(form) {
-            var type = form.getAttribute('data-entity');
-            var cfg = ENTITY[type];
-            var f = new FormData(form);
-            var btn = form.querySelector('button[type="submit"]');
-            if (btn) btn.disabled = true;
-
-            post(new URLSearchParams(f)).then(function (result) {
-                if (!result.success) { alert('Lỗi: ' + result.message); return; }
-                closeModal(cfg.modal);
-                var id = result.id || f.get('id');
-                upsertRow(type, cfg.fromForm(f, id, result));
-                syncStats(result.stats);
-            }).catch(function (err) {
-                console.error(err);
-                alert(err.message || 'Có lỗi xảy ra khi xử lý dữ liệu!');
-            }).then(function () { if (btn) btn.disabled = false; });
+        function call(data, onSuccess) {
+            return post(data).then(function (result) {
+                if (!result.success) {
+                    toast(result.message || 'Không thể thực hiện thao tác.', true);
+                    return false;
+                }
+                if (result.stats) S.stats = result.stats;
+                if (onSuccess) onSuccess(result);
+                toast(result.message || 'Đã lưu dữ liệu.');
+                renderPage();
+                return true;
+            }).catch(function (error) {
+                toast(error.message || 'Không thể kết nối máy chủ.', true);
+                return false;
+            });
+        }
+        function filter(list, fields) {
+            var query = ($('quick-search').value || '').trim().toLocaleLowerCase('vi-VN');
+            if (!query || S.page === 'dashboard') return list;
+            return list.filter(function (item) {
+                if (item.first_name || item.last_name) {
+                    var fullName = ((item.first_name || '') + ' ' + (item.last_name || '')).trim();
+                    if (fullName.toLocaleLowerCase('vi-VN').indexOf(query) >= 0) return true;
+                }
+                return fields.some(function (field) {
+                    return String(item[field] == null ? '': item[field]).toLocaleLowerCase('vi-VN').indexOf(query) >= 0;
+                });
+            });
+        }
+        function kpi(icon, title, value, hint, tone, pageTarget) {
+            var pageAttr = pageTarget ? ' data-page="' + pageTarget + '"' : '';
+            return '<article class="stat-card"' + pageAttr + '><div class="stat-top"><span class="stat-icon ' + tone + '">' + icon + '</span><span class="stat-period"></span></div>' +
+                '<div class="stat-label">' + esc(title) + '</div><div class="stat-value">' + esc(value) + '</div><div class="stat-hint">' + esc(hint) + '</div></article>';
+        }
+        function toolbar(title, note, buttonId, buttonLabel) {
+            return '<div class="section-heading"><div><h2>' + esc(title) + '</h2><p>' + esc(note) + '</p></div>' +
+                '<button type="button" class="btn btn-primary" id="' + buttonId + '"><span>＋</span>' + esc(buttonLabel) + '</button></div>';
         }
 
-        function deleteRow(type, tr) {
-            var cfg = ENTITY[type];
-            var id = tr.dataset.id;
-            if (!id) { alert('Không xác định được ID dòng cần xóa.'); return; }
-            if (!confirm('Bạn có chắc chắn muốn xóa mục này?')) return;
+        function renderDashboard() {
+            var st = S.stats || {};
+            var recent = S.orders.slice(0, 5).map(function (o) {
+                return '<tr><td><strong class="mono">' + esc(o.order_code) + '</strong><small class="cell-sub">' + esc(o.created_at || '') + '</small></td>' +
+                    '<td><strong>' + esc(o.receiver_name) + '</strong><small class="cell-sub">' + esc(o.customer_email) + '</small></td>' +
+                    '<td class="money-cell">' + money(o.total_amount) + '</td><td>' + statusPill(o.order_status) + '</td></tr>';
+            }).join('');
+            var roleStats = st.roleStats || {};
+            var roleRows = Object.keys(roleStats).map(function (role) {
+                return '<div class="summary-row"><span>' + esc(nice(role)) + '</span><strong>' + esc(roleStats[role]) + '</strong><div class="mini-track"><span style="width:' +
+                    Math.min(100, Math.round((Number(roleStats[role]) / Math.max(1, Number(st.userCount))) * 100)) + '%"></span></div></div>';
+            }).join('') || '<div class="empty-note">Chưa có dữ liệu người dùng.</div>';
+            var orderStats = st.orderStatusStats || {};
+            var statusRows = Object.keys(orderStats).map(function (status) {
+                return '<div class="summary-row"><span>' + esc(nice(status)) + '</span><strong>' + esc(orderStats[status]) + '</strong></div>';
+            }).join('') || '<div class="empty-note">Chưa có dữ liệu đơn hàng.</div>';
 
-            var p = new URLSearchParams();
-            p.append('action', cfg.deleteAction);
-            p.append('id', id);
+            return '<div class="welcome-row"><div><div class="eyebrow">WORKSPACE</div><h2>Chào mừng trở lại 👋</h2></div><span class="live-tag"><i></i> connected</span></div>' +
+                '<div class="stat-grid">' +
+                kpi('♙', 'Người dùng', st.userCount || 0, 'Tài khoản', 'icon-blue', 'users') +
+                kpi('▤', 'Đơn hàng', st.orderCount || 0, 'Tổng số đơn hàng', 'icon-violet', 'orders') +
+                kpi('⌨', 'Sản phẩm', st.productCount || 0, 'Bản ghi sản phẩm', 'icon-orange', 'products') +
+                kpi('₫', 'Giá trị đơn không hủy', money(st.totalOrdersValue || 0), 'Cộng các đơn không bị hủy', 'icon-green') +
+                '</div><div class="dashboard-grid"><section class="panel"><div class="panel-heading"><div><h3>Đơn hàng gần đây</h3><p>Các đơn mới nhất trong cơ sở dữ liệu</p></div><button type="button" class="text-action" data-page="orders">Xem tất cả →</button></div>' +
+                '<div class="table-scroll"><table><thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Tổng tiền</th><th>Trạng thái</th></tr></thead><tbody>' + (recent || emptyRow(4, 'Chưa có đơn hàng')) + '</tbody></table></div></section>' +
+                '<div class="side-panels"><section class="panel"><div class="panel-heading"><div><h3>Vai trò người dùng</h3><p>Phân bố tài khoản</p></div></div><div class="summary-list">' + roleRows + '</div></section>' +
+                '<section class="panel"><div class="panel-heading"><div><h3>Trạng thái đơn hàng</h3><p>Tổng số theo trạng thái</p></div></div><div class="summary-list">' + statusRows + '</div></section></div></div>';
+        }
 
-            post(p).then(function (result) {
-                if (!result.success) { alert('Lỗi xóa: ' + result.message); return; }
-                tr.style.transition = 'opacity 0.3s ease';
-                tr.style.opacity = '0';
-                setTimeout(function () { tr.remove(); }, 300);
-                syncStats(result.stats);
-            }).catch(function (err) {
-                console.error(err);
-                alert(err.message || 'Không thể thực hiện câu lệnh xóa!');
+        function renderUsers() {
+            var users = filter(S.users, ['first_name', 'last_name', 'email', 'role', 'status', 'id']);
+            var rows = users.map(function (u) {
+                var avatarText = initials(u.first_name, u.last_name);
+                return '<tr><td class="id-cell">#' + esc(u.id) + '</td><td><div class="person-cell"><span class="person-avatar">' + esc(avatarText) + '</span><span><strong>' + esc(u.first_name + ' ' + u.last_name) + '</strong><small class="cell-sub">' + esc(u.email) + '</small></span></div></td>' +
+                    '<td><span class="role-pill">' + esc(nice(u.role)) + '</span></td><td>' + statusPill(u.status) + '</td><td><div class="action-group"><button type="button" class="btn btn-small btn-light" data-act="edit-user" data-id="' + esc(u.id) + '">Sửa</button><button type="button" class="btn btn-small btn-danger-light" data-act="delete-user" data-id="' + esc(u.id) + '">Xóa</button></div></td></tr>';
+            }).join('');
+            return toolbar('Danh sách người dùng', S.users.length + ' tài khoản.', 'add-user', 'Thêm người dùng') +
+                '<div class="table-card"><div class="table-scroll"><table><thead><tr><th>ID</th><th>Người dùng</th><th>Vai trò</th><th>Trạng thái</th><th class="action-col">Thao tác</th></tr></thead><tbody>' +
+                (rows || emptyRow(5, 'Không tìm thấy người dùng')) + '</tbody></table></div><div class="table-footer"><span>Đang hiển thị ' + users.length + ' / ' + S.users.length + ' người dùng</span><span>Email phải là duy nhất</span></div></div>';
+        }
+
+        function renderProducts() {
+            var products = filter(S.products, ['name', 'sku', 'shop_name', 'category_name', 'status', 'id']);
+            var rows = products.map(function (p) {
+                return '<tr><td class="id-cell">#' + esc(p.id) + '</td><td><div class="product-cell"><span class="product-icon">⌨</span><span><strong>' + esc(p.name) + '</strong><small class="cell-sub">SKU: ' + esc(p.sku || '—') + '</small></span></div></td>' +
+                    '<td>' + esc(p.shop_name) + '</td><td>' + esc(p.category_name) + '</td><td class="money-cell">' + money(p.price) + '</td><td><span class="stock-value ' + (Number(p.stock) <= 5 ? 'stock-low': '') + '">' + esc(p.stock) + '</span></td><td>' + statusPill(p.status) + '</td>' +
+                    '<td><div class="action-group"><button type="button" class="btn btn-small btn-light" data-act="edit-product" data-id="' + esc(p.id) + '">Sửa</button><button type="button" class="btn btn-small btn-danger-light" data-act="delete-product" data-id="' + esc(p.id) + '">Xóa</button></div></td></tr>';
+            }).join('');
+            return toolbar('Danh sách sản phẩm', S.products.length + ' sản phẩm, bao gồm cả sản phẩm ngừng bán.', 'add-product', 'Thêm sản phẩm') +
+                '<div class="table-card"><div class="table-scroll"><table class="product-table"><thead><tr><th>ID</th><th>Sản phẩm</th><th>Cửa hàng</th><th>Danh mục</th><th>Giá bán</th><th>Tồn kho</th><th>Trạng thái</th><th class="action-col">Thao tác</th></tr></thead><tbody>' +
+                (rows || emptyRow(8, 'Không tìm thấy sản phẩm')) + '</tbody></table></div><div class="table-footer"><span>Đang hiển thị ' + products.length + ' / ' + S.products.length + ' sản phẩm</span><span>Sản phẩm đã có đơn hàng sẽ được lưu trữ khi xóa</span></div></div>';
+        }
+
+        function renderOrders() {
+            var orders = filter(S.orders, ['order_code', 'receiver_name', 'receiver_phone', 'shipping_address', 'customer_email', 'order_status', 'product_name', 'id']);
+            var rows = orders.map(function (o) {
+                return '<tr><td><strong class="mono">' + esc(o.order_code) + '</strong><small class="cell-sub">ID #' + esc(o.id) + '</small></td>' +
+                    '<td><strong>' + esc(o.receiver_name) + '</strong><small class="cell-sub">' + esc(o.customer_email) + '</small></td>' +
+                    '<td><strong>' + esc(o.product_name || 'Sản phẩm') + '</strong><small class="cell-sub">' + esc(o.receiver_phone || '') + '</small></td>' +
+                    '<td class="money-cell">' + money(o.total_amount) + '</td><td>' + statusPill(o.order_status) + '</td>' +
+                    '<td><div class="action-group"><button type="button" class="btn btn-small btn-light" data-act="edit-order" data-id="' + esc(o.id) + '">Sửa</button><button type="button" class="btn btn-small btn-danger-light" data-act="delete-order" data-id="' + esc(o.id) + '">Xóa</button></div></td></tr>';
+            }).join('');
+            return toolbar('Danh sách đơn hàng', S.orders.length + ' đơn hàng.', 'add-order', 'Tạo đơn hàng') +
+                '<div class="table-card"><div class="table-scroll"><table><thead><tr><th>Mã đơn</th><th>Người nhận</th><th>Sản phẩm</th><th>Tổng tiền</th><th>Trạng thái</th><th class="action-col">Thao tác</th></tr></thead><tbody>' +
+                (rows || emptyRow(6, 'Không tìm thấy đơn hàng')) + '</tbody></table></div><div class="table-footer"><span>Đang hiển thị ' + orders.length + ' / ' + S.orders.length + ' đơn hàng</span><span>Đơn mới sẽ tạo chi tiết đơn hàng</span></div></div>';
+        }
+
+        function renderPage() {
+            var page = S.page;
+            $('page-title').textContent = (TITLES[page] || TITLES.dashboard)[0];
+            document.title = (TITLES[page] || TITLES.dashboard)[0] + ' · KeebHub';
+            $('quick-search').placeholder = page === 'dashboard' ? 'Tìm nhanh trong các mục...': 'Tìm trong ' + (page === 'users' ? 'người dùng': page === 'products' ? 'sản phẩm': 'đơn hàng') + '...';
+            Array.prototype.forEach.call(document.querySelectorAll('[data-page]'), function (button) {
+                if (button.classList.contains('nav-item')) button.classList.toggle('active', button.dataset.page === page);
+            });
+            if (page === 'users') $('main-content').innerHTML = renderUsers();
+            else if (page === 'products') $('main-content').innerHTML = renderProducts();
+            else if (page === 'orders') $('main-content').innerHTML = renderOrders();
+            else $('main-content').innerHTML = renderDashboard();
+            bindAddButtons();
+        }
+
+        function fieldHtml(field) {
+            var value = field.value == null ? '': field.value;
+            var required = field.required ? ' required': '';
+            var readonly = field.readonly ? ' readonly': '';
+            var placeholder = field.placeholder ? ' placeholder="' + esc(field.placeholder) + '"': '';
+            var input;
+            if (field.type === 'select') {
+                var options = opts(field.options || []);
+                input = '<select name="' + esc(field.key) + '"' + required + '>' + options.map(function (option) {
+                    var selected = String(option.value) === String(value) ? ' selected': '';
+                    return '<option value="' + esc(option.value) + '"' + selected + '>' + esc(option.label) + '</option>';
+                }).join('') + '</select>';
+            } else if (field.type === 'textarea') {
+                input = '<textarea name="' + esc(field.key) + '" rows="3"' + required + placeholder + '>' + esc(value) + '</textarea>';
+            } else {
+                var type = field.type || 'text';
+                input = '<input type="' + esc(type) + '" name="' + esc(field.key) + '" value="' + esc(value) + '"' +
+                    (field.min != null ? ' min="' + esc(field.min) + '"': '') + (field.max != null ? ' max="' + esc(field.max) + '"': '') +
+                    (field.step != null ? ' step="' + esc(field.step) + '"': '') + (field.autocomplete ? ' autocomplete="' + esc(field.autocomplete) + '"': '') +
+                    required + readonly + placeholder + '>';
+            }
+            return '<label class="form-field' + (field.full ? ' full-field': '') + '"><span>' + esc(field.label) + (field.required ? ' <em>*</em>': '') + '</span>' + input +
+                (field.help ? '<small>' + esc(field.help) + '</small>': '') + '</label>';
+        }
+
+        function showModal(title, fields, saveHandler, deleteHandler) {
+            var host = $('modal-container');
+            host.innerHTML = '<div class="modal-backdrop"><section class="modal-dialog" role="dialog" aria-modal="true" aria-label="' + esc(title) + '"><div class="modal-heading"><div><span class="eyebrow">KEEBHUB ADMIN</span><h2>' + esc(title) + '</h2></div><button type="button" class="close-modal" aria-label="Đóng">×</button></div>' +
+                '<form id="record-form" class="record-form"><div class="form-grid">' + fields.map(fieldHtml).join('') + '</div><div class="modal-footer">' +
+                (deleteHandler ? '<button type="button" class="btn btn-danger-light" id="modal-delete">Xóa bản ghi</button>': '<span class="form-note">Các trường có dấu * là bắt buộc.</span>') +
+                '<div class="modal-footer-actions"><button type="button" class="btn btn-light" id="modal-cancel">Hủy</button><button type="submit" class="btn btn-primary" id="modal-save">Lưu thay đổi</button></div></div></form></section></div>';
+            function close() { host.innerHTML = ''; }
+            host.querySelector('.close-modal').onclick = close;
+            $('modal-cancel').onclick = close;
+            host.querySelector('.modal-backdrop').addEventListener('click', function (event) { if (event.target === event.currentTarget) close(); });
+            $('record-form').addEventListener('submit', function (event) {
+                event.preventDefault();
+                var data = {};
+                new FormData(event.currentTarget).forEach(function (value, key) { data[key] = String(value).trim(); });
+                var btnSave = $('modal-save');
+                if (btnSave) { btnSave.disabled = true; btnSave.textContent = 'Đang lưu...'; }
+                Promise.resolve(saveHandler(data)).then(function (ok) {
+                    if (ok) close();
+                    else if ($('modal-save')) { $('modal-save').disabled = false; $('modal-save').textContent = 'Lưu thay đổi'; }
+                }).catch(function () {
+                    if ($('modal-save')) { $('modal-save').disabled = false; $('modal-save').textContent = 'Lưu thay đổi'; }
+                });
+            });
+            if (deleteHandler) {
+                $('modal-delete').onclick = function () {
+                    if (window.confirm('Bạn chắc chắn muốn xóa bản ghi này?')) {
+                        Promise.resolve(deleteHandler()).then(function (ok) { if (ok) close(); });
+                    }
+                };
+            }
+            var first = host.querySelector('input,select,textarea');
+            if (first) first.focus();
+        }
+
+        function userFields(user) {
+            var creating = !user;
+            return [
+                {key:'first_name', label:'Họ', value:user ? user.first_name: '', required:true},
+                {key:'last_name', label:'Tên', value:user ? user.last_name: '', required:true},
+                {key:'email', label:'Email', type:'email', value:user ? user.email: '', required:true},
+                {key:'password', label:creating ? 'Mật khẩu': 'Mật khẩu mới', type:'password', value:'', required:creating, autocomplete:'new-password', help:creating ? 'Ít nhất 6 ký tự.': 'Để trống nếu không muốn đổi mật khẩu.'},
+                {key:'role', label:'Vai trò', type:'select', options:USER_ROLES, value:user ? user.role: 'CUSTOMER', required:true},
+                {key:'status', label:'Trạng thái', type:'select', options:USER_STATUSES, value:user ? user.status: 'ACTIVE', required:true}
+            ];
+        }
+        function productFields(product) {
+            var shopOptions = S.shops.map(function (shop) { return {value:shop.id, label:shop.shop_name}; });
+            var categoryOptions = S.categories.map(function (category) { return {value:category.id, label:category.name}; });
+            return [
+                {key:'name', label:'Tên sản phẩm', value:product ? product.name: '', required:true, full:true},
+                {key:'sku', label:'Mã SKU', value:product ? product.sku: '', required:true},
+                {key:'price', label:'Giá bán (VNĐ)', type:'number', min:0, step:1, value:product ? product.price: 0, required:true},
+                {key:'shop_id', label:'Cửa hàng', type:'select', options:shopOptions, value:product ? product.shop_id: (shopOptions[0] ? shopOptions[0].value: ''), required:true},
+                {key:'category_id', label:'Danh mục', type:'select', options:categoryOptions, value:product ? product.category_id: (categoryOptions[0] ? categoryOptions[0].value: ''), required:true},
+                {key:'stock', label:'Số lượng tồn kho', type:'number', min:0, step:1, value:product ? product.stock: 0, required:true},
+                {key:'status', label:'Trạng thái', type:'select', options:PRODUCT_STATUSES, value:product ? product.status: 'ACTIVE', required:true}
+            ];
+        }
+        function orderFields(order) {
+            var creating = !order;
+            var fields = [
+                {key:'order_code', label:'Mã đơn hàng', value:order ? order.order_code: '', placeholder:'Để trống để tự tạo', help:'Tối đa 30 ký tự.'},
+                {key:'receiver_name', label:'Tên người nhận', value:order ? order.receiver_name: '', required:true},
+                {key:'customer_email', label:'Tài khoản khách hàng', type:'select', options:userOptions(order ? order.customer_email: null), value:order ? order.customer_email: (userOptions(null)[0] ? userOptions(null)[0].value: ''), required:true, full:true},
+                {key:'receiver_phone', label:'Số điện thoại', value:order ? order.receiver_phone: '', required:true},
+                {key:'shipping_address', label:'Địa chỉ giao hàng', value:order ? order.shipping_address: '', required:true, full:true},
+                {key:'status', label:'Trạng thái đơn hàng', type:'select', options:ORDER_STATUSES, value:order ? order.order_status: 'PENDING', required:true}
+            ];
+            if (creating) {
+                fields.splice(1, 0, {key:'product_id', label:'Sản phẩm', type:'select', options:productOptions(null), value:productOptions(null)[0] ? productOptions(null)[0].value: '', required:true, full:true});
+                fields.splice(2, 0, {key:'quantity', label:'Số lượng', type:'number', min:1, max:10000, step:1, value:1, required:true, help:'Tổng tiền sẽ tính theo giá sản phẩm × số lượng.'});
+            } else {
+                fields.push({key:'order_total_display', label:'Tổng tiền hiện tại', type:'text', value:money(order.total_amount), readonly:true, help:'Giá trị thanh toán được giữ nguyên khi chỉnh sửa thông tin đơn.'});
+            }
+            return fields;
+        }
+
+        function bindAddButtons() {
+            var addUser = $('add-user');
+            if (addUser) addUser.onclick = function () {
+                showModal('Thêm người dùng', userFields(null), function (form) {
+                    form.action = 'saveUser'; form.id = 0;
+                    return call(form, function (result) {
+                        S.users.unshift({id:result.id, first_name:form.first_name, last_name:form.last_name, email:form.email.toLowerCase(), role:form.role, status:form.status});
+                    });
+                });
+            };
+            var addProduct = $('add-product');
+            if (addProduct) addProduct.onclick = function () {
+                if (!S.shops.length || !S.categories.length) { toast('Cần có ít nhất một cửa hàng và một danh mục trước khi thêm sản phẩm.', true); return; }
+                showModal('Thêm sản phẩm', productFields(null), function (form) {
+                    form.action = 'saveProduct'; form.id = 0;
+                    return call(form, function (result) {
+                        var shop = byId(S.shops, form.shop_id), category = byId(S.categories, form.category_id);
+                        S.products.unshift({id:result.id, name:form.name, sku:form.sku, shop_id:+form.shop_id, category_id:+form.category_id,
+                            shop_name:shop ? shop.shop_name: '', category_name:category ? category.name: '', price:+form.price, stock:+form.stock, status:form.status});
+                    });
+                });
+            };
+            var addOrder = $('add-order');
+            if (addOrder) addOrder.onclick = function () {
+                if (!userOptions(null).length || !productOptions(null).length) { toast('Cần có người dùng ACTIVE và sản phẩm ACTIVE trước khi tạo đơn hàng.', true); return; }
+                showModal('Tạo đơn hàng', orderFields(null), function (form) {
+                    form.action = 'saveOrder'; form.id = 0;
+                    return call(form, function (result) {
+                        var product = byId(S.products, form.product_id);
+                        var qty = +form.quantity || 1;
+                        var totalAmt = result.totalAmount || ((product ? +product.price : 0) * qty);
+                        var finalCode = result.orderCode || form.order_code || ('ID-' + result.id);
+                        S.orders.unshift({
+                            id: result.id,
+                            order_code: finalCode,
+                            receiver_name: form.receiver_name,
+                            receiver_phone: form.receiver_phone,
+                            shipping_address: form.shipping_address,
+                            customer_email: form.customer_email,
+                            total_amount: totalAmt,
+                            order_status: form.status,
+                            product_id: +form.product_id,
+                            product_name: product ? product.name : '',
+                            created_at: new Date().toISOString().slice(0, 19).replace('T', ' ')
+                        });
+                    });
+                });
+            };
+        }
+
+        // Xử lý bật/tắt Admin Profile Menu khi bấm vào avatar
+        var profileMenu = document.querySelector('.admin-profile-menu');
+        if (profileMenu) {
+            profileMenu.addEventListener('click', function (e) {
+                if (e.target.closest('.dropdown-item')) return;
+                e.stopPropagation();
+                this.classList.toggle('active');
             });
         }
 
-        /* ---------------------------------------------------------------- */
-        /* Gắn sự kiện (event delegation: dòng mới thêm bằng JS cũng chạy)  */
-        /* ---------------------------------------------------------------- */
-        document.addEventListener('click', function (e) {
-            var t = e.target;
+        document.addEventListener('click', function (event) {
+            // Tự động đóng Profile Menu khi bấm ra ngoài khung
+            if (profileMenu && !profileMenu.contains(event.target)) {
+                profileMenu.classList.remove('active');
+            }
 
-            var nav = t.closest('[data-nav-tab]');
-            if (nav) { navigateToTab(nav.getAttribute('data-nav-tab')); return; }
-
-            var tabBtn = t.closest('[data-switch-tab]');
-            if (tabBtn) { switchTab(tabBtn.getAttribute('data-switch-tab')); return; }
-
-            var add = t.closest('[data-add]');
-            if (add) { openAdd(add.getAttribute('data-add')); return; }
-
-            var close = t.closest('[data-close-modal]');
-            if (close) { closeModal(close.getAttribute('data-close-modal')); return; }
-
-            var actBtn = t.closest('button[data-action]');
-            if (actBtn) {
-                var tr = actBtn.closest('tr[data-entity]');
-                if (!tr) return;
-                var type = tr.getAttribute('data-entity');
-                if (actBtn.getAttribute('data-action') === 'edit') openEdit(type, tr);
-                else deleteRow(type, tr);
+            var nav = event.target.closest('[data-page]');
+            if (nav) {
+                S.page = nav.dataset.page;
+                $('quick-search').value = '';
+                renderPage();
                 return;
             }
-
-            // bấm vào nền mờ để đóng modal
-            if (t.classList && t.classList.contains('modal-backdrop')) closeModal(t.id);
-        });
-
-        document.addEventListener('submit', function (e) {
-            var form = e.target;
-            if (form.getAttribute && form.getAttribute('data-entity')) {
-                e.preventDefault();
-                submitForm(form);
+            var button = event.target.closest('[data-act]');
+            if (!button) return;
+            var action = button.dataset.act;
+            var id = button.dataset.id;
+            if (action === 'edit-user') {
+                var user = byId(S.users, id);
+                if (!user) return;
+                showModal('Sửa người dùng #' + id, userFields(user), function (form) {
+                    form.action = 'saveUser'; form.id = id;
+                    return call(form, function () {
+                        var oldEmail = user.email;
+                        var newEmail = form.email.toLowerCase();
+                        Object.assign(user, {first_name:form.first_name, last_name:form.last_name, email:newEmail, role:form.role, status:form.status});
+                        if (oldEmail !== newEmail) {
+                            S.orders.forEach(function (o) {
+                                if (o.customer_email === oldEmail) o.customer_email = newEmail;
+                            });
+                        }
+                    });
+                }, function () {
+                    var delEmail = user.email;
+                    return call({action:'deleteUser', id:id}, function () {
+                        S.users = S.users.filter(function (item) { return String(item.id) !== String(id); });
+                        S.orders = S.orders.filter(function (o) { return o.customer_email !== delEmail; });
+                    });
+                });
+            } else if (action === 'delete-user') {
+                var deleteUser = byId(S.users, id);
+                if (deleteUser && window.confirm('Xóa người dùng ' + deleteUser.email + '? Đơn hàng thuộc tài khoản này cũng sẽ bị xóa.')) {
+                    var delEmail = deleteUser.email;
+                    call({action:'deleteUser', id:id}, function () {
+                        S.users = S.users.filter(function (item) { return String(item.id) !== String(id); });
+                        S.orders = S.orders.filter(function (o) { return o.customer_email !== delEmail; });
+                    });
+                }
+            } else if (action === 'edit-product') {
+                var product = byId(S.products, id);
+                if (!product) return;
+                showModal('Sửa sản phẩm #' + id, productFields(product), function (form) {
+                    form.action = 'saveProduct'; form.id = id;
+                    return call(form, function () {
+                        var shop = byId(S.shops, form.shop_id), category = byId(S.categories, form.category_id);
+                        Object.assign(product, {name:form.name, sku:form.sku, shop_id:+form.shop_id, category_id:+form.category_id,
+                            shop_name:shop ? shop.shop_name: '', category_name:category ? category.name: '', price:+form.price, stock:+form.stock, status:form.status});
+                        S.orders.forEach(function (o) {
+                            if (String(o.product_id) === String(id)) o.product_name = form.name;
+                        });
+                    });
+                }, function () {
+                    return call({action:'deleteProduct', id:id}, function (result) {
+                        if (result.hardDeleted) S.products = S.products.filter(function (item) { return String(item.id) !== String(id); });
+                        else product.status = 'INACTIVE';
+                    });
+                });
+            } else if (action === 'delete-product') {
+                var deleteProduct = byId(S.products, id);
+                if (deleteProduct && window.confirm('Xóa/ngừng bán sản phẩm "' + deleteProduct.name + '"?')) {
+                    call({action:'deleteProduct', id:id}, function (result) {
+                        if (result.hardDeleted) S.products = S.products.filter(function (item) { return String(item.id) !== String(id); });
+                        else deleteProduct.status = 'INACTIVE';
+                    });
+                }
+            } else if (action === 'edit-order') {
+                var order = byId(S.orders, id);
+                if (!order) return;
+                showModal('Sửa đơn hàng ' + order.order_code, orderFields(order), function (form) {
+                    form.action = 'saveOrder'; form.id = id;
+                    return call(form, function (result) {
+                        Object.assign(order, {
+                            order_code: (result.orderCode && result.orderCode.trim()) ? result.orderCode : (form.order_code || order.order_code),
+                            receiver_name: form.receiver_name,
+                            receiver_phone: form.receiver_phone,
+                            shipping_address: form.shipping_address,
+                            customer_email: form.customer_email,
+                            order_status: form.status
+                        });
+                    });
+                }, function () {
+                    return call({action:'deleteOrder', id:id}, function () { S.orders = S.orders.filter(function (item) { return String(item.id) !== String(id); }); });
+                });
+            } else if (action === 'delete-order') {
+                var deleteOrder = byId(S.orders, id);
+                if (deleteOrder && window.confirm('Xóa đơn hàng ' + deleteOrder.order_code + ' cùng các chi tiết liên quan?')) {
+                    call({action:'deleteOrder', id:id}, function () { S.orders = S.orders.filter(function (item) { return String(item.id) !== String(id); }); });
+                }
             }
         });
 
-        var started = false;
-        function init() {
-            if (started) return;
-            started = true;
-            var saved = load('activeAdminTab');
-            if (saved) switchTab(saved);
-            renderCharts(BOOT.stats || {});
-        }
-
-        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-        else init();
+        $('quick-search').addEventListener('input', function () {
+            if (S.page !== 'dashboard') renderPage();
+        });
+        window.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') $('modal-container').innerHTML = '';
+        });
+        renderPage();
     })();
 </script>
 </body>

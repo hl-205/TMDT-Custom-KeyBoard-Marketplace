@@ -45,21 +45,23 @@ public class LoginServlet extends HttpServlet {
             session.setAttribute("userEmail", user.getEmail());
 
             // --- XỬ LÝ ĐỒNG BỘ GIỎ HÀNG VÀO DATABASE ---
-            Map<Integer, CartItem> dbCart = cartDAO.getCartByUserId(user.getId());
+            Map<String, CartItem> dbCart = cartDAO.getCartByUserId(user.getId());
 
             @SuppressWarnings("unchecked")
-            Map<Integer, CartItem> sessionCart = (Map<Integer, CartItem>) session.getAttribute("cart");
+            Map<String, CartItem> sessionCart = (Map<String, CartItem>) session.getAttribute("cart");
 
             if (sessionCart != null && !sessionCart.isEmpty()) {
+                // SỬA: gộp theo key (sản phẩm + phân loại)
                 for (CartItem item : sessionCart.values()) {
-                    int pId = item.getProduct().getId();
-                    int currentQty = dbCart.containsKey(pId) ? dbCart.get(pId).getQuantity() : 0;
-                    int newQty = currentQty + item.getQuantity();
-
-                    cartDAO.saveOrUpdateItem(user.getId(), pId, newQty);
+                    CartItem existing = dbCart.get(item.getKey());
+                    if (existing != null && existing.getExtraPrice() == item.getExtraPrice()) {
+                        existing.setQuantity(existing.getQuantity() + item.getQuantity());
+                    } else {
+                        dbCart.put(item.getKey(), item);
+                    }
                 }
-                // Tải lại giỏ hàng đầy đủ từ DB sau khi đã gộp
-                dbCart = cartDAO.getCartByUserId(user.getId());
+                // Lưu giỏ hàng đã gộp vào DB (các dòng có phụ phí chỉ giữ trong session)
+                cartDAO.syncCart(user.getId(), dbCart);
             }
 
             // Cập nhật lại giỏ hàng trong Session

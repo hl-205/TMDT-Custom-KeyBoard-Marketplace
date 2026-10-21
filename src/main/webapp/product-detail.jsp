@@ -188,6 +188,10 @@
             <form method="post" action="<%= request.getContextPath() %>/cart" id="cartForm" class="pd-buy-actions">
                 <input type="hidden" name="productId" value="<%= product.getId() %>">
                 <input type="hidden" name="quantity" id="cartQty" value="1">
+                <input type="hidden" name="color" id="cartColor" value="">
+                <input type="hidden" name="plate" id="cartPlate" value="<%= defaultPlateLabel %>">
+                <input type="hidden" name="extraPrice" id="cartExtraPrice" value="0">
+
                 <button type="submit" class="btn-add-cart">🛒 Thêm vào giỏ</button>
                 <button type="submit" name="buyNow" value="1" class="btn-buy-now">Mua ngay</button>
             </form>
@@ -365,39 +369,50 @@
         <aside class="pd-right-sidebar">
             <div class="sidebar-box-card">
                 <h4>Thường mua cùng</h4>
-                <div class="bundle-item">
-                    <div class="bundle-thumb"><div class="illus-kit" style="width:28px;height:18px;"></div></div>
-                    <div class="bundle-info">
-                        <strong>Kit Keychron Q1 Pro QMK/VIA — knob, hotswap, ANSI</strong>
-                        <span>4.290.000₫</span>
+                <%
+                    List<Product> bundleItems = new java.util.ArrayList<>();
+                    long bundleTotal = 0;
+                    if (similarProducts != null) {
+                        for (Product bp : similarProducts) {
+                            if (bp.getStock() > 0 && bundleItems.size() < 4) {
+                                bundleItems.add(bp);
+                                bundleTotal += bp.getPrice();
+                            }
+                        }
+                    }
+                %>
+                <% if (bundleItems.isEmpty()) { %>
+                <p style="font-size:13px;color:#64748B;">Chưa có sản phẩm gợi ý mua cùng.</p>
+                <% } else { %>
+                <form method="post" action="<%= request.getContextPath() %>/cart">
+                    <input type="hidden" name="action" value="addBundle">
+                    <% for (Product bp : bundleItems) { %>
+                    <input type="hidden" name="productId" value="<%= bp.getId() %>">
+                    <a class="bundle-item" href="product-detail?id=<%= bp.getId() %>" style="text-decoration:none;color:inherit;">
+                        <div class="bundle-thumb">
+                            <% if (bp.getCategoryId() == 1) { %>
+                            <div class="illus-kit" style="width:28px;height:18px;"></div>
+                            <% } else if (bp.getCategoryId() == 2) { %>
+                            <div class="illus-switch yellow" style="width:22px;height:22px;"></div>
+                            <% } else if (bp.getCategoryId() == 3) { %>
+                            <div class="illus-keycap" style="width:24px;height:24px;"></div>
+                            <% } else { %>
+                            <div class="illus-switch purple" style="width:22px;height:22px;"></div>
+                            <% } %>
+                        </div>
+                        <div class="bundle-info">
+                            <strong><%= bp.getName() %></strong>
+                            <span><%= bp.getFormattedPrice() %></span>
+                        </div>
+                    </a>
+                    <% } %>
+                    <div class="bundle-total-row">
+                        <span>Tổng combo</span>
+                        <strong><%= String.format(java.util.Locale.GERMANY, "%,d", bundleTotal) %>₫</strong>
                     </div>
-                </div>
-                <div class="bundle-item">
-                    <div class="bundle-thumb"><div class="illus-switch yellow" style="width:22px;height:22px;"></div></div>
-                    <div class="bundle-info">
-                        <strong>Switch Akko Cream Yellow V3 Pro — Linear 50g (45 nút)</strong>
-                        <span>320.000₫</span>
-                    </div>
-                </div>
-                <div class="bundle-item">
-                    <div class="bundle-thumb"><div class="illus-switch purple" style="width:22px;height:22px;"></div></div>
-                    <div class="bundle-info">
-                        <strong>Stabilizer Durock V2 PCB-mount — đã lube sẵn</strong>
-                        <span>420.000₫</span>
-                    </div>
-                </div>
-                <div class="bundle-item">
-                    <div class="bundle-thumb"><div class="illus-keycap" style="width:24px;height:24px;"></div></div>
-                    <div class="bundle-info">
-                        <strong>Keycap Akko Black & Pink ASA profile — 158 phím</strong>
-                        <span>690.000₫</span>
-                    </div>
-                </div>
-                <div class="bundle-total-row">
-                    <span>Tổng combo</span>
-                    <strong>12.230.000₫</strong>
-                </div>
-                <a href="cart.jsp" class="btn-full-blue">Thêm cả combo vào giỏ</a>
+                    <button type="submit" class="btn-full-blue">Thêm cả combo vào giỏ</button>
+                </form>
+                <% } %>
             </div>
 
             <div class="sidebar-blue-promo">
@@ -537,21 +552,32 @@
             colorBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             selectedColorText.textContent = btn.getAttribute('data-label');
+            document.getElementById('cartColor').value = btn.getAttribute('data-label');
         });
     });
+    const activeColorBtn = document.querySelector('#colorGroup .pd-opt-btn.active');
+    if (activeColorBtn) {
+        document.getElementById('cartColor').value = activeColorBtn.getAttribute('data-label');
+    }
+
 
     // 4. Tương tác chọn Plate & Tự động cập nhật Giá tiền theo Plate đã chọn
     const plateBtns = document.querySelectorAll('#plateGroup .pd-opt-btn');
     const selectedPlateText = document.getElementById('selectedPlateText');
     const displayPrice = document.getElementById('displayPrice');
     const displayOldPrice = document.getElementById('displayOldPrice');
+    const initialPlateBtn = document.querySelector('#plateGroup .pd-opt-btn.active');
+    if (initialPlateBtn) {
+        document.getElementById('cartExtraPrice').value = initialPlateBtn.getAttribute('data-extra') || '0';
+    }
 
     plateBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             plateBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             selectedPlateText.textContent = btn.getAttribute('data-label');
-
+            document.getElementById('cartPlate').value = btn.getAttribute('data-label');
+            document.getElementById('cartExtraPrice').value = btn.getAttribute('data-extra') || '0';
             const basePrice = parseInt(displayPrice.getAttribute('data-base'), 10) || 0;
             const extraPrice = parseInt(btn.getAttribute('data-extra'), 10) || 0;
             displayPrice.textContent = formatCurrencyVND(basePrice + extraPrice);
@@ -564,6 +590,10 @@
             }
         });
     });
+    const activePlateBtn = document.querySelector('#plateGroup .pd-opt-btn.active');
+    if (activePlateBtn) {
+        document.getElementById('cartPlate').value = activePlateBtn.getAttribute('data-label');
+    }
 
     // 5. Tăng giảm số lượng trong phạm vi từ 1 đến tồn kho thực tế
     const qtyInput = document.getElementById('qtyInput');

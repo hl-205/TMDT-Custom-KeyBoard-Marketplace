@@ -491,3 +491,222 @@ INSERT INTO order_progress (order_id, step_number, step_title, step_desc, status
                                                                                                     (1, 3, 'Cân stabilizer', 'Clip + lube Durock V2 cho phím Space, Enter, Backspace, 2 Shift. Đã căn wire thẳng tắp, hết rattle.', 'COMPLETED', '16/10 · 10:05'),
                                                                                                     (1, 4, 'Lắp ráp & test toàn phím', 'Lắp switch, gắn keycap, test từng phím bằng phần mềm VIA và kiểm tra âm thanh.', 'IN_PROGRESS', 'Đang thực hiện'),
                                                                                                     (1, 5, 'Đóng gói & bàn giao vận chuyển', 'Quay video soundtest cuối, đóng thùng chống sốc bàn giao vận chuyển.', 'PENDING', 'Dự kiến 18/10');
+
+
+USE keebhub_db;
+
+CREATE TABLE IF NOT EXISTS discount_coupons (
+                                                id INT AUTO_INCREMENT PRIMARY KEY,
+                                                code VARCHAR(50) NOT NULL UNIQUE,
+    description VARCHAR(255) NOT NULL,
+    discount_type ENUM('FIXED', 'PERCENT', 'FREESHIP')
+    NOT NULL DEFAULT 'FIXED',
+    discount_value DECIMAL(12,2) NOT NULL DEFAULT 0,
+    max_discount_amount DECIMAL(12,2) DEFAULT NULL,
+    min_order_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+    start_at DATETIME NOT NULL,
+    end_at DATETIME NOT NULL,
+    usage_limit INT DEFAULT NULL,
+    used_count INT NOT NULL DEFAULT 0,
+    status ENUM('ACTIVE', 'INACTIVE')
+    NOT NULL DEFAULT 'ACTIVE',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_coupon_status_dates (status, start_at, end_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO discount_coupons
+(code, description, discount_type, discount_value,
+ max_discount_amount, min_order_amount,
+ start_at, end_at, usage_limit, used_count, status)
+VALUES
+    ('KEEB200K', 'Giảm 200.000đ cho đơn từ 2 triệu',
+     'FIXED', 200000, NULL, 2000000,
+     NOW(), '2027-12-31 23:59:59', 1000, 0, 'ACTIVE'),
+
+    ('KEEB50K', 'Giảm 50.000đ cho đơn từ 500.000đ',
+     'FIXED', 50000, NULL, 500000,
+     NOW(), '2027-12-31 23:59:59', 1000, 0, 'ACTIVE'),
+
+    ('SWITCH10', 'Giảm 10% cho sản phẩm switch',
+     'PERCENT', 10, 100000, 500000,
+     NOW(), '2027-12-31 23:59:59', 500, 0, 'ACTIVE'),
+
+    ('KEYCAP5', 'Giảm 5% cho đơn từ 300.000đ',
+     'PERCENT', 5, 150000, 300000,
+     NOW(), '2027-12-31 23:59:59', 500, 0, 'ACTIVE'),
+
+    ('KIT150K', 'Giảm 150.000đ cho đơn từ 3 triệu',
+     'FIXED', 150000, NULL, 3000000,
+     NOW(), '2027-12-31 23:59:59', 300, 0, 'ACTIVE'),
+
+    ('WELCOME30', 'Giảm 30.000đ cho đơn từ 200.000đ',
+     'FIXED', 30000, NULL, 200000,
+     NOW(), '2027-12-31 23:59:59', 2000, 0, 'ACTIVE'),
+
+    ('BUILD12', 'Giảm 12%, tối đa 250.000đ',
+     'PERCENT', 12, 250000, 1500000,
+     NOW(), '2027-12-31 23:59:59', 300, 0, 'ACTIVE'),
+
+    ('FREESHIP', 'Ưu đãi vận chuyển cho đơn từ 300.000đ',
+     'FREESHIP', 0, NULL, 300000,
+     NOW(), '2027-12-31 23:59:59', 1000, 0, 'ACTIVE')
+
+    ON DUPLICATE KEY UPDATE
+                         description = VALUES(description),
+                         discount_type = VALUES(discount_type),
+                         discount_value = VALUES(discount_value),
+                         max_discount_amount = VALUES(max_discount_amount),
+                         min_order_amount = VALUES(min_order_amount),
+                         end_at = VALUES(end_at),
+                         usage_limit = VALUES(usage_limit),
+                         status = VALUES(status);
+
+-- Kiểm tra 8 mã
+SELECT *
+FROM discount_coupons
+ORDER BY id;
+
+USE keebhub_db;
+
+-- DIA CHI NHAN HANG: chi bo sung bang moi, khong xoa database cu.
+CREATE TABLE IF NOT EXISTS user_addresses (
+                                              id INT AUTO_INCREMENT PRIMARY KEY,
+                                              user_id INT NOT NULL,
+                                              receiver_name VARCHAR(100) NOT NULL,
+    receiver_phone VARCHAR(20) NOT NULL,
+    full_address VARCHAR(500) NOT NULL,
+    is_default TINYINT(1) NOT NULL DEFAULT 0,
+    INDEX idx_user_addresses_user (user_id),
+    CONSTRAINT fk_user_addresses_user FOREIGN KEY (user_id)
+    REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Du lieu mau: chi them neu tai khoan ton tai va chua co dia chi.
+INSERT INTO user_addresses (user_id, receiver_name, receiver_phone, full_address, is_default)
+SELECT u.id, CONCAT_WS(' ', u.first_name, u.last_name), COALESCE(u.phone, ''), a.full_address, 1
+FROM users u
+         JOIN (
+    SELECT 1 AS user_id, '128 Nguyễn Văn Cừ, Phường Chợ Quán, TP. Hồ Chí Minh' AS full_address
+    UNION ALL SELECT 2, '12 Võ Văn Ngân, Phường Thủ Đức, TP. Hồ Chí Minh'
+    UNION ALL SELECT 3, '45 Nguyễn Thị Minh Khai, Phường Sài Gòn, TP. Hồ Chí Minh'
+    UNION ALL SELECT 4, '78 Cách Mạng Tháng Tám, Phường Xuân Hòa, TP. Hồ Chí Minh'
+    UNION ALL SELECT 5, '25 Phan Văn Trị, Phường Gò Vấp, TP. Hồ Chí Minh'
+) a ON a.user_id = u.id
+WHERE NOT EXISTS (SELECT 1 FROM user_addresses x WHERE x.user_id = u.id);
+
+-- Dia chi thu hai cho tai khoan khach hang id=1.
+INSERT INTO user_addresses (user_id, receiver_name, receiver_phone, full_address, is_default)
+SELECT u.id, CONCAT_WS(' ', u.first_name, u.last_name), COALESCE(u.phone, ''),
+       'Khu phố 6, Phường Linh Trung, TP. Hồ Chí Minh', 0
+FROM users u
+WHERE u.id = 1
+  AND NOT EXISTS (
+    SELECT 1 FROM user_addresses x
+    WHERE x.user_id = u.id AND x.full_address = 'Khu phố 6, Phường Linh Trung, TP. Hồ Chí Minh'
+);
+
+-- Kiem tra dia chi theo tai khoan.
+SELECT a.id, a.user_id,
+       CONCAT_WS(' ', u.first_name, u.last_name) AS account_name,
+       a.receiver_name, a.receiver_phone, a.full_address,
+       CASE WHEN a.is_default = 1 THEN 'Mặc định' ELSE 'Địa chỉ phụ' END AS address_type
+FROM user_addresses a
+         JOIN users u ON u.id = a.user_id
+ORDER BY a.user_id, a.is_default DESC, a.id;
+
+USE keebhub_db;
+
+CREATE TABLE IF NOT EXISTS user_addresses (
+                                              id INT AUTO_INCREMENT PRIMARY KEY,
+                                              user_id INT NOT NULL,
+                                              receiver_name VARCHAR(100) NOT NULL,
+    receiver_phone VARCHAR(20) NOT NULL,
+    full_address VARCHAR(500) NOT NULL,
+    is_default TINYINT(1) NOT NULL DEFAULT 0,
+    INDEX idx_user_addresses_user (user_id),
+    CONSTRAINT fk_user_addresses_user FOREIGN KEY (user_id)
+    REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tao 5 dia chi mau, rieng tung user; khong chen trung dia chi da co.
+-- Neu tai khoan da co N dia chi, chi bo sung toi da 5-N dia chi.
+INSERT INTO user_addresses (user_id, receiver_name, receiver_phone, full_address, is_default)
+SELECT t.user_id, t.receiver_name, t.receiver_phone, t.full_address,
+       CASE WHEN t.existing_count = 0 AND t.missing_rank = 1 THEN 1 ELSE 0 END
+FROM (
+         SELECT candidates.*,
+                ROW_NUMBER() OVER (PARTITION BY candidates.user_id ORDER BY candidates.slot) AS missing_rank
+         FROM (
+                  SELECT u.id AS user_id,
+                         TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS receiver_name,
+                         COALESCE(u.phone, '') AS receiver_phone,
+                         sample.slot,
+                         sample.full_address,
+                         (SELECT COUNT(*) FROM user_addresses a WHERE a.user_id = u.id) AS existing_count
+                  FROM users u
+                           CROSS JOIN (
+                      SELECT 1 AS slot, '128 Nguyễn Văn Cừ, Phường Chợ Quán, TP. Hồ Chí Minh' AS full_address
+                      UNION ALL SELECT 2, '12 Võ Văn Ngân, Phường Thủ Đức, TP. Hồ Chí Minh'
+                      UNION ALL SELECT 3, '45 Nguyễn Thị Minh Khai, Phường Sài Gòn, TP. Hồ Chí Minh'
+                      UNION ALL SELECT 4, '78 Cách Mạng Tháng Tám, Phường Xuân Hòa, TP. Hồ Chí Minh'
+                      UNION ALL SELECT 5, '25 Phan Văn Trị, Phường Gò Vấp, TP. Hồ Chí Minh'
+                  ) AS sample
+                  WHERE u.role = 'CUSTOMER'
+                    AND NOT EXISTS (
+                      SELECT 1 FROM user_addresses a
+                      WHERE a.user_id = u.id AND a.full_address = sample.full_address
+                  )
+              ) AS candidates
+     ) AS t
+WHERE t.missing_rank <= GREATEST(0, 5 - t.existing_count);
+
+-- Neu mot tai khoan CUSTOMER co dia chi nhung chua co mac dinh,
+-- danh dau dia chi co id nho nhat la mac dinh (khong thay doi mac dinh da co).
+UPDATE user_addresses a
+    JOIN (
+    SELECT a2.user_id, MIN(a2.id) AS first_id
+    FROM user_addresses a2
+    JOIN users u ON u.id = a2.user_id AND u.role = 'CUSTOMER'
+    GROUP BY a2.user_id
+    HAVING SUM(a2.is_default = 1) = 0
+    ) missing ON missing.first_id = a.id
+    SET a.is_default = 1;
+
+-- Kiem tra so dia chi va so dia chi mac dinh theo tung CUSTOMER.
+SELECT u.id AS user_id,
+       TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS full_name,
+       COUNT(a.id) AS address_count,
+       COALESCE(SUM(a.is_default = 1), 0) AS default_count
+FROM users u
+         LEFT JOIN user_addresses a ON a.user_id = u.id
+WHERE u.role = 'CUSTOMER'
+GROUP BY u.id, u.first_name, u.last_name
+ORDER BY u.id;
+
+-- Xem chi tiet tat ca dia chi CUSTOMER.
+SELECT a.id, a.user_id, a.receiver_name, a.receiver_phone,
+       a.full_address, a.is_default
+FROM user_addresses a
+         JOIN users u ON u.id = a.user_id
+WHERE u.role = 'CUSTOMER'
+ORDER BY a.user_id, a.is_default DESC, a.id;
+
+-- KeebHub: nâng cấp bổ sung, không xóa dữ liệu, chạy lại được.
+USE keebhub_db;
+DELIMITER $$
+DROP PROCEDURE IF EXISTS upgrade_cart_additive $$
+CREATE PROCEDURE upgrade_cart_additive()
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cart_items' AND COLUMN_NAME = 'variant_label') THEN
+ALTER TABLE cart_items ADD COLUMN variant_label VARCHAR(255) NOT NULL DEFAULT '';
+END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cart_items' AND COLUMN_NAME = 'extra_price') THEN
+ALTER TABLE cart_items ADD COLUMN extra_price BIGINT NOT NULL DEFAULT 0;
+END IF;
+END $$
+CALL upgrade_cart_additive() $$
+DROP PROCEDURE upgrade_cart_additive $$
+    DELIMITER ;
+SELECT COLUMN_NAME, COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cart_items' AND COLUMN_NAME IN ('variant_label','extra_price');

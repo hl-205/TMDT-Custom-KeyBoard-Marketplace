@@ -10,25 +10,35 @@ import java.util.*;
 public class OrderDAO {
 
     public int createOrder(int userId, String receiverName, String phone, String address, List<CartItem> cart) throws SQLException {
+        return createOrders(userId, receiverName, phone, address, cart).get(0);
+    }
+
+    public List<Integer> createOrders(int userId, String receiverName, String phone, String address, List<CartItem> cart) throws SQLException {
+        return createOrders(userId, receiverName, phone, address, cart, null);
+    }
+
+    public List<Integer> createOrders(int userId, String receiverName, String phone, String address,
+                                      List<CartItem> cart, String couponCode) throws SQLException {
+        return createOrders(userId, receiverName, phone, address, cart, couponCode, 0, "CHUA_THANH_TOAN");
+    }
+
+    public List<Integer> createOrders(int userId, String receiverName, String phone, String address,
+                                      List<CartItem> cart, String couponCode, long shippingFee,
+                                      String paymentMethod) throws SQLException {
+        if (shippingFee < 0 || !Set.of("COD", "VNPAY_QR", "ATM", "BANK_TRANSFER").contains(paymentMethod))
+            throw new SQLException("Phương thức thanh toán hoặc phí vận chuyển không hợp lệ.");
         if (cart == null || cart.isEmpty()) {
             throw new SQLException("Giỏ hàng đang trống.");
         }
 
-        // Schema hiện tại có shop_id bắt buộc: mỗi lần đặt hàng phải thuộc một shop.
-        int shopId = cart.get(0).getProduct().getShopId();
+        Map<Integer, List<CartItem>> byShop = new LinkedHashMap<>();
         for (CartItem item : cart) {
-            if (item.getProduct().getShopId() != shopId) {
-                throw new SQLException("Vui lòng đặt từng đơn theo cửa hàng.");
-            }
+            byShop.computeIfAbsent(item.getProduct().getShopId(), k -> new ArrayList<>()).add(item);
         }
 
-        String code = "KH" + System.currentTimeMillis();
-        BigDecimal subtotal = cart.stream()
-                .map(CartItem::getLineTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal shipping = BigDecimal.ZERO;
-
         String sql = "INSERT INTO orders(order_code, user_id, shop_id, receiver_name, receiver_phone, shipping_address, subtotal, shipping_fee, total_amount, payment_method, order_status) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING')";
+        String itemSql = "INSERT INTO order_items(order_id, product_id, product_name, quantity, unit_price, line_total) VALUES(?, ?, ?, ?, ?, ?)";
+        String stockSql = "UPDATE products SET stock = stock - ?, sold_count = sold_count + ? WHERE id = ? AND stock >= ?";
 
         try (Connection c = DBContext.getConnection()) {
             if (c == null) {
@@ -37,56 +47,122 @@ public class OrderDAO {
             c.setAutoCommit(false);
 
             try {
-                int orderId;
-                try (PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-                    ps.setString(1, code);
-                    ps.setInt(2, userId);
-                    ps.setInt(3, shopId);
-                    ps.setString(4, receiverName);
-                    ps.setString(5, phone);
-                    ps.setString(6, address);
-                    ps.setBigDecimal(7, subtotal);
-                    ps.setBigDecimal(8, shipping);
-                    ps.setBigDecimal(9, subtotal.add(shipping));
-                    ps.setString(10, "CHUA_THANH_TOAN");
-                    ps.executeUpdate();
-
-                    try (ResultSet rs = ps.getGeneratedKeys()) {
-                        if (!rs.next()) {
-                            throw new SQLException("Không tạo được đơn hàng.");
+                List<Integer> orderIds = new ArrayList<>();
+                long base = System.currentTimeMillis();
+                int idx = 0;
+                long wholeSubtotal = 0;
+                for (CartItem item : cart) {
+                    wholeSubtotal = Math.addExact(wholeSubtotal, item.getLineTotal().longValueExact());
+                }
+                long wholeDiscount = 0;
+                if (couponCode != null && !couponCode.isBlank()) {
+                    // Khóa bản ghi trong transaction để tránh vượt số lượt sử dụng.
+                    String lockSql = "SELECT id, code, description, discount_type, discount_value, max_discount_amount, "
+                            + "min_order_amount, start_at, end_at, usage_limit, used_count, status "
+                            + "FROM discount_coupons WHERE UPPER(code)=UPPER(?) FOR UPDATE";
+                    try (PreparedStatement lock = c.prepareStatement(lockSql)) {
+                        lock.setString(1, couponCode.trim());
+                        try (ResultSet rs = lock.executeQuery()) {
+                            if (!rs.next()) throw new SQLException("Mã giảm giá không tồn tại.");
+                            java.util.Map<String,Object> coupon = new java.util.LinkedHashMap<>();
+                            coupon.put("id", rs.getInt("id"));
+                            coupon.put("status", rs.getString("status"));
+                            coupon.put("startAt", rs.getTimestamp("start_at"));
+                            coupon.put("endAt", rs.getTimestamp("end_at"));
+                            coupon.put("minOrderAmount", rs.getBigDecimal("min_order_amount"));
+                            coupon.put("discountType", rs.getString("discount_type"));
+                            coupon.put("discountValue", rs.getBigDecimal("discount_value"));
+                            coupon.put("maxDiscountAmount", rs.getBigDecimal("max_discount_amount"));
+                            int limit = rs.getInt("usage_limit");
+                            coupon.put("usageLimit", rs.wasNull() ? null : limit);
+                            coupon.put("usedCount", rs.getInt("used_count"));
+                            CartDAO coupons = new CartDAO();
+                            if (!coupons.isCouponValid(coupon, wholeSubtotal))
+                                throw new SQLException("Mã giảm giá đã hết hạn, hết lượt hoặc đơn chưa đủ điều kiện.");
+                            wholeDiscount = coupons.calculateDiscount(coupon, wholeSubtotal);
+                            try (PreparedStatement use = c.prepareStatement(
+                                    "UPDATE discount_coupons SET used_count=used_count+1 WHERE id=?")) {
+                                use.setInt(1, rs.getInt("id"));
+                                if (use.executeUpdate() != 1) throw new SQLException("Không cập nhật được lượt dùng mã.");
+                            }
                         }
-                        orderId = rs.getInt(1);
                     }
                 }
+                long remainingDiscount = wholeDiscount;
+                long remainingSubtotal = wholeSubtotal;
 
-                String itemSql = "INSERT INTO order_items(order_id, product_id, product_name, quantity, unit_price, line_total) VALUES(?, ?, ?, ?, ?, ?)";
-                String stockSql = "UPDATE products SET stock = stock - ?, sold_count = sold_count + ? WHERE id = ? AND stock >= ?";
+                for (Map.Entry<Integer, List<CartItem>> e : byShop.entrySet()) {
+                    int shopId = e.getKey();
+                    List<CartItem> shopItems = e.getValue();
 
-                for (CartItem item : cart) {
-                    try (PreparedStatement ps = c.prepareStatement(stockSql)) {
-                        int q = item.getQuantity();
-                        ps.setInt(1, q);
-                        ps.setInt(2, q);
-                        ps.setInt(3, item.getProduct().getId());
-                        ps.setInt(4, q);
-                        if (ps.executeUpdate() != 1) {
-                            throw new SQLException("Sản phẩm hết hàng hoặc không đủ số lượng: " + item.getProduct().getName());
+                    // Mỗi shop một mã đơn riêng (nhân 10 + chỉ số để không trùng trong cùng mili giây)
+                    String code = "KH" + (base * 10 + idx);
+                    idx++;
+
+                    BigDecimal subtotal = shopItems.stream()
+                            .map(CartItem::getLineTotal)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    BigDecimal shipping = BigDecimal.valueOf(idx == 1 ? shippingFee : 0);
+                    long shopSubtotal = subtotal.longValueExact();
+                    long shopDiscount = remainingSubtotal == shopSubtotal
+                            ? remainingDiscount
+                            : BigDecimal.valueOf(remainingDiscount)
+                            .multiply(BigDecimal.valueOf(shopSubtotal))
+                            .divide(BigDecimal.valueOf(remainingSubtotal), 0, java.math.RoundingMode.DOWN)
+                            .longValueExact();
+                    remainingDiscount -= shopDiscount;
+                    remainingSubtotal -= shopSubtotal;
+
+                    int orderId;
+                    try (PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                        ps.setString(1, code);
+                        ps.setInt(2, userId);
+                        ps.setInt(3, shopId);
+                        ps.setString(4, receiverName);
+                        ps.setString(5, phone);
+                        ps.setString(6, address);
+                        ps.setBigDecimal(7, subtotal);
+                        ps.setBigDecimal(8, shipping);
+                        ps.setBigDecimal(9, subtotal.subtract(BigDecimal.valueOf(shopDiscount)).add(shipping));
+                        ps.setString(10, paymentMethod);
+                        ps.executeUpdate();
+
+                        try (ResultSet rs = ps.getGeneratedKeys()) {
+                            if (!rs.next()) {
+                                throw new SQLException("Không tạo được đơn hàng.");
+                            }
+                            orderId = rs.getInt(1);
                         }
                     }
 
-                    try (PreparedStatement ps = c.prepareStatement(itemSql)) {
-                        ps.setInt(1, orderId);
-                        ps.setInt(2, item.getProduct().getId());
-                        ps.setString(3, item.getProduct().getName());
-                        ps.setInt(4, item.getQuantity());
-                        ps.setBigDecimal(5, BigDecimal.valueOf(item.getProduct().getPrice()));
-                        ps.setBigDecimal(6, item.getLineTotal());
-                        ps.executeUpdate();
+                    for (CartItem item : shopItems) {
+                        try (PreparedStatement ps = c.prepareStatement(stockSql)) {
+                            int q = item.getQuantity();
+                            ps.setInt(1, q);
+                            ps.setInt(2, q);
+                            ps.setInt(3, item.getProduct().getId());
+                            ps.setInt(4, q);
+                            if (ps.executeUpdate() != 1) {
+                                throw new SQLException("Sản phẩm hết hàng hoặc không đủ số lượng: " + item.getProduct().getName());
+                            }
+                        }
+
+                        try (PreparedStatement ps = c.prepareStatement(itemSql)) {
+                            ps.setInt(1, orderId);
+                            ps.setInt(2, item.getProduct().getId());
+                            ps.setString(3, item.getProduct().getName()
+                                    + (item.getVariantLabel().isEmpty() ? "" : " (" + item.getVariantLabel() + ")"));
+                            ps.setInt(4, item.getQuantity());
+                            ps.setBigDecimal(5, BigDecimal.valueOf(item.getUnitPrice()));
+                            ps.setBigDecimal(6, item.getLineTotal());
+                            ps.executeUpdate();
+                        }
                     }
+                    orderIds.add(orderId);
                 }
 
                 c.commit();
-                return orderId;
+                return orderIds;
             } catch (SQLException ex) {
                 c.rollback();
                 throw ex;

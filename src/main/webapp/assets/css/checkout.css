@@ -1,303 +1,96 @@
-/* ==========================================================================
-   KEEBHUB - TRANG ĐẶT HÀNG (CHECKOUT.CSS)
-   ========================================================================== */
+/* KeebHub: checkout and order success styles */
 
-.checkout-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 24px 16px;
+*{box-sizing:border-box}.co-page{background:#f6f7fa;min-height:950px;padding:25px 15px 100px;color:#121d31}.co-container{max-width:1180px;margin:auto}.co-steps{display:flex;align-items:center;gap:12px;margin:0 0 22px;color:#64748b;font-size:12px}.co-steps span{padding:7px 12px;border-radius:20px;background:#eef1f5}.co-steps .done{color:#059669;background:#eafaf1}.co-steps .active{color:#1e5be7;background:#eaf0ff;font-weight:800}.co-steps.center{justify-content:center}.co-layout{display:grid;grid-template-columns:minmax(0,2.35fr) minmax(280px,1fr);gap:22px;align-items:start}.co-main{display:grid;gap:16px}.co-card{background:white;border:1px solid #dfe5ed;border-radius:14px;padding:22px;margin:0 0 14px}.co-title{display:flex;gap:12px;align-items:center;margin-bottom:20px}.co-title h2,.co-summary h2{font-size:16px;margin:0}.co-num{background:#2463ed;color:white;width:26px;height:26px;display:grid;place-items:center;border-radius:50%;font-size:13px;font-weight:800}.co-address{display:flex;align-items:center;gap:12px;border-bottom:1px solid #e9edf2;padding-bottom:15px;margin-bottom:17px}.co-address>div{flex:1;min-width:0}.co-address strong{font-size:14px}.co-address p{font-size:12px;color:#64748b;margin:6px 0}.co-pin,.co-product-icon{width:43px;height:43px;border-radius:10px;background:#f0f4fa;display:grid;place-items:center;flex-shrink:0}.co-address button{border:1px solid #d9e0e8;background:white;border-radius:8px;padding:10px 12px;cursor:pointer}.co-fields{display:grid;grid-template-columns:1fr 1fr;gap:13px}.co-fields label{display:grid;gap:7px;font-size:12px;font-weight:700;color:#41516a}.co-fields .wide{grid-column:1/-1}.co-fields input,.co-fields textarea{width:100%;border:1px solid #d5dde8;border-radius:8px;padding:11px;font:inherit;font-weight:400;color:#111827}.co-check,.co-terms{display:flex;align-items:flex-start;gap:9px;font-size:12px;color:#596579;margin-top:14px}.co-shipping{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.co-option{border:1px solid #dce3ed;border-radius:10px;padding:14px;display:grid;gap:8px;cursor:pointer;position:relative;font-size:13px}.co-option input{position:absolute;top:14px;left:10px;accent-color:#2463ed}.co-option b,.co-option small,.co-option strong{padding-left:18px}.co-option small,.co-payment small{color:#93a0b2;font-size:11px}.co-option.chosen,.co-payment.chosen{border-color:#2463ed;background:#eef3ff}.co-notice{background:#fff8e7;color:#a34d14;border-radius:9px;padding:14px;margin-top:14px;font-size:12px;line-height:1.7}.co-payments{display:grid;gap:9px}.co-payment{display:flex;gap:12px;align-items:center;border:1px solid #dce3ed;border-radius:10px;padding:13px;cursor:pointer}.co-payment input{accent-color:#2463ed}.co-payment>span:nth-of-type(2){flex:1;display:grid;gap:5px}.co-payment b{font-size:13px}.co-pay-icon{background:#f6f8fa;border:1px solid #e5eaf0;border-radius:6px;padding:8px}.co-payment em{font-size:10px;font-style:normal;border:1px solid #dce3ed;padding:6px;border-radius:5px}.co-blue-note{background:#eaf1ff;color:#2453af;border-radius:9px;padding:13px;margin-top:13px;font-size:12px}.co-summary{position:sticky;top:16px}.co-summary-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.co-summary-head a{font-size:12px;font-weight:700;color:#2463ed}.co-product{display:flex;gap:10px;align-items:center;margin-bottom:15px}.co-product-name{flex:1;min-width:0;display:grid;gap:4px}.co-product-name b{font-size:11px;line-height:1.4}.co-product-name small{font-size:10px;color:#94a3b8}.co-product>strong{font-size:12px;white-space:nowrap}.co-summary hr{border:0;border-top:1px solid #e5eaf0;margin:18px 0}.co-sumline,.co-grand{display:flex;justify-content:space-between;gap:10px;margin:13px 0;font-size:13px}.co-sumline span{color:#64748b}.co-green{color:#0aaf69}.co-grand{align-items:center;border-top:1px solid #e5eaf0;padding-top:18px;font-weight:800}.co-grand strong,.co-success-details strong{color:#f4511e;font-size:23px}.co-terms input{accent-color:#2463ed}.co-terms a{color:#2463ed}.co-submit{background:#ff5722;color:white;border:0;border-radius:9px;padding:17px;width:100%;font-weight:800;margin-top:18px;cursor:pointer}.co-submit:disabled{opacity:.6;cursor:wait}.co-pending{display:block;text-align:center;margin-top:10px;color:#64748b}.co-perks{font-size:12px;color:#64748b}.co-perks p{margin:7px 0}.co-error{background:#fee2e2;color:#991b1b;padding:14px;border-radius:8px;margin-bottom:16px}.co-success-container{max-width:640px;margin:20px auto}.co-success-card{border:1px solid #e0e6ec;background:white;border-radius:18px;overflow:hidden}.co-success-top{text-align:center;background:linear-gradient(#eafcf3,#fff);padding:36px 20px}.co-checkmark{width:66px;height:66px;background:#07945a;border-radius:50%;display:grid;place-items:center;color:white;font-size:32px;margin:0 auto 22px}.co-success-top h1{font-size:25px;margin:0 0 12px}.co-success-top p{color:#65758a;font-size:13px;line-height:1.6}.co-success-details{padding:12px 32px}.co-success-details>div{display:flex;justify-content:space-between;gap:20px;align-items:center;padding:13px 0;font-size:13px}.co-success-details span{color:#64748b}.co-success-details b{text-align:right;overflow-wrap:anywhere}.co-success-card>.co-notice{margin:10px 30px}.co-success-actions{display:flex;gap:12px;padding:20px 30px}.co-success-actions a{flex:1;text-align:center;border:1px solid #d5dce6;padding:13px;border-radius:9px;font-size:13px;font-weight:800;color:#172033;text-decoration:none}.co-success-actions a:first-child{background:#2463ed;color:white;border-color:#2463ed}.co-timeline{background:#f7f9fc;border-top:1px solid #e0e6ec;display:grid;grid-template-columns:repeat(4,1fr);padding:25px 10px;text-align:center;gap:8px}.co-timeline span{display:grid;gap:8px}.co-timeline b{font-size:11px}.co-timeline small{font-size:10px;color:#94a3b8}@media(max-width:800px){.co-layout{grid-template-columns:1fr}.co-summary{position:static}.co-shipping{grid-template-columns:1fr}.co-fields{grid-template-columns:1fr}.co-fields .wide{grid-column:auto}.co-success-details{padding:10px 18px}.co-success-actions{padding:15px}.co-page{padding-bottom:45px}}
+
+/* Checkout CSS consolidated into the JSP: no checkout-new.css or checkout.css required. */
+.co-page { font-family: 'Plus Jakarta Sans', Inter, system-ui, sans-serif; }
+.co-page .co-card { box-shadow: 0 4px 20px rgba(15,23,42,.04); }
+.co-page .co-fields input:focus, .co-page .co-fields textarea:focus {
+    outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+}
+.co-page .co-submit:hover { background: #ea4b17; }
+.co-page .co-submit:focus-visible, .co-page a:focus-visible,
+.co-page button:focus-visible, .co-page input:focus-visible {
+    outline: 2px solid #2563eb; outline-offset: 2px;
+}
+.co-page .co-product-name { overflow-wrap: anywhere; }
+.co-page .co-sumline b { text-align: right; }
+@media (max-width: 560px) {
+    .co-page .co-card { padding: 16px; }
+    .co-page .co-steps { gap: 5px; flex-wrap: wrap; }
+    .co-page .co-steps span { padding: 6px 8px; }
+    .co-page .co-success-actions { flex-direction: column; }
+    .co-page .co-timeline { grid-template-columns: repeat(2, 1fr); }
+    .co-page .co-success-details>div { align-items: flex-start; }
 }
 
-.page-title {
-    font-size: 28px;
-    font-weight: 800;
-    color: #0f172a;
-    margin-bottom: 24px;
-}
 
-.alert-error {
-    background-color: #fef2f2;
-    border: 1px solid #fecaca;
-    color: #dc2626;
-    padding: 12px 16px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    font-size: 14px;
-}
+/* Screenshot-inspired checkout refinements */
+.co-page{background:#f6f7fa;min-height:850px;padding-top:22px}
+.co-container{max-width:1180px}
+.co-layout{grid-template-columns:minmax(0,2.3fr) minmax(290px,1fr);gap:20px}
+.co-card{border-radius:13px;padding:19px}
+.co-main{gap:0}
+.co-title{margin-bottom:16px}
+.co-title h2{font-size:15px}
+.co-title .co-link{margin-left:auto;background:transparent;border:0;color:#1858e6;font-size:12px;font-weight:700;cursor:pointer}
+.co-address{margin-bottom:15px}
+.co-address p{margin:8px 0 0}
+.co-default{display:inline-block;font-size:10px;color:#2457be;background:#e9f0ff;padding:3px 6px;border-radius:5px}
+.co-address-chooser{display:grid;gap:8px;margin-bottom:16px}
+.co-address-choice{display:flex;align-items:flex-start;gap:10px;padding:12px;border:1px solid #e1e7f0;border-radius:9px;cursor:pointer;font-size:12px}
+.co-address-choice input{margin-top:2px;accent-color:#2463ed}
+.co-address-choice small{display:block;color:#64748b;margin-top:6px}
+.co-muted{font-size:13px;color:#64748b}
+.co-extra-fields{margin-top:15px;padding-top:15px;border-top:1px solid #e9edf2}
+.co-fields input,.co-fields textarea{background:white}
+.co-option{min-height:86px}
+.co-payment{min-height:62px}
+.co-payment.chosen,.co-option.chosen{border-color:#316dff;background:#edf3ff}
+.co-summary{position:sticky;top:16px}
+.co-summary-head a{color:#245ce4}
+.co-grand strong{color:#ff4c1e;font-size:22px}
+.co-submit{background:#ff5524}
+.co-perks{font-size:12px;color:#64748b}
+.co-perks p{margin:8px 0}
+[hidden]{display:none!important}
+@media(max-width:800px){.co-layout{grid-template-columns:1fr}.co-summary{position:static}}
 
-/* LAYOUT CÂN BẰNG 2 CỘT (CÙNG CHIỀU CAO) */
-.checkout-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 420px;
-    gap: 32px;
-    align-items: stretch; /* Giúp Form 1 và Form 2 dài bằng nhau */
-}
+/* Address chooser and inline editing */
+.co-chooser-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.co-chooser-heading button{border:0;background:transparent;color:#2563eb;font-weight:700;cursor:pointer}
+.co-address-chooser,.co-edit-panel{margin:12px 0 18px;padding:16px;border:1px solid #dbe3ee;border-radius:12px;background:#f9fbff}
+.co-address-choice{display:flex;align-items:flex-start;gap:10px;padding:12px;border:1px solid #e1e6ee;border-radius:9px;background:white;margin-bottom:8px;cursor:pointer}
+.co-address-choice:has(input:checked){border-color:#2563eb;background:#eef4ff}
+.co-address-choice input{margin-top:4px;accent-color:#2563eb}
+.co-address-choice span{display:grid;gap:5px;font-size:13px}
+.co-address-choice small{color:#64748b;font-size:12px}
+.co-save-address{background:#ff5722;color:white;border:0;border-radius:8px;padding:11px 20px;margin-top:14px;font-weight:700;cursor:pointer}
+.co-address-ok{background:#ecfdf5;color:#047857;border-radius:9px;padding:12px 16px;margin-bottom:12px}
+[hidden]{display:none!important}
 
-/* 1. KHỐI FORM THÔNG TIN (BÊN TRÁI) */
-body .checkout-form {
-    background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 16px !important;
-    padding: 32px !important;
-    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05) !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: space-between !important; /* Đẩy nút xuống dưới cùng */
-    box-sizing: border-box !important;
-    height: 100% !important;
-}
+/* Checkout visual alignment with supplied mockup */
+.co-notice{background:#fff8e8;color:#a34c15;border-radius:10px;padding:15px 16px;line-height:1.7}
+.co-blue-note{background:#eaf1ff;color:#2051af;border-radius:10px;padding:15px 16px;line-height:1.65}
+.co-payments{gap:9px}
+.co-payment{gap:12px;padding:13px 12px;min-height:64px}
+.co-payment>span:nth-of-type(2){flex:1;min-width:0}
+.co-pay-icon{display:grid;place-items:center;width:36px;height:36px;min-width:36px;border:1px solid #e4e9f2;border-radius:7px;background:#f7f9fc;font-size:16px}
+.co-pay-logos{display:flex;gap:5px;align-items:center;flex-shrink:0;margin-left:auto}
+.co-brand{font-size:9px;font-weight:800;letter-spacing:-.1px;padding:7px 5px;border:1px solid #dce4f0;border-radius:5px;background:#fff;color:#26364b;white-space:nowrap}
+.co-momo{color:#a60069}.co-zalo{color:#1768db}.co-vnpay{color:#1243a4}.co-visa{color:#1b438e}.co-mc{color:#d13d29}
+/* Keep order summary AND assurance card visible together while scrolling */
+.co-side{position:sticky;top:16px;align-self:start;display:flex;flex-direction:column;gap:12px;max-height:calc(100vh - 32px);overflow-y:auto;scrollbar-width:thin;overscroll-behavior:contain}
+.co-side .co-summary{position:static;top:auto;margin:0}
+.co-side .co-perks{margin:0}
+@media(max-width:800px){.co-side{position:static;max-height:none;overflow:visible}.co-pay-logos{flex-wrap:wrap;justify-content:flex-end}}
+@media(max-width:440px){.co-pay-logos{gap:3px}.co-brand{font-size:8px;padding:5px 3px}.co-payment{gap:7px}}
 
-body .form-body {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-body .form-section-title {
-    font-size: 20px !important;
-    font-weight: 700 !important;
-    color: #0f172a !important;
-    margin: 0 0 10px 0 !important;
-    padding-bottom: 12px !important;
-    border-bottom: 1px solid #f1f5f9 !important;
-}
-
-/* KHỐI BAO NGUYÊN DÒNG 100% */
-body .checkout-form .form-group {
-    display: flex !important;
-    flex-direction: column !important;
-    width: 100% !important;
-    margin-bottom: 0 !important;
-}
-
-/* LABEL TIÊU ĐỀ Ô NHẬP */
-body .checkout-form label {
-    display: block !important;
-    font-weight: 700 !important;
-    font-size: 15px !important;
-    color: #1e293b !important;
-    margin-bottom: 8px !important;
-}
-
-body .checkout-form label .required {
-    color: #ef4444 !important;
-    margin-left: 2px !important;
-}
-
-/* ĐỊNH DẠNG Ô NHẬP LIỆU FULL 100% HOÀN TOÀN, CHỮ TO */
-body .checkout-form input[type="text"],
-body .checkout-form input[type="tel"],
-body .checkout-form input[type="number"],
-body .checkout-form input[type="email"],
-body .checkout-form input,
-body .checkout-form textarea {
-    display: block !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-    padding: 14px 18px !important;
-    font-size: 16px !important; /* Chữ to rõ ràng */
-    line-height: 1.5 !important;
-    color: #0f172a !important;
-    background-color: #ffffff !important;
-    border: 1.5px solid #cbd5e1 !important;
-    border-radius: 10px !important;
-    outline: none !important;
-    transition: all 0.2s ease-in-out !important;
-}
-
-body .checkout-form input:focus,
-body .checkout-form textarea:focus {
-    border-color: #2563eb !important;
-    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15) !important;
-}
-
-body .checkout-form input::placeholder,
-body .checkout-form textarea::placeholder {
-    color: #94a3b8 !important;
-    font-size: 15px !important;
-}
-
-body .checkout-form textarea {
-    min-height: 120px !important;
-    resize: vertical !important;
-}
-
-/* NÚT BẤM VÀ HÀNH ĐỘNG */
-body .checkout-actions {
-    display: flex !important;
-    gap: 16px !important;
-    margin-top: 24px !important;
-    padding-top: 16px !important;
-    border-top: 1px solid #f1f5f9 !important;
-}
-
-body .checkout-actions .btn {
-    flex: 1 !important;
-    padding: 14px 20px !important;
-    font-size: 16px !important;
-    font-weight: 700 !important;
-    border-radius: 10px !important;
-    cursor: pointer !important;
-    text-align: center !important;
-    text-decoration: none !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    transition: all 0.2s ease !important;
-}
-
-body .checkout-actions .btn-primary {
-    background-color: #2563eb !important;
-    color: #ffffff !important;
-    border: none !important;
-    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3) !important;
-}
-
-body .checkout-actions .btn-primary:hover {
-    background-color: #1d4ed8 !important;
-    transform: translateY(-1px) !important;
-}
-
-body .checkout-actions .btn-outline {
-    background-color: #ffffff !important;
-    border: 1.5px solid #2563eb !important;
-    color: #2563eb !important;
-}
-
-body .checkout-actions .btn-outline:hover {
-    background-color: #eff6ff !important;
-}
-
-/* 2. TÓM TẮT ĐƠN HÀNG (BÊN PHẢI) */
-body .order-summary {
-    background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 16px !important;
-    padding: 28px !important;
-    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05) !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: space-between !important;
-    box-sizing: border-box !important;
-}
-
-body .summary-title {
-    margin: 0 0 16px 0 !important;
-    font-size: 20px !important;
-    font-weight: 800 !important;
-    color: #0f172a !important;
-    padding-bottom: 12px !important;
-    border-bottom: 1px solid #f1f5f9 !important;
-}
-
-body .summary-item {
-    display: grid !important;
-    grid-template-columns: 72px 1fr !important;
-    gap: 14px !important;
-    padding: 12px 0 !important;
-    border-bottom: 1px solid #f1f5f9 !important;
-}
-
-body .summary-thumb {
-    width: 72px !important;
-    height: 72px !important;
-    background: #f8fafc !important;
-    border-radius: 10px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    overflow: hidden !important;
-    border: 1px solid #e2e8f0 !important;
-}
-
-body .summary-thumb .illus-kit { width: 56px; height: 34px; }
-body .summary-thumb .illus-switch { width: 34px; height: 34px; }
-body .summary-thumb .illus-keycap { width: 40px; height: 40px; }
-
-body .summary-info { min-width: 0; }
-
-body .summary-name {
-    font-weight: 600 !important;
-    font-size: 14px !important;
-    line-height: 1.4 !important;
-    color: #1e293b !important;
-    margin: 0 0 4px 0 !important;
-}
-
-body .summary-shop {
-    font-size: 12px !important;
-    color: #64748b !important;
-    margin-bottom: 6px !important;
-}
-
-body .summary-price-row {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    font-size: 13px !important;
-}
-
-body .summary-price { font-weight: 700 !important; color: #ea580c !important; }
-body .summary-old { color: #94a3b8 !important; text-decoration: line-through !important; font-size: 12px !important; margin-left: 6px !important; }
-body .summary-qty { color: #64748b !important; font-weight: 600 !important; }
-
-body .summary-line-total {
-    text-align: right !important;
-    font-weight: 700 !important;
-    font-size: 14px !important;
-    margin-top: 4px !important;
-    color: #0f172a !important;
-}
-
-body .summary-totals {
-    margin-top: 16px !important;
-    font-size: 14px !important;
-}
-
-body .summary-totals .row {
-    display: flex !important;
-    justify-content: space-between !important;
-    padding: 8px 0 !important;
-    color: #64748b !important;
-}
-
-body .summary-totals .free-shipping {
-    color: #16a34a !important;
-    font-weight: 600 !important;
-}
-
-body .summary-totals .grand {
-    border-top: 1px dashed #e2e8f0 !important;
-    margin-top: 8px !important;
-    padding-top: 16px !important;
-    color: #0f172a !important;
-    font-weight: 800 !important;
-    font-size: 16px !important;
-}
-
-body .summary-totals .grand-total {
-    color: #ea580c !important;
-    font-size: 22px !important;
-    font-weight: 800 !important;
-}
-
-body .summary-back {
-    display: inline-block !important;
-    margin-top: 16px !important;
-    font-size: 14px !important;
-    font-weight: 600 !important;
-    color: #2563eb !important;
-    text-decoration: none !important;
-}
-
-/* RESPONSIVE TRÊN MÀN HÌNH NHỎ */
-@media (max-width: 900px) {
-    .checkout-layout {
-        grid-template-columns: 1fr !important;
-    }
-
-    body .checkout-actions {
-        flex-direction: column !important;
-    }
-}
+/* ===== Gợi ý sản phẩm sau khi đặt hàng ===== */
+.co-recommend{margin:26px auto 10px;max-width:640px}
+.co-recommend-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px}
+.co-recommend-head h2{font-size:17px;font-weight:800;color:#172033;margin:0}
+.co-recommend-head a{color:#2563eb;font-size:12px;font-weight:700;text-decoration:none}
+.co-recommend-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.co-recommend-item{display:block;min-width:0;background:#fff;border:1px solid #e3e8f0;border-radius:11px;overflow:hidden;color:#111827;text-decoration:none;transition:box-shadow .2s,transform .2s}
+.co-recommend-item:hover{transform:translateY(-3px);box-shadow:0 8px 22px rgba(20,35,70,.09)}

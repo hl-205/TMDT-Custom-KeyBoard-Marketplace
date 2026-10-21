@@ -185,12 +185,14 @@
                 </div>
             </div>
 
-            <div class="pd-buy-actions">
-                <a href="cart.jsp" class="btn-add-cart">🛒 Thêm vào giỏ</a>
-                <a href="checkout.jsp" class="btn-buy-now">Mua ngay</a>
-            </div>
+            <form method="post" action="<%= request.getContextPath() %>/cart" id="cartForm" class="pd-buy-actions">
+                <input type="hidden" name="productId" value="<%= product.getId() %>">
+                <input type="hidden" name="quantity" id="cartQty" value="1">
+                <button type="submit" class="btn-add-cart">🛒 Thêm vào giỏ</button>
+                <button type="submit" name="buyNow" value="1" class="btn-buy-now">Mua ngay</button>
+            </form>
 
-            <a href="custom-builder.jsp?kitId=<%= product.getId() %>" class="btn-custom-builder-wide">
+            <a href="custom-builder?kitId=<%= product.getId() %>" class="btn-custom-builder-wide">
                 ⚙️ Dùng kit này để build custom trong Custom Builder
             </a>
 
@@ -401,7 +403,7 @@
             <div class="sidebar-blue-promo">
                 <h4>⚙️ Build trọn bộ với kit này</h4>
                 <p>Chọn switch, keycap và gói gia công phù hợp — hệ thống tự loại linh kiện không lắp vừa.</p>
-                <a href="custom-builder.jsp?kitId=<%= product.getId() %>" class="btn-full-blue">Mở Custom Builder</a>
+                <a href="custom-builder?kitId=<%= product.getId() %>" class="btn-full-blue">Mở Custom Builder</a>
             </div>
 
             <div class="sidebar-box-card">
@@ -577,6 +579,11 @@
             stockLimitWarning.style.display = (val >= maxStock) ? 'block' : 'none';
         }
     }
+
+    // Gửi số lượng đang chọn cùng form thêm vào giỏ
+    document.getElementById('cartForm').addEventListener('submit', () => {
+        document.getElementById('cartQty').value = parseInt(qtyInput.value, 10) || 1;
+    });
 
     qtyMinus.addEventListener('click', () => {
         let val = parseInt(qtyInput.value, 10) || 1;

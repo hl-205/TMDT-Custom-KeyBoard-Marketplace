@@ -1,7 +1,11 @@
 package dao;
 
 import model.Product;
-import model.Product.*;
+import model.Product.ProductOption;
+import model.Product.ProductSpec;
+import model.Product.ProductCompatibility;
+import model.Product.Review;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -33,6 +37,7 @@ public class ProductDAO {
             this.comment = comment;
             this.reviewDate = reviewDate;
         }
+
         public int getReviewId() { return reviewId; }
         public int getProductId() { return productId; }
         public String getProductName() { return productName; }
@@ -48,8 +53,8 @@ public class ProductDAO {
                 + "s.shop_name, s.avatar_text, s.avatar_color, s.address, s.is_verified, "
                 + "s.rating_avg AS shop_rating, s.follower_count, s.response_rate, s.response_time "
                 + "FROM products p "
-                + "JOIN categories c ON p.category_id = c.id "
-                + "JOIN shops s ON p.shop_id = s.id "
+                + "LEFT JOIN categories c ON p.category_id = c.id "
+                + "LEFT JOIN shops s ON p.shop_id = s.id "
                 + "WHERE p.id = ?";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -62,7 +67,7 @@ public class ProductDAO {
                     p.setShopAvatarText(rs.getString("avatar_text"));
                     p.setShopAvatarColor(rs.getString("avatar_color"));
                     p.setShopAddress(rs.getString("address"));
-                    p.setShopVerified(rs.getInt("is_verified") == 1);
+                    p.setShopVerified(rs.getObject("is_verified") != null && rs.getInt("is_verified") == 1);
                     p.setShopRating(rs.getDouble("shop_rating"));
                     p.setShopFollowers(rs.getInt("follower_count"));
                     p.setShopResponseRate(rs.getInt("response_rate"));
@@ -83,8 +88,8 @@ public class ProductDAO {
         List<Product> list = new ArrayList<>();
         StringBuilder sql = new StringBuilder(
                 "SELECT p.*, s.shop_name, c.name AS category_name FROM products p "
-                        + "JOIN shops s ON p.shop_id = s.id "
-                        + "JOIN categories c ON p.category_id = c.id "
+                        + "LEFT JOIN shops s ON p.shop_id = s.id "
+                        + "LEFT JOIN categories c ON p.category_id = c.id "
                         + "WHERE p.status = 'ACTIVE' "
         );
         List<Object> params = new ArrayList<>();
@@ -195,7 +200,7 @@ public class ProductDAO {
         List<Product> list = new ArrayList<>();
         StringBuilder sql = new StringBuilder(
                 "SELECT p.*, s.shop_name FROM products p "
-                        + "JOIN shops s ON p.shop_id = s.id "
+                        + "LEFT JOIN shops s ON p.shop_id = s.id "
                         + "WHERE p.shop_id = ? "
         );
         if (categoryId != null && categoryId > 0) {
@@ -207,8 +212,10 @@ public class ProductDAO {
             sql.append("ORDER BY p.sold_count DESC");
         } else if ("price_asc".equals(sort)) {
             sql.append("ORDER BY p.price ASC");
+        } else if ("price_desc".equals(sort)) {
+            sql.append("ORDER BY p.price DESC");
         } else {
-            sql.append("ORDER BY p.sold_count DESC");
+            sql.append("ORDER BY p.sold_count DESC, p.rating_avg DESC");
         }
 
         try (Connection conn = DBContext.getConnection();
@@ -271,8 +278,8 @@ public class ProductDAO {
         List<UserReviewItem> list = new ArrayList<>();
         String sql = "SELECT r.*, p.name AS product_name, s.shop_name "
                 + "FROM reviews r "
-                + "JOIN products p ON r.product_id = p.id "
-                + "JOIN shops s ON p.shop_id = s.id "
+                + "LEFT JOIN products p ON r.product_id = p.id "
+                + "LEFT JOIN shops s ON p.shop_id = s.id "
                 + "WHERE r.user_id = ? ORDER BY r.id DESC";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -416,7 +423,7 @@ public class ProductDAO {
     public List<Product> getSimilarProducts(int excludeProductId, int limit) {
         List<Product> list = new ArrayList<>();
         String sql = "SELECT p.*, s.shop_name FROM products p "
-                + "JOIN shops s ON p.shop_id = s.id "
+                + "LEFT JOIN shops s ON p.shop_id = s.id "
                 + "WHERE p.id <> ? ORDER BY p.id ASC LIMIT ?";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -433,6 +440,58 @@ public class ProductDAO {
             e.printStackTrace();
         }
         return list;
+    }
+
+    public static class CategoryStat {
+        private int id;
+        private String name;
+        private String icon;
+        private int productCount;
+
+        public CategoryStat(int id, String name, String icon, int productCount) {
+            this.id = id;
+            this.name = name;
+            this.icon = icon;
+            this.productCount = productCount;
+        }
+        public int getId() { return id; }
+        public String getName() { return name; }
+        public String getIcon() { return icon; }
+        public int getProductCount() { return productCount; }
+    }
+
+    public List<CategoryStat> getAllCategoriesWithCount() {
+        List<CategoryStat> list = new ArrayList<>();
+        String sql = "SELECT c.id, c.name, c.icon, COUNT(p.id) AS actual_count "
+                + "FROM categories c LEFT JOIN products p ON c.id = p.category_id AND p.status = 'ACTIVE' "
+                + "GROUP BY c.id, c.name, c.icon ORDER BY c.id ASC";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                list.add(new CategoryStat(
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getString("icon"),
+                        rs.getInt("actual_count")
+                ));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public int getTotalActiveProductsCount() {
+        String sql = "SELECT COUNT(*) FROM products WHERE status = 'ACTIVE'";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) return rs.getInt(1);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return 0;
     }
 
     private Product mapProduct(ResultSet rs) throws Exception {

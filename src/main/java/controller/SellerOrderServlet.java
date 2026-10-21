@@ -27,31 +27,31 @@ public class SellerOrderServlet extends HttpServlet {
         }
 
         Shop sellerShop = shopDAO.getShopByOwnerId(currentUser.getId());
+        int shopId = (sellerShop != null) ? sellerShop.getId() : 2;
+
         request.setAttribute("sellerShop", sellerShop);
-        request.setAttribute("totalOrdersCount", customDAO.countOrdersByStatus("ALL", false));
-        request.setAttribute("pendingCount", customDAO.countOrdersByStatus("PENDING", false));
-        request.setAttribute("pendingCustomCount", customDAO.countOrdersByStatus("PENDING", true));
-        request.setAttribute("processingCount", customDAO.countOrdersByStatus("PROCESSING", false));
-        request.setAttribute("processingCustomCount", customDAO.countOrdersByStatus("PROCESSING", true));
-        request.setAttribute("shippingCount", customDAO.countOrdersByStatus("SHIPPING", false));
-        request.setAttribute("completedCount", customDAO.countOrdersByStatus("COMPLETED", false));
+        request.setAttribute("totalOrdersCount", customDAO.countOrdersByShopAndStatus(shopId, "ALL", false));
+        request.setAttribute("pendingCount", customDAO.countOrdersByShopAndStatus(shopId, "PENDING", false));
+        request.setAttribute("pendingCustomCount", customDAO.countOrdersByShopAndStatus(shopId, "PENDING", true));
+        request.setAttribute("processingCount", customDAO.countOrdersByShopAndStatus(shopId, "PROCESSING", false));
+        request.setAttribute("processingCustomCount", customDAO.countOrdersByShopAndStatus(shopId, "PROCESSING", true));
+        request.setAttribute("shippingCount", customDAO.countOrdersByShopAndStatus(shopId, "SHIPPING", false));
+        request.setAttribute("completedCount", customDAO.countOrdersByShopAndStatus(shopId, "COMPLETED", false));
 
         String path = request.getServletPath();
         if ("/seller-confirm-custom".equals(path)) {
             CustomOrder order = null;
             String idParam = request.getParameter("id");
-            if (idParam != null) {
+            if (idParam != null && !idParam.isBlank()) {
                 try {
                     order = customDAO.getOrderById(Integer.parseInt(idParam));
                 } catch (Exception ignored) {}
             }
             if (order == null) {
-                List<CustomOrder> pendingList = customDAO.getOrdersForSeller("PENDING", true);
-                if (!pendingList.isEmpty()) order = pendingList.get(0);
-            }
-            if (order == null) {
-                List<CustomOrder> all = customDAO.getOrdersForSeller("ALL", false);
-                if (!all.isEmpty()) order = all.get(0);
+                List<CustomOrder> pendingList = customDAO.getOrdersForSellerByShop(shopId, "PENDING", true);
+                if (!pendingList.isEmpty()) {
+                    order = pendingList.get(0);
+                }
             }
             request.setAttribute("order", order);
             request.getRequestDispatcher("seller-confirm-custom.jsp").forward(request, response);
@@ -62,7 +62,7 @@ public class SellerOrderServlet extends HttpServlet {
         if (status == null || status.isEmpty()) status = "ALL";
         boolean onlyCustom = "1".equals(request.getParameter("custom"));
 
-        List<CustomOrder> orders = customDAO.getOrdersForSeller(status, onlyCustom);
+        List<CustomOrder> orders = customDAO.getOrdersForSellerByShop(shopId, status, onlyCustom);
         request.setAttribute("orders", orders);
         request.setAttribute("selectedStatus", status);
         request.setAttribute("onlyCustom", onlyCustom);
@@ -72,14 +72,22 @@ public class SellerOrderServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        request.setCharacterEncoding("UTF-8");
         String decision = request.getParameter("decision");
         int orderId = 0;
         try {
             orderId = Integer.parseInt(request.getParameter("orderId"));
         } catch (Exception ignored) {}
 
+        if ("complete".equals(decision)) {
+            customDAO.markOrderCompleted(orderId);
+            response.sendRedirect("seller-orders?msg=completed");
+            return;
+        }
+
+        String shopNote = request.getParameter("shopNote");
         if ("reject".equals(decision)) {
-            customDAO.rejectCustomOrder(orderId);
+            customDAO.rejectCustomOrder(orderId, shopNote);
             response.sendRedirect("seller-orders?msg=rejected");
             return;
         }
@@ -98,9 +106,7 @@ public class SellerOrderServlet extends HttpServlet {
             }
         } catch (Exception ignored) {}
 
-        String shopNote = request.getParameter("shopNote");
         customDAO.acceptCustomOrder(orderId, committedDays, shopNote, extraFee);
-
         response.sendRedirect("seller-progress?id=" + orderId + "&msg=accepted");
     }
 }

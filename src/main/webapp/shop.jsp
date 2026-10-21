@@ -11,6 +11,13 @@
     }
     List<CustomServiceItem> services = (List<CustomServiceItem>) request.getAttribute("services");
     List<Product> shopProducts = (List<Product>) request.getAttribute("shopProducts");
+    Integer totalShopProductsObj = (Integer) request.getAttribute("totalShopProducts");
+    int totalShopProducts = (totalShopProductsObj != null) ? totalShopProductsObj : shopProducts.size();
+    Integer currentPageObj = (Integer) request.getAttribute("currentPage");
+    int currentPage = (currentPageObj != null) ? currentPageObj : 1;
+    Integer totalPagesObj = (Integer) request.getAttribute("totalPages");
+    int totalPages = (totalPagesObj != null) ? totalPagesObj : 1;
+
     Integer selectedCat = (Integer) request.getAttribute("selectedCat");
     String sort = (String) request.getAttribute("sort");
 %>
@@ -30,14 +37,13 @@
 <main class="container">
     <div class="pd-breadcrumb" style="padding: 16px 0;">
         <a href="index.jsp">Trang chủ</a> ›
-        <a href="shop?id=<%= shop.getId() %>">Shop</a> ›
+        <a href="shops">Hệ thống Gian hàng</a> ›
         <strong><%= shop.getShopName() %></strong>
     </div>
 
-    <!-- Header Gian hàng chuẩn Frame 18 -->
     <section class="shop-hero-header">
         <div class="shop-hero-left">
-            <div class="shop-big-avatar"><%= shop.getAvatarText() %></div>
+            <div class="shop-big-avatar" style="color:<%= shop.getAvatarColor() %>;"><%= shop.getAvatarText() %></div>
             <div>
                 <div class="shop-title-badges">
                     <h2><%= shop.getShopName() %></h2>
@@ -59,7 +65,7 @@
                         <span>Người theo dõi</span>
                     </div>
                     <div class="shop-kpi-item">
-                        <strong><%= shop.getProductCount() %></strong>
+                        <strong><%= totalShopProducts %></strong>
                         <span>Sản phẩm</span>
                     </div>
                     <div class="shop-kpi-item">
@@ -75,33 +81,37 @@
         </div>
         <div class="shop-hero-actions">
             <button type="button" class="btn-follow-white" onclick="this.textContent = (this.textContent.includes('Đang') ? '+ Theo dõi' : '✓ Đang theo dõi')">+ Theo dõi</button>
-            <button type="button" class="btn-chat-outline">💬 Chat ngay</button>
+            <a href="custom-builder" class="btn-chat-outline" style="display:flex;align-items:center;justify-content:center;">⚙️ Đặt Build tại Shop</a>
         </div>
     </section>
 
-    <!-- Thanh Tab lọc theo danh mục trong Shop -->
     <div class="shop-nav-tabs">
         <a href="shop?id=<%= shop.getId() %>" class="shop-tab-item <%= selectedCat == null ? "active" : "" %>">Tất cả sản phẩm</a>
         <a href="shop?id=<%= shop.getId() %>&cat=1" class="shop-tab-item <%= (selectedCat != null && selectedCat == 1) ? "active" : "" %>">Kit bàn phím</a>
         <a href="shop?id=<%= shop.getId() %>&cat=2" class="shop-tab-item <%= (selectedCat != null && selectedCat == 2) ? "active" : "" %>">Switch</a>
         <a href="shop?id=<%= shop.getId() %>&cat=3" class="shop-tab-item <%= (selectedCat != null && selectedCat == 3) ? "active" : "" %>">Keycap</a>
         <a href="shop?id=<%= shop.getId() %>&cat=4" class="shop-tab-item <%= (selectedCat != null && selectedCat == 4) ? "active" : "" %>">Stabilizer</a>
-        <a href="#sec-shop-services" class="shop-tab-item">Dịch vụ gia công</a>
+        <a href="shop?id=<%= shop.getId() %>&cat=5" class="shop-tab-item <%= (selectedCat != null && selectedCat == 5) ? "active" : "" %>">Phụ kiện</a>
+        <a href="shop?id=<%= shop.getId() %>&cat=6" class="shop-tab-item <%= (selectedCat != null && selectedCat == 6) ? "active" : "" %>">Dịch vụ gia công</a>
     </div>
 
-    <!-- 3 Hộp thông tin Dịch vụ gia công / Chỉ số vận hành / Thông tin shop -->
     <div class="shop-info-3cols" id="sec-shop-services">
         <div class="shop-info-card">
-            <h4>🛠️ Dịch vụ gia công</h4>
-            <% if (services != null) {
+            <h4>🛠️ Dịch vụ gia công tại xưởng</h4>
+            <% if (services != null && !services.isEmpty()) {
                 for (CustomServiceItem sv : services) { %>
             <div class="shop-stat-line">
-                <span>Gói <%= sv.getServiceName() %></span>
+                <span><%= sv.getServiceName() %></span>
                 <strong><%= sv.getFormattedPrice() %></strong>
             </div>
             <%  }
-            } %>
-            <div style="font-size:11px;color:#94A3B8;margin-top:8px;">Thời gian gia công 5–7 ngày · Bảo hành 6 tháng</div>
+            } else { %>
+            <div class="shop-stat-line">
+                <span>Chuyên phân phối linh kiện chính hãng</span>
+                <strong>Sẵn hàng</strong>
+            </div>
+            <% } %>
+            <div style="font-size:11px;color:#94A3B8;margin-top:8px;">Bảo hành kỹ thuật trực tiếp qua sàn KeebHub</div>
         </div>
 
         <div class="shop-info-card">
@@ -118,7 +128,7 @@
                 <span>Tỉ lệ hoàn hàng</span>
                 <strong class="green"><%= shop.getReturnRate() %>%</strong>
             </div>
-            <div style="font-size:11px;color:#94A3B8;margin-top:8px;">Thống kê 90 ngày gần nhất</div>
+            <div style="font-size:11px;color:#94A3B8;margin-top:8px;">Dữ liệu trích xuất từ hệ thống KeebHub</div>
         </div>
 
         <div class="shop-info-card">
@@ -128,7 +138,7 @@
                 <strong><%= shop.getJoinedDate() %></strong>
             </div>
             <div class="shop-stat-line">
-                <span>Địa chỉ xưởng</span>
+                <span>Địa chỉ</span>
                 <strong><%= shop.getAddress() %></strong>
             </div>
             <div class="shop-stat-line">
@@ -136,15 +146,14 @@
                 <strong><%= shop.getWorkingHours() %></strong>
             </div>
             <div style="margin-top:8px;">
-                <a href="#" style="font-size:12px;color:#1B64F2;font-weight:700;">Xem hồ sơ đầy đủ ›</a>
+                <a href="shops" style="font-size:12px;color:#1B64F2;font-weight:700;">Xem danh sách 30 gian hàng ›</a>
             </div>
         </div>
     </div>
 
-    <!-- Danh sách sản phẩm thuộc Gian hàng -->
     <section class="home-section">
         <div class="section-head">
-            <h3>Sản phẩm của shop <span style="font-weight:400;color:#64748B;">(<%= shopProducts.size() %>)</span></h3>
+            <h3>Sản phẩm của <%= shop.getShopName() %> <span style="font-weight:400;color:#64748B;">(<%= totalShopProducts %>)</span></h3>
             <div style="display:flex;gap:8px;">
                 <a href="shop?id=<%= shop.getId() %><%= selectedCat != null ? "&cat=" + selectedCat : "" %>&sort=popular"
                    class="sort-pill-btn <%= "popular".equals(sort) ? "active" : "" %>">Phổ biến</a>
@@ -157,7 +166,13 @@
             </div>
         </div>
 
-        <div class="product-grid-6">
+        <% if (shopProducts.isEmpty()) { %>
+        <div style="background:#FFF;border:1px solid #E2E8F0;border-radius:12px;padding:36px;text-align:center;margin-bottom:24px;">
+            <p style="color:#64748B;margin-bottom:12px;">Gian hàng hiện chưa có sản phẩm nào thuộc danh mục này.</p>
+            <a href="shop?id=<%= shop.getId() %>" class="btn btn-blue">Xem tất cả sản phẩm của Shop</a>
+        </div>
+        <% } else { %>
+        <div class="product-grid-6" style="margin-bottom:24px;">
             <% for (Product sp : shopProducts) { %>
             <a href="product-detail?id=<%= sp.getId() %>" class="p-card">
                 <% if (sp.getBadge() != null && !sp.getBadge().isEmpty()) { %>
@@ -175,7 +190,7 @@
                     <div class="illus-switch purple"></div>
                     <% } %>
                 </div>
-                <div class="p-Shop"><span class="dot-green"></span> <%= shop.getShopName() %></div>
+                <div class="p-Shop"><span class="dot-green"></span> <%= sp.getShopName() %></div>
                 <h4 class="p-name"><%= sp.getName() %></h4>
                 <div class="p-price">
                     <%= sp.getFormattedPrice() %>
@@ -190,6 +205,16 @@
             </a>
             <% } %>
         </div>
+
+        <div class="pagination-bar">
+            <% for (int pg = 1; pg <= totalPages; pg++) { %>
+            <a href="shop?id=<%= shop.getId() %><%= selectedCat != null ? "&cat=" + selectedCat : "" %>&sort=<%= sort %>&page=<%= pg %>"
+               class="pg-item <%= pg == currentPage ? "active" : "" %>">
+                <%= pg %>
+            </a>
+            <% } %>
+        </div>
+        <% } %>
     </section>
 </main>
 

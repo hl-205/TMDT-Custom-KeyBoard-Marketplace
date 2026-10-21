@@ -1,0 +1,451 @@
+/* =========================================================
+   shops.css — Trang tìm kiếm gian hàng KeebHub
+   ========================================================= */
+
+/* ---------- Hero Banner ---------- */
+.shops-hero-banner {
+    background: linear-gradient(135deg, #091536 0%, #1E3A8A 55%, #1B64F2 100%);
+    border-radius: 16px;
+    padding: 36px 40px;
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    gap: 24px;
+    overflow: hidden;
+    position: relative;
+}
+
+.shops-hero-banner::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 280px; height: 280px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 50%;
+}
+
+.shops-hero-text h2 {
+    font-size: 30px;
+    font-weight: 800;
+    margin-bottom: 8px;
+}
+
+.shops-hero-text p {
+    font-size: 14px;
+    color: #CBD5E1;
+    max-width: 560px;
+    margin-bottom: 18px;
+    line-height: 1.6;
+}
+
+.shops-hero-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.shops-hero-pills span {
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.22);
+    padding: 5px 13px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    backdrop-filter: blur(4px);
+}
+
+.shops-hero-stat {
+    display: flex;
+    gap: 20px;
+    flex-shrink: 0;
+}
+
+.shops-stat-box {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 12px;
+    padding: 16px 20px;
+    text-align: center;
+    min-width: 90px;
+    backdrop-filter: blur(6px);
+}
+
+.shops-stat-box strong {
+    display: block;
+    font-size: 22px;
+    font-weight: 800;
+}
+
+.shops-stat-box span {
+    font-size: 11px;
+    color: #93C5FD;
+    font-weight: 600;
+}
+
+/* ---------- Search Bar + Filters ---------- */
+.shops-search-bar-wrap {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(15,23,42,0.06);
+}
+
+.shops-search-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.shops-search-field {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.shops-search-icon {
+    position: absolute;
+    left: 14px;
+    font-size: 16px;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.shops-search-input {
+    width: 100%;
+    height: 46px;
+    border: 1.5px solid #CBD5E1;
+    border-radius: 10px;
+    padding: 0 40px 0 42px;
+    font-size: 14px;
+    color: #0F172A;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background: #F8FAFC;
+    font-family: inherit;
+}
+
+.shops-search-input:focus {
+    border-color: #1B64F2;
+    box-shadow: 0 0 0 3px rgba(27,100,242,0.1);
+    background: #FFFFFF;
+}
+
+.shops-search-input::placeholder {
+    color: #94A3B8;
+}
+
+.shops-clear-btn {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    color: #94A3B8;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+}
+
+.shops-clear-btn:hover {
+    color: #EF4444;
+    background: #FEE2E2;
+}
+
+.shops-filter-pills {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.shops-filter-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748B;
+    white-space: nowrap;
+    margin-right: 4px;
+}
+
+.shops-fpill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1.5px solid #E2E8F0;
+    background: #F8FAFC;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    text-decoration: none;
+    transition: all 0.18s;
+    white-space: nowrap;
+}
+
+.shops-fpill:hover {
+    border-color: #93C5FD;
+    color: #1B64F2;
+    background: #EFF6FF;
+    transform: translateY(-1px);
+}
+
+.shops-fpill.active {
+    background: linear-gradient(135deg, #1B64F2, #2563EB);
+    color: #FFFFFF;
+    border-color: #1B64F2;
+    box-shadow: 0 3px 10px rgba(27,100,242,0.28);
+}
+
+.shops-fpill.active:hover {
+    background: linear-gradient(135deg, #1557E0, #1D4ED8);
+    color: #FFFFFF;
+}
+
+/* ---------- Result Header ---------- */
+.shops-result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.shops-result-count {
+    font-size: 14px;
+    color: #475569;
+}
+
+.shops-sort-pills {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* ---------- Shop Card Grid ---------- */
+.shops-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+@media (max-width: 900px) {
+    .shops-grid { grid-template-columns: repeat(2, 1fr); }
+    .shops-hero-stat { flex-direction: column; }
+}
+
+@media (max-width: 600px) {
+    .shops-grid { grid-template-columns: 1fr; }
+    .shops-hero-banner { flex-direction: column; }
+}
+
+.shop-card-link {
+    text-decoration: none;
+    display: block;
+}
+
+.shop-card {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    padding: 22px 22px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.22s ease,
+    border-color 0.18s;
+    height: 100%;
+    cursor: pointer;
+}
+
+.shop-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 32px rgba(27,100,242,0.14);
+    border-color: #93C5FD;
+}
+
+/* Top row: avatar + badges + rating */
+.shop-card-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.shop-card-avatar {
+    width: 54px;
+    height: 54px;
+    border-radius: 12px;
+    color: #FFFFFF;
+    font-size: 20px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+}
+
+.shop-card-badges {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    margin-top: 2px;
+}
+
+.sc-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    display: inline-block;
+    width: fit-content;
+}
+
+.sc-badge.verified {
+    background: #DCFCE7;
+    color: #15803D;
+}
+
+.sc-badge.workshop {
+    background: #FFF7ED;
+    color: #EA580C;
+    border: 1px solid #FDBA74;
+}
+
+.shop-card-rating {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 14px;
+    font-weight: 800;
+    color: #0F172A;
+    white-space: nowrap;
+}
+
+.sc-star {
+    color: #F59E0B;
+    font-size: 16px;
+}
+
+.sc-rating-count {
+    font-size: 11px;
+    font-weight: 400;
+    color: #94A3B8;
+}
+
+/* Body */
+.shop-card-body {
+    flex: 1;
+}
+
+.shop-card-name {
+    font-size: 16px;
+    font-weight: 800;
+    color: #0F172A;
+    margin-bottom: 6px;
+    transition: color 0.15s;
+}
+
+.shop-card-link:hover .shop-card-name {
+    color: #1B64F2;
+}
+
+.shop-card-desc {
+    font-size: 13px;
+    color: #64748B;
+    line-height: 1.55;
+    margin-bottom: 8px;
+}
+
+.shop-card-address {
+    font-size: 12px;
+    color: #94A3B8;
+    font-weight: 600;
+}
+
+/* KPIs row */
+.shop-card-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    background: #F8FAFC;
+    border-radius: 10px;
+    padding: 10px 8px;
+}
+
+.shop-card-kpi {
+    text-align: center;
+}
+
+.shop-card-kpi strong {
+    display: block;
+    font-size: 14px;
+    font-weight: 800;
+    color: #0F172A;
+}
+
+.shop-card-kpi span {
+    font-size: 10px;
+    color: #94A3B8;
+    font-weight: 600;
+}
+
+/* Footer */
+.shop-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 10px;
+    border-top: 1px solid #F1F5F9;
+}
+
+.shop-card-joined {
+    font-size: 11px;
+    color: #94A3B8;
+}
+
+.shop-card-cta {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1B64F2;
+    transition: gap 0.15s;
+}
+
+.shop-card:hover .shop-card-cta {
+    letter-spacing: 0.3px;
+}
+
+/* ---------- Empty State ---------- */
+.shops-empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    color: #64748B;
+}
+
+.shops-empty-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    opacity: 0.4;
+}
+
+.shops-empty-state h3 {
+    font-size: 20px;
+    font-weight: 800;
+    color: #0F172A;
+    margin-bottom: 8px;
+}
+
+.shops-empty-state p {
+    font-size: 14px;
+    margin-bottom: 24px;
+}

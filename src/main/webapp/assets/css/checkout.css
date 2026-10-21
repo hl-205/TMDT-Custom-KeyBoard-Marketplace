@@ -1,0 +1,303 @@
+/* ==========================================================================
+   KEEBHUB - TRANG ĐẶT HÀNG (CHECKOUT.CSS)
+   ========================================================================== */
+
+.checkout-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px 16px;
+}
+
+.page-title {
+    font-size: 28px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 24px;
+}
+
+.alert-error {
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 14px;
+}
+
+/* LAYOUT CÂN BẰNG 2 CỘT (CÙNG CHIỀU CAO) */
+.checkout-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 420px;
+    gap: 32px;
+    align-items: stretch; /* Giúp Form 1 và Form 2 dài bằng nhau */
+}
+
+/* 1. KHỐI FORM THÔNG TIN (BÊN TRÁI) */
+body .checkout-form {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 16px !important;
+    padding: 32px !important;
+    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important; /* Đẩy nút xuống dưới cùng */
+    box-sizing: border-box !important;
+    height: 100% !important;
+}
+
+body .form-body {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+body .form-section-title {
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+    margin: 0 0 10px 0 !important;
+    padding-bottom: 12px !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+}
+
+/* KHỐI BAO NGUYÊN DÒNG 100% */
+body .checkout-form .form-group {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    margin-bottom: 0 !important;
+}
+
+/* LABEL TIÊU ĐỀ Ô NHẬP */
+body .checkout-form label {
+    display: block !important;
+    font-weight: 700 !important;
+    font-size: 15px !important;
+    color: #1e293b !important;
+    margin-bottom: 8px !important;
+}
+
+body .checkout-form label .required {
+    color: #ef4444 !important;
+    margin-left: 2px !important;
+}
+
+/* ĐỊNH DẠNG Ô NHẬP LIỆU FULL 100% HOÀN TOÀN, CHỮ TO */
+body .checkout-form input[type="text"],
+body .checkout-form input[type="tel"],
+body .checkout-form input[type="number"],
+body .checkout-form input[type="email"],
+body .checkout-form input,
+body .checkout-form textarea {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 14px 18px !important;
+    font-size: 16px !important; /* Chữ to rõ ràng */
+    line-height: 1.5 !important;
+    color: #0f172a !important;
+    background-color: #ffffff !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 10px !important;
+    outline: none !important;
+    transition: all 0.2s ease-in-out !important;
+}
+
+body .checkout-form input:focus,
+body .checkout-form textarea:focus {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15) !important;
+}
+
+body .checkout-form input::placeholder,
+body .checkout-form textarea::placeholder {
+    color: #94a3b8 !important;
+    font-size: 15px !important;
+}
+
+body .checkout-form textarea {
+    min-height: 120px !important;
+    resize: vertical !important;
+}
+
+/* NÚT BẤM VÀ HÀNH ĐỘNG */
+body .checkout-actions {
+    display: flex !important;
+    gap: 16px !important;
+    margin-top: 24px !important;
+    padding-top: 16px !important;
+    border-top: 1px solid #f1f5f9 !important;
+}
+
+body .checkout-actions .btn {
+    flex: 1 !important;
+    padding: 14px 20px !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    border-radius: 10px !important;
+    cursor: pointer !important;
+    text-align: center !important;
+    text-decoration: none !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.2s ease !important;
+}
+
+body .checkout-actions .btn-primary {
+    background-color: #2563eb !important;
+    color: #ffffff !important;
+    border: none !important;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3) !important;
+}
+
+body .checkout-actions .btn-primary:hover {
+    background-color: #1d4ed8 !important;
+    transform: translateY(-1px) !important;
+}
+
+body .checkout-actions .btn-outline {
+    background-color: #ffffff !important;
+    border: 1.5px solid #2563eb !important;
+    color: #2563eb !important;
+}
+
+body .checkout-actions .btn-outline:hover {
+    background-color: #eff6ff !important;
+}
+
+/* 2. TÓM TẮT ĐƠN HÀNG (BÊN PHẢI) */
+body .order-summary {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 16px !important;
+    padding: 28px !important;
+    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    box-sizing: border-box !important;
+}
+
+body .summary-title {
+    margin: 0 0 16px 0 !important;
+    font-size: 20px !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    padding-bottom: 12px !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+}
+
+body .summary-item {
+    display: grid !important;
+    grid-template-columns: 72px 1fr !important;
+    gap: 14px !important;
+    padding: 12px 0 !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+}
+
+body .summary-thumb {
+    width: 72px !important;
+    height: 72px !important;
+    background: #f8fafc !important;
+    border-radius: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+    border: 1px solid #e2e8f0 !important;
+}
+
+body .summary-thumb .illus-kit { width: 56px; height: 34px; }
+body .summary-thumb .illus-switch { width: 34px; height: 34px; }
+body .summary-thumb .illus-keycap { width: 40px; height: 40px; }
+
+body .summary-info { min-width: 0; }
+
+body .summary-name {
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+    color: #1e293b !important;
+    margin: 0 0 4px 0 !important;
+}
+
+body .summary-shop {
+    font-size: 12px !important;
+    color: #64748b !important;
+    margin-bottom: 6px !important;
+}
+
+body .summary-price-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    font-size: 13px !important;
+}
+
+body .summary-price { font-weight: 700 !important; color: #ea580c !important; }
+body .summary-old { color: #94a3b8 !important; text-decoration: line-through !important; font-size: 12px !important; margin-left: 6px !important; }
+body .summary-qty { color: #64748b !important; font-weight: 600 !important; }
+
+body .summary-line-total {
+    text-align: right !important;
+    font-weight: 700 !important;
+    font-size: 14px !important;
+    margin-top: 4px !important;
+    color: #0f172a !important;
+}
+
+body .summary-totals {
+    margin-top: 16px !important;
+    font-size: 14px !important;
+}
+
+body .summary-totals .row {
+    display: flex !important;
+    justify-content: space-between !important;
+    padding: 8px 0 !important;
+    color: #64748b !important;
+}
+
+body .summary-totals .free-shipping {
+    color: #16a34a !important;
+    font-weight: 600 !important;
+}
+
+body .summary-totals .grand {
+    border-top: 1px dashed #e2e8f0 !important;
+    margin-top: 8px !important;
+    padding-top: 16px !important;
+    color: #0f172a !important;
+    font-weight: 800 !important;
+    font-size: 16px !important;
+}
+
+body .summary-totals .grand-total {
+    color: #ea580c !important;
+    font-size: 22px !important;
+    font-weight: 800 !important;
+}
+
+body .summary-back {
+    display: inline-block !important;
+    margin-top: 16px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: #2563eb !important;
+    text-decoration: none !important;
+}
+
+/* RESPONSIVE TRÊN MÀN HÌNH NHỎ */
+@media (max-width: 900px) {
+    .checkout-layout {
+        grid-template-columns: 1fr !important;
+    }
+
+    body .checkout-actions {
+        flex-direction: column !important;
+    }
+}

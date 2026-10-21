@@ -1,4 +1,30 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ page import="dao.ProductDAO" %>
+<%@ page import="dao.ProductDAO.CategoryStat" %>
+<%@ page import="dao.ShopDAO" %>
+<%@ page import="dao.CustomOrderDAO" %>
+<%@ page import="model.Product" %>
+<%@ page import="model.Shop" %>
+<%@ page import="java.util.List" %>
+<%
+    ProductDAO homeProductDAO = new ProductDAO();
+    ShopDAO homeShopDAO = new ShopDAO();
+    CustomOrderDAO homeOrderDAO = new CustomOrderDAO();
+
+    List<CategoryStat> categories = homeProductDAO.getAllCategoriesWithCount();
+    int totalProductsCount = homeProductDAO.getTotalActiveProductsCount();
+    List<Shop> allShops = homeShopDAO.getAllShops();
+    List<Shop> workshopShops = homeShopDAO.searchShops(null, "workshop", null, "rating");
+    int totalOrdersCount = homeOrderDAO.countOrdersByStatus("ALL", false);
+
+    List<Product> bestSellingList = homeProductDAO.filterProducts(
+            null, null, null, null, null, null, null, null, null, false, false, null, "best_selling"
+    );
+    List<Product> topProducts = bestSellingList.size() > 12 ? bestSellingList.subList(0, 12) : bestSellingList;
+    List<Shop> featuredWorkshops = workshopShops.size() > 8 ? workshopShops.subList(0, 8) : workshopShops;
+
+    String[] circleColors = {"blue", "orange", "yellow", "green", "purple", "gray"};
+%>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -13,17 +39,38 @@
 
 <main class="container home-page">
     <div class="hero-top-grid">
+        <!-- Cột danh mục bên trái lấy số lượng thật từ bảng categories & products -->
         <aside class="sidebar-categories">
             <ul class="sidebar-list">
-                <li class="active"><a href="category.jsp?cat=1"><span class="icon">⌨️</span> Kit bàn phím <span class="count">1.240</span></a></li>
-                <li><a href="category.jsp?cat=2"><span class="icon">⚙️</span> Switch <span class="count">860</span></a></li>
-                <li><a href="category.jsp?cat=3"><span class="icon">🎨</span> Keycap <span class="count">1.520</span></a></li>
-                <li><a href="category.jsp?cat=4"><span class="icon">⚖️</span> Stabilizer <span class="count">310</span></a></li>
-                <li><a href="category.jsp?cat=5"><span class="icon">🔩</span> Plate & foam <span class="count">220</span></a></li>
-                <li><a href="category.jsp?cat=5"><span class="icon">🔌</span> Cáp & phụ kiện <span class="count">980</span></a></li>
-                <li><a href="category.jsp?cat=6"><span class="icon">🛠️</span> Dịch vụ gia công <span class="count">142</span></a></li>
-                <li><a href="#"><span class="icon">📦</span> Build sẵn <span class="count">74</span></a></li>
-                <li class="highlight"><a href="#"><span class="icon">🔥</span> Group buy <span class="count">18</span></a></li>
+                <% for (int i = 0; i < categories.size(); i++) {
+                    CategoryStat cs = categories.get(i);
+                %>
+                <li class="<%= i == 0 ? "active" : "" %>">
+                    <a href="category?cat=<%= cs.getId() %>">
+                        <span class="icon"><%= cs.getIcon() %></span>
+                        <%= cs.getName() %>
+                        <span class="count"><%= cs.getProductCount() %></span>
+                    </a>
+                </li>
+                <% } %>
+                <li>
+                    <a href="shops">
+                        <span class="icon">🏪</span> Hệ thống Gian hàng
+                        <span class="count"><%= allShops.size() %></span>
+                    </a>
+                </li>
+                <li>
+                    <a href="shops?type=workshop">
+                        <span class="icon">🛠️</span> Xưởng nhận Build
+                        <span class="count"><%= workshopShops.size() %></span>
+                    </a>
+                </li>
+                <li class="highlight">
+                    <a href="custom-builder">
+                        <span class="icon">⚙️</span> Custom Builder
+                        <span class="count">5 bước</span>
+                    </a>
+                </li>
             </ul>
         </aside>
 
@@ -33,13 +80,13 @@
                 <h2>Tự build bàn phím<br>đúng gu của bạn</h2>
                 <p class="desc">Chọn kit, switch, keycap và gói gia công trong một luồng duy nhất. Hệ thống tự kiểm tra tương thích trước khi bạn đặt hàng.</p>
                 <div class="banner-buttons">
-                    <a href="custom-builder.jsp" class="btn btn-orange">⚙️ Bắt đầu build ngay</a>
+                    <a href="custom-builder" class="btn btn-orange">⚙️ Bắt đầu build ngay</a>
                     <a href="product-detail?id=1" class="btn btn-white">Xem build mẫu</a>
                 </div>
                 <div class="banner-stats">
-                    <div class="stat-item"><strong>4.800+</strong><span>Sản phẩm</span></div>
-                    <div class="stat-item"><strong>142</strong><span>Xưởng gia công</span></div>
-                    <div class="stat-item"><strong>26k</strong><span>Đơn đã giao</span></div>
+                    <div class="stat-item"><strong><%= totalProductsCount %></strong><span>Sản phẩm trong DB</span></div>
+                    <div class="stat-item"><strong><%= allShops.size() %></strong><span>Gian hàng & Xưởng</span></div>
+                    <div class="stat-item"><strong><%= totalOrdersCount %></strong><span>Đơn trên hệ thống</span></div>
                 </div>
             </div>
             <div class="banner-keeb-graphic">
@@ -62,14 +109,14 @@
 
         <div class="side-banners">
             <div class="small-banner group-buy-banner">
-                <h4>Group buy<br>GMK Olivia++</h4>
-                <p>Đóng đơn sau 6 ngày</p>
-                <a href="product-detail?id=3" class="link-arrow">Tham gia ngay →</a>
+                <h4>Keycap Cao Cấp<br>GMK Olivia++</h4>
+                <p>Hàng chính hãng Đức tại Keycap Đông Nam</p>
+                <a href="product-detail?id=3" class="link-arrow">Xem chi tiết →</a>
             </div>
             <div class="small-banner service-banner">
-                <h4>Gói lube trọn bộ<br>chỉ 750.000đ</h4>
-                <p>Xưởng thẩm định, bảo hành 6 tháng</p>
-                <a href="#" class="link-arrow green">Đặt dịch vụ →</a>
+                <h4>Gói Full Lube + Tune<br>chỉ 750.000đ</h4>
+                <p>Xưởng SwitchHouse thẩm định, BH 6 tháng</p>
+                <a href="product-detail?id=94" class="link-arrow green">Đặt dịch vụ →</a>
             </div>
         </div>
     </div>
@@ -100,47 +147,28 @@
             <div class="trust-icon blue-bg">🛠️</div>
             <div>
                 <strong>Xưởng gia công thẩm định</strong>
-                <p>142 shop đã xác minh</p>
+                <p><%= workshopShops.size() %> xưởng chuyên nghiệp</p>
             </div>
         </div>
     </div>
 
+    <!-- Danh mục nổi bật lấy trực tiếp từ bảng categories -->
     <section class="home-section">
         <div class="section-head">
             <h3>Danh mục nổi bật</h3>
-            <a href="category.jsp" class="view-all-link">Xem tất cả →</a>
+            <a href="category" class="view-all-link">Xem tất cả (<%= totalProductsCount %> sản phẩm) →</a>
         </div>
         <div class="featured-cat-grid">
-            <a href="category.jsp?cat=1" class="cat-box">
-                <div class="cat-icon-circle blue">⌨️</div>
-                <strong>Kit bàn phím</strong>
-                <span>1.240 sp</span>
+            <% for (int i = 0; i < categories.size(); i++) {
+                CategoryStat cs = categories.get(i);
+                String colorCls = circleColors[i % circleColors.length];
+            %>
+            <a href="category?cat=<%= cs.getId() %>" class="cat-box">
+                <div class="cat-icon-circle <%= colorCls %>"><%= cs.getIcon() %></div>
+                <strong><%= cs.getName() %></strong>
+                <span><%= cs.getProductCount() %> sản phẩm</span>
             </a>
-            <a href="category.jsp?cat=2" class="cat-box">
-                <div class="cat-icon-circle orange">⚙️</div>
-                <strong>Switch</strong>
-                <span>860 sp</span>
-            </a>
-            <a href="category.jsp?cat=3" class="cat-box">
-                <div class="cat-icon-circle yellow">🎨</div>
-                <strong>Keycap</strong>
-                <span>1.520 sp</span>
-            </a>
-            <a href="category.jsp?cat=4" class="cat-box">
-                <div class="cat-icon-circle green">⚖️</div>
-                <strong>Stabilizer</strong>
-                <span>310 sp</span>
-            </a>
-            <a href="category.jsp?cat=5" class="cat-box">
-                <div class="cat-icon-circle purple">🔌</div>
-                <strong>Phụ kiện</strong>
-                <span>980 sp</span>
-            </a>
-            <a href="category.jsp?cat=6" class="cat-box">
-                <div class="cat-icon-circle gray">🛠️</div>
-                <strong>Dịch vụ gia công</strong>
-                <span>142 shop</span>
-            </a>
+            <% } %>
         </div>
     </section>
 
@@ -157,14 +185,14 @@
                 <span>5 · <strong>Xem lại</strong></span>
             </div>
             <div class="builder-promo-actions">
-                <a href="custom-builder.jsp" class="btn btn-blue">Mở Custom Builder</a>
-                <a href="guide.jsp" class="btn btn-outline-gray">Xem hướng dẫn</a>
+                <a href="custom-builder" class="btn btn-blue">Mở Custom Builder</a>
+                <a href="category?custom=1" class="btn btn-outline-gray">Xem linh kiện hỗ trợ Custom</a>
             </div>
         </div>
         <div class="builder-promo-right">
             <div class="mini-build-card">
                 <div class="mini-build-head">
-                    <strong>Cấu hình của bạn</strong>
+                    <strong>Cấu hình mẫu #1</strong>
                     <span class="compat-ok">✓ Tương thích</span>
                 </div>
                 <ul class="mini-build-list">
@@ -179,148 +207,127 @@
                     <strong class="total-orange">8.900.000đ</strong>
                 </div>
                 <div class="mini-build-hold">
-                    🔒 Đã giữ chỗ tồn kho · còn 14:22
+                    🔒 Đã giữ chỗ tồn kho · còn <strong id="homeHoldTimer">14:22</strong>
                 </div>
             </div>
         </div>
     </section>
 
+    <!-- Flash Sale có đồng hồ đếm ngược thực tế từng giây -->
     <div class="flash-sale-banner">
         <div>
-            <span class="fs-subtitle">FLASH SALE</span>
-            <h3>Giảm đến 40% switch & keycap</h3>
+            <span class="fs-subtitle">FLASH SALE ĐANG DIỄN RA</span>
+            <h3>Ưu đãi giảm giá linh kiện Switch, Keycap & Kit nhôm CNC</h3>
         </div>
         <div class="fs-right">
             <span class="fs-label">Kết thúc sau</span>
             <div class="fs-timer">
-                <span>04</span> <span>12</span> <span>38</span>
+                <span id="fsHours">04</span> <span id="fsMinutes">12</span> <span id="fsSeconds">38</span>
             </div>
-            <a href="category.jsp" class="btn btn-white-orange">Xem deal</a>
+            <a href="category?sort=popular" class="btn btn-white-orange">Xem deal ngay</a>
         </div>
     </div>
 
+    <!-- Sản phẩm bán chạy lấy trực tiếp Top 12 từ Database -->
     <section class="home-section">
         <div class="section-head">
-            <h3>Sản phẩm bán chạy</h3>
-            <a href="category.jsp" class="view-all-link">Xem tất cả →</a>
+            <h3>Sản phẩm bán chạy nhất</h3>
+            <a href="category?sort=best_selling" class="view-all-link">Xem tất cả <%= totalProductsCount %> sản phẩm →</a>
         </div>
         <div class="product-grid-6">
-            <a href="product-detail?id=1" class="p-card">
-                <span class="p-badge discount">-18%</span>
+            <% for (Product p : topProducts) { %>
+            <a href="product-detail?id=<%= p.getId() %>" class="p-card">
+                <% if (p.getBadge() != null && !p.getBadge().isEmpty()) { %>
+                <span class="p-badge <%= p.getBadge().contains("%") ? "discount" : "new" %>"><%= p.getBadge() %></span>
+                <% } %>
                 <span class="p-wish">♡</span>
-                <div class="p-thumb"><div class="illus-kit"></div></div>
-                <div class="p-Shop"><span class="dot-green"></span> KeebLab Store</div>
-                <h4 class="p-name">Kit Tofu60 2.0 Aluminium — Hotswap...</h4>
-                <div class="p-price">2.690.000đ <del>3.280.000đ</del></div>
-                <div class="p-meta"><span class="stars">★★★★★ 4.9</span><span>Đã bán 1.2k</span></div>
+                <div class="p-thumb">
+                    <% if (p.getCategoryId() == 1) { %>
+                    <div class="illus-kit"></div>
+                    <% } else if (p.getCategoryId() == 2) { %>
+                    <div class="illus-switch yellow"></div>
+                    <% } else if (p.getCategoryId() == 3) { %>
+                    <div class="illus-keycap"></div>
+                    <% } else { %>
+                    <div class="illus-switch purple"></div>
+                    <% } %>
+                </div>
+                <div class="p-Shop"><span class="dot-green"></span> <%= p.getShopName() %></div>
+                <h4 class="p-name"><%= p.getName() %></h4>
+                <div class="p-price">
+                    <%= p.getFormattedPrice() %>
+                    <% if (p.getOldPrice() > 0) { %>
+                    <del><%= p.getFormattedOldPrice() %></del>
+                    <% } %>
+                </div>
+                <div class="p-meta">
+                    <span class="stars">★★★★★ <%= p.getRatingAvg() %></span>
+                    <span>Đã bán <%= p.getFormattedSoldCount() %></span>
+                </div>
             </a>
-
-            <a href="product-detail?id=2" class="p-card">
-                <span class="p-badge new">Mới</span>
-                <span class="p-wish">♡</span>
-                <div class="p-thumb"><div class="illus-switch dark"></div></div>
-                <div class="p-Shop"><span class="dot-green"></span> SwitchHouse</div>
-                <h4 class="p-name">Switch Gateron Oil King — Linear 55g (bịch 70...</h4>
-                <div class="p-price">890.000đ</div>
-                <div class="p-meta"><span class="stars">★★★★★ 4.7</span><span>Đã bán 430</span></div>
-            </a>
-
-            <a href="product-detail?id=3" class="p-card">
-                <span class="p-badge preorder">Pre-order</span>
-                <span class="p-wish">♡</span>
-                <div class="p-thumb"><div class="illus-keycap pink"></div></div>
-                <div class="p-Shop"><span class="dot-green"></span> Keycap Đông Nam</div>
-                <h4 class="p-name">Keycap GMK Olivia++ Cherry profile — bộ...</h4>
-                <div class="p-price">4.150.000đ</div>
-                <div class="p-meta"><span class="stars">★★★★★ 5.0</span><span>Đã bán 86</span></div>
-            </a>
-
-            <a href="product-detail?id=4" class="p-card">
-                <span class="p-badge discount">-10%</span>
-                <span class="p-wish">♡</span>
-                <div class="p-thumb"><div class="illus-kit dark"></div></div>
-                <div class="p-Shop"><span class="dot-green"></span> Keychron VN</div>
-                <h4 class="p-name">Kit Keychron Q1 Pro QMK/VIA — knob...</h4>
-                <div class="p-price">4.290.000đ <del>4.790.000đ</del></div>
-                <div class="p-meta"><span class="stars">★★★★★ 4.8</span><span>Đã bán 2.1k</span></div>
-            </a>
-
-            <a href="product-detail?id=5" class="p-card">
-                <span class="p-badge discount">-24%</span>
-                <span class="p-wish">♡</span>
-                <div class="p-thumb"><div class="illus-switch yellow"></div></div>
-                <div class="p-Shop"><span class="dot-green"></span> Akko Official</div>
-                <h4 class="p-name">Switch Akko Cream Yellow V3 Pro — Linear...</h4>
-                <div class="p-price">320.000đ <del>420.000đ</del></div>
-                <div class="p-meta"><span class="stars">★★★★★ 4.6</span><span>Đã bán 3.4k</span></div>
-            </a>
-
-            <a href="product-detail?id=6" class="p-card">
-                <span class="p-wish">♡</span>
-                <div class="p-thumb"><div class="illus-switch purple"></div></div>
-                <div class="p-Shop"><span class="dot-green"></span> SwitchHouse</div>
-                <h4 class="p-name">Stabilizer Durock V2 PCB-mount — đã lube...</h4>
-                <div class="p-price">420.000đ</div>
-                <div class="p-meta"><span class="stars">★★★★★ 4.8</span><span>Đã bán 760</span></div>
-            </a>
+            <% } %>
         </div>
     </section>
 
+    <!-- Xưởng gia công uy tín lấy trực tiếp từ bảng shops -->
     <section class="home-section">
         <div class="section-head">
-            <h3>Shop gia công uy tín</h3>
-            <a href="#" class="view-all-link">Xem tất cả →</a>
+            <h3>Xưởng gia công & Gian hàng tiêu biểu</h3>
+            <a href="shops" class="view-all-link">Xem toàn bộ <%= allShops.size() %> gian hàng →</a>
         </div>
         <div class="shop-cards-grid">
-            <a href="shop.jsp?id=1" class="shop-mini-card">
-                <div class="shop-avatar blue">KL</div>
+            <% for (Shop s : featuredWorkshops) { %>
+            <a href="shop?id=<%= s.getId() %>" class="shop-mini-card">
+                <div class="shop-avatar" style="background:<%= s.getAvatarColor() %>;"><%= s.getAvatarText() %></div>
                 <div class="shop-mini-info">
-                    <strong>KeebLab Store</strong>
-                    <p>★ 4.9 · 12.4k lượt theo dõi</p>
+                    <strong><%= s.getShopName() %></strong>
+                    <p>★ <%= s.getRatingAvg() %> · <%= s.getFormattedFollowers() %> theo dõi · <%= s.getProductCount() %> SP</p>
                     <div class="shop-badges">
+                        <% if (s.isVerified()) { %>
                         <span class="s-badge verified">Đã xác minh</span>
-                        <span class="s-badge workshop">Gia công</span>
+                        <% } %>
+                        <% if (s.isWorkshop()) { %>
+                        <span class="s-badge workshop">Xưởng gia công</span>
+                        <% } %>
                     </div>
                 </div>
             </a>
-            <a href="shop.jsp?id=2" class="shop-mini-card">
-                <div class="shop-avatar orange">SH</div>
-                <div class="shop-mini-info">
-                    <strong>SwitchHouse</strong>
-                    <p>★ 4.8 · 8.9k lượt theo dõi</p>
-                    <div class="shop-badges">
-                        <span class="s-badge verified">Đã xác minh</span>
-                        <span class="s-badge workshop">Gia công</span>
-                    </div>
-                </div>
-            </a>
-            <a href="shop.jsp?id=4" class="shop-mini-card">
-                <div class="shop-avatar purple">KĐ</div>
-                <div class="shop-mini-info">
-                    <strong>Keycap Đông Nam</strong>
-                    <p>★ 5.0 · 4.2k lượt theo dõi</p>
-                    <div class="shop-badges">
-                        <span class="s-badge verified">Đã xác minh</span>
-                        <span class="s-badge workshop">Gia công</span>
-                    </div>
-                </div>
-            </a>
-            <a href="shop.jsp?id=6" class="shop-mini-card">
-                <div class="shop-avatar green">MG</div>
-                <div class="shop-mini-info">
-                    <strong>Monsgeek VN</strong>
-                    <p>★ 4.7 · 6.1k lượt theo dõi</p>
-                    <div class="shop-badges">
-                        <span class="s-badge verified">Đã xác minh</span>
-                        <span class="s-badge workshop">Gia công</span>
-                    </div>
-                </div>
-            </a>
+            <% } %>
         </div>
     </section>
 </main>
 
 <jsp:include page="includes/footer.jsp" />
 
+<script>
+    // Đồng hồ đếm ngược Flash Sale và Giữ chỗ tồn kho chạy thực tế từng giây
+    document.addEventListener("DOMContentLoaded", function() {
+        let fsTotalSec = 4 * 3600 + 12 * 60 + 38;
+        const hEl = document.getElementById("fsHours");
+        const mEl = document.getElementById("fsMinutes");
+        const sEl = document.getElementById("fsSeconds");
+
+        let holdTotalSec = 14 * 60 + 22;
+        const holdEl = document.getElementById("homeHoldTimer");
+
+        setInterval(function() {
+            if (fsTotalSec > 0) {
+                fsTotalSec--;
+                const h = Math.floor(fsTotalSec / 3600);
+                const m = Math.floor((fsTotalSec % 3600) / 60);
+                const s = fsTotalSec % 60;
+                if (hEl) hEl.textContent = String(h).padStart(2, '0');
+                if (mEl) mEl.textContent = String(m).padStart(2, '0');
+                if (sEl) sEl.textContent = String(s).padStart(2, '0');
+            }
+            if (holdTotalSec > 0) {
+                holdTotalSec--;
+                const hm = Math.floor(holdTotalSec / 60);
+                const hs = holdTotalSec % 60;
+                if (holdEl) holdEl.textContent = String(hm).padStart(2, '0') + ":" + String(hs).padStart(2, '0');
+            }
+        }, 1000);
+    });
+</script>
 </body>
 </html>

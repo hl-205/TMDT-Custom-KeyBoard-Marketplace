@@ -5,29 +5,12 @@ import model.Shop.CustomServiceItem;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ShopDAO {
 
-    private static boolean shopOwnerNormalized = false;
-
-    private synchronized void ensureShopOwnerNormalized() {
-        if (shopOwnerNormalized) return;
-        try (Connection conn = DBContext.getConnection();
-             Statement st = conn.createStatement()) {
-            // Chuẩn hóa để user_id = 2 sở hữu chính xác xưởng gia công SwitchHouse (id = 2)
-            st.executeUpdate("UPDATE shops SET owner_id = NULL WHERE id <> 2 AND owner_id = 2");
-            st.executeUpdate("UPDATE shops SET owner_id = 2 WHERE id = 2");
-            shopOwnerNormalized = true;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
     public Shop getShopById(int id) {
-        ensureShopOwnerNormalized();
         String sql = "SELECT * FROM shops WHERE id = ?";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -44,7 +27,6 @@ public class ShopDAO {
     }
 
     public Shop getShopByOwnerId(int ownerId) {
-        ensureShopOwnerNormalized();
         String sql = "SELECT * FROM shops WHERE owner_id = ? LIMIT 1";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -58,6 +40,58 @@ public class ShopDAO {
             e.printStackTrace();
         }
         return getShopById(2);
+    }
+
+    public List<Shop> getAllShops() {
+        return searchShops(null, null, null, "popular");
+    }
+
+    public List<Shop> searchShops(String keyword, String type, Double minRating, String sort) {
+        List<Shop> list = new ArrayList<>();
+        StringBuilder sql = new StringBuilder("SELECT * FROM shops WHERE 1=1 ");
+        List<Object> params = new ArrayList<>();
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql.append("AND (shop_name LIKE ? OR description LIKE ? OR address LIKE ?) ");
+            String kw = "%" + keyword.trim() + "%";
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+        }
+        if ("workshop".equals(type)) {
+            sql.append("AND is_workshop = 1 ");
+        } else if ("verified".equals(type)) {
+            sql.append("AND is_verified = 1 ");
+        }
+        if (minRating != null && minRating > 0) {
+            sql.append("AND rating_avg >= ? ");
+            params.add(minRating);
+        }
+
+        if ("rating".equals(sort)) {
+            sql.append("ORDER BY rating_avg DESC, rating_count DESC");
+        } else if ("newest".equals(sort)) {
+            sql.append("ORDER BY id DESC");
+        } else if ("followers".equals(sort)) {
+            sql.append("ORDER BY follower_count DESC");
+        } else {
+            sql.append("ORDER BY product_count DESC, follower_count DESC");
+        }
+
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapShop(rs));
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
     }
 
     public List<CustomServiceItem> getServicesByShopId(int shopId) {

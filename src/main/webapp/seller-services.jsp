@@ -78,7 +78,6 @@
 
         <section class="white-panel-card">
             <h2 style="font-size:16px;font-weight:800;">Các gói dịch vụ của <%= shopName %></h2>
-            <p style="font-size:12px;color:#64748B;">Dữ liệu đọc trực tiếp từ bảng <code>custom_services</code> trong MySQL</p>
 
             <div class="service-pkg-grid3">
                 <% for (ServicePackage pkg : services) { %>

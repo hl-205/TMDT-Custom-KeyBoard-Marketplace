@@ -198,41 +198,102 @@
 .sort-header-bar {
     background: #FFFFFF;
     border: 1px solid #E2E8F0;
-    border-radius: 10px;
+    border-radius: 12px;
     padding: 10px 16px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     margin-bottom: 16px;
+    flex-wrap: wrap;
+    box-shadow: 0 1px 4px rgba(15,23,42,0.04);
 }
 
 .sort-header-bar .s-label {
     font-size: 13px;
-    color: #64748B;
-    margin-right: 6px;
+    font-weight: 600;
+    color: #94A3B8;
+    margin-right: 4px;
+    white-space: nowrap;
 }
 
 .sort-pill-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     padding: 7px 14px;
     border-radius: 8px;
-    border: 1px solid #E2E8F0;
+    border: 1.5px solid #E2E8F0;
     background: #FFFFFF;
     font-size: 13px;
     font-weight: 600;
-    color: #334155;
+    color: #475569;
     cursor: pointer;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    overflow: hidden;
+}
+
+.sort-pill-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(27,100,242,0.06), transparent);
+    transform: translateX(-100%);
+    transition: transform 0s;
+}
+.sort-pill-btn:hover::before {
+    transform: translateX(100%);
+    transition: transform 0.45s ease;
+}
+.sort-pill-btn:hover {
+    border-color: #93C5FD;
+    color: #1B64F2;
+    background: #F0F7FF;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(27,100,242,0.12);
+}
+.sort-pill-btn:active {
+    transform: translateY(0);
+    box-shadow: none;
 }
 
 .sort-pill-btn.active {
-    background: #1B64F2;
+    background: linear-gradient(135deg, #1B64F2 0%, #2563EB 100%);
     color: #FFFFFF;
     border-color: #1B64F2;
+    box-shadow: 0 4px 12px rgba(27,100,242,0.30);
+    transform: translateY(-1px);
+}
+
+.sort-pill-btn.active:hover {
+    background: linear-gradient(135deg, #1557E0 0%, #1D4ED8 100%);
+    box-shadow: 0 6px 16px rgba(27,100,242,0.38);
+    color: #FFFFFF;
+    border-color: #1557E0;
+}
+/* Sort indicator icon cho active pill */
+.sort-pill-btn.active::after {
+    content: '✓';
+    font-size: 11px;
+    font-weight: 800;
+    opacity: 0.85;
+    margin-left: 2px;
 }
 
 .sort-right-count {
     margin-left: auto;
     font-size: 13px;
-    color: #64748B;
+    font-weight: 600;
+    color: #94A3B8;
+    white-space: nowrap;
+
+}
+
+.sort-right-count strong {
+    color: #1B64F2;
 }
 
 .compat-banner-alert {

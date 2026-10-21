@@ -45,9 +45,7 @@
             </div>
 
             <div class="acc-nav-group-title">Tài khoản</div>
-            <a href="my-orders" class="acc-nav-link"><span>👤 Hồ sơ cá nhân</span></a>
-            <a href="my-orders" class="acc-nav-link"><span>📍 Sổ địa chỉ</span></a>
-            <a href="my-orders" class="acc-nav-link"><span>🔒 Bảo mật</span></a>
+            <a href="profile" class="acc-nav-link"><span>👤 Thông tin tài khoản</span></a>
 
             <div class="acc-nav-group-title">Mua hàng</div>
             <a href="my-orders" class="acc-nav-link"><span>📦 Đơn hàng của tôi</span></a>

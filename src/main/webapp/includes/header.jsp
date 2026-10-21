@@ -21,7 +21,7 @@
       <% if (isSellerRole) { %>
       <a href="seller-services" style="color:#60A5FA;"><strong>🏪 Quản lý Xưởng</strong></a>
       <% } %>
-      <a href="my-orders"><strong>Tài khoản</strong></a>
+      <a href="profile"><strong>Tài khoản</strong></a>
       <a href="logout"><strong>Đăng xuất</strong></a>
       <% } %>
     </div>
@@ -77,6 +77,7 @@
           <a href="seller-services" class="dropdown-item" style="color:#1B64F2;font-weight:700;">🔧 Quản lý dịch vụ Custom</a>
           <div class="dropdown-divider"></div>
           <% } %>
+          <a href="profile" class="dropdown-item">👤 Thông tin tài khoản</a>
           <a href="my-orders" class="dropdown-item">📦 Đơn hàng của tôi</a>
           <a href="my-reviews" class="dropdown-item">⭐ Đánh giá của tôi</a>
           <div class="dropdown-divider"></div>

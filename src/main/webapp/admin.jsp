@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/admin.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
 <div class="admin-shell">
@@ -21,6 +22,7 @@
         <div class="sidebar-label">QUẢN LÝ</div>
         <nav id="sidebar-nav" class="sidebar-nav">
             <button type="button" class="nav-item active" data-page="dashboard"><span class="nav-icon">▦</span>Tổng quan</button>
+            <button type="button" class="nav-item" data-page="analytics"><span class="nav-icon">📊</span>Thống kê biểu đồ</button>
             <button type="button" class="nav-item" data-page="users"><span class="nav-icon">♙</span>Người dùng</button>
             <button type="button" class="nav-item" data-page="products"><span class="nav-icon">⌨</span>Sản phẩm</button>
             <button type="button" class="nav-item" data-page="orders"><span class="nav-icon">▤</span>Đơn hàng</button>
@@ -73,6 +75,7 @@
 <script id="data-shops" type="application/json"><c:out value="${shopsJson}" default="[]" escapeXml="false"/></script>
 <script id="data-categories" type="application/json"><c:out value="${categoriesJson}" default="[]" escapeXml="false"/></script>
 <script id="data-stats" type="application/json"><c:out value="${statsJson}" default="{}" escapeXml="false"/></script>
+<script id="data-revenue-stats" type="application/json"><c:out value="${revenueStatsJson}" default="{}" escapeXml="false"/></script>
 
 <script>
     (function () {
@@ -80,9 +83,11 @@
         function parseJson(id) {
             try {
                 var el = document.getElementById(id);
-                return el ? JSON.parse(el.textContent) : (id === 'data-stats' ? {} : []);
+                var isObj = (id === 'data-stats' || id === 'data-revenue-stats');
+                return el ? JSON.parse(el.textContent) : (isObj ? {} : []);
             } catch (e) {
-                return id === 'data-stats' ? {} : [];
+                var isObj = (id === 'data-stats' || id === 'data-revenue-stats');
+                return isObj ? {} : [];
             }
         }
 
@@ -94,8 +99,11 @@
             products: parseJson('data-products'),
             shops: parseJson('data-shops'),
             categories: parseJson('data-categories'),
-            stats: parseJson('data-stats')
+            stats: parseJson('data-stats'),
+            revenueStats: parseJson('data-revenue-stats'),
+            analyticsMetric: 'revenue'
         };
+        var analyticsChartInstance = null;
         var ctxPath = "<c:out value='${pageContext.request.contextPath}'/>";
 
         var ORDER_STATUSES = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPING', 'SHIPPED', 'COMPLETED', 'CANCELLED'];
@@ -104,6 +112,7 @@
         var PRODUCT_STATUSES = ['ACTIVE', 'INACTIVE'];
         var TITLES = {
             dashboard: ['Tổng quan', 'Số liệu tổng hợp cơ sở dữ liệu.'],
+            analytics: ['Thống kê & Biểu đồ', 'Biểu đồ cột thống kê doanh thu và đơn hàng theo khoảng thời gian tùy chọn.'],
             users: ['Quản lý người dùng', 'Thêm, cập nhật vai trò và trạng thái tài khoản.'],
             products: ['Quản lý sản phẩm', 'Quản lý thông tin, cửa hàng, danh mục và tồn kho.'],
             orders: ['Quản lý đơn hàng', 'Theo dõi thông tin giao hàng và cập nhật trạng thái đơn.']
@@ -225,7 +234,7 @@
                 return '<div class="summary-row"><span>' + esc(nice(status)) + '</span><strong>' + esc(orderStats[status]) + '</strong></div>';
             }).join('') || '<div class="empty-note">Chưa có dữ liệu đơn hàng.</div>';
 
-            return '<div class="welcome-row"><div><div class="eyebrow">WORKSPACE</div><h2>Chào mừng trở lại 👋</h2></div><span class="live-tag"><i></i> connected</span></div>' +
+            return '<div class="welcome-row"><div><div class="eyebrow">WORKSPACE</div><h2>Chào mừng trở lại 👋</h2></div><div style="display:flex;align-items:center;gap:10px;"><button type="button" class="btn btn-primary btn-small" data-page="analytics" style="padding:6px 14px;font-size:12px;font-weight:700;"><span>📊</span> Biểu đồ doanh thu</button><span class="live-tag"><i></i> connected</span></div></div>' +
                 '<div class="stat-grid">' +
                 kpi('♙', 'Người dùng', st.userCount || 0, 'Tài khoản', 'icon-blue', 'users') +
                 kpi('▤', 'Đơn hàng', st.orderCount || 0, 'Tổng số đơn hàng', 'icon-violet', 'orders') +
@@ -275,17 +284,289 @@
                 (rows || emptyRow(6, 'Không tìm thấy đơn hàng')) + '</tbody></table></div><div class="table-footer"><span>Đang hiển thị ' + orders.length + ' / ' + S.orders.length + ' đơn hàng</span><span>Đơn mới sẽ tạo chi tiết đơn hàng</span></div></div>';
         }
 
+        function renderAnalytics() {
+            var rev = S.revenueStats || {};
+            var fromDate = rev.fromDate || '';
+            var toDate = rev.toDate || '';
+            var totalRev = Number(rev.totalRevenue) || 0;
+            var totalOrd = Number(rev.totalOrders) || 0;
+            var avgRev = Number(rev.avgRevenuePerDay) || 0;
+            var cancelOrd = Number(rev.cancelledOrders) || 0;
+            var dailyList = rev.dailyList || [];
+
+            var rows = dailyList.map(function(item) {
+                var rAmount = Number(item.revenue) || 0;
+                var oCount = Number(item.orders) || 0;
+                var cCount = Number(item.cancelled) || 0;
+                var percent = totalRev > 0 ? ((rAmount / totalRev) * 100).toFixed(1) : '0.0';
+                return '<tr>' +
+                    '<td class="mono"><strong>' + esc(item.date) + '</strong></td>' +
+                    '<td class="money-cell"><strong>' + money(rAmount) + '</strong></td>' +
+                    '<td><span class="status-pill status-success">' + oCount + ' đơn</span></td>' +
+                    '<td>' + (cCount > 0 ? '<span class="status-pill status-danger">' + cCount + ' đơn</span>' : '<span class="status-pill status-neutral">0</span>') + '</td>' +
+                    '<td><div style="display:flex;align-items:center;gap:8px;"><span>' + percent + '%</span><div class="mini-track" style="flex:1;max-width:80px;"><span style="width:' + percent + '%"></span></div></div></td>' +
+                    '</tr>';
+            }).join('');
+
+            var emptyMsg = '<div class="chart-empty-state"><span class="icon">📅</span><p>Không có dữ liệu đơn hàng trong khoảng thời gian này.</p><small>Hãy chọn khoảng thời gian rộng hơn để xem thống kê.</small></div>';
+
+            return '<div class="analytics-filter-card">' +
+                '<div class="filter-header">' +
+                    '<div>' +
+                        '<h3 style="margin:0 0 4px;font-size:15px;font-weight:700;color:#0f172a;">Khoảng thời gian thống kê</h3>' +
+                        '<p style="margin:0;font-size:12px;color:#64748b;">Chọn khoảng ngày để lọc dữ liệu doanh thu và số lượng đơn hàng</p>' +
+                    '</div>' +
+                    '<div class="quick-filter-pills">' +
+                        '<button type="button" class="pill-btn" data-preset="7d">7 ngày qua</button>' +
+                        '<button type="button" class="pill-btn" data-preset="30d">30 ngày qua</button>' +
+                        '<button type="button" class="pill-btn" data-preset="this_month">Tháng này</button>' +
+                        '<button type="button" class="pill-btn" data-preset="all">Tất cả</button>' +
+                    '</div>' +
+                '</div>' +
+                '<form id="analytics-filter-form" class="filter-inputs-row" style="margin-top:14px;">' +
+                    '<div class="date-input-group">' +
+                        '<span>Từ ngày:</span>' +
+                        '<input type="date" id="stats-from-date" name="from_date" value="' + esc(fromDate) + '" required>' +
+                    '</div>' +
+                    '<div class="date-input-group">' +
+                        '<span>Đến ngày:</span>' +
+                        '<input type="date" id="stats-to-date" name="to_date" value="' + esc(toDate) + '" required>' +
+                    '</div>' +
+                    '<button type="submit" class="btn btn-primary" id="btn-apply-filter" style="padding:7px 18px;font-size:13px;">' +
+                        '<span>⚡</span> Áp dụng bộ lọc' +
+                    '</button>' +
+                '</form>' +
+            '</div>' +
+
+            '<div class="stat-grid" style="margin-bottom:20px;">' +
+                kpi('₫', 'Tổng doanh thu', money(totalRev), 'Doanh thu từ các đơn hoàn thành/đang xử lý', 'icon-green') +
+                kpi('▤', 'Đơn thành công', totalOrd, 'Tổng đơn hàng đã ghi nhận', 'icon-blue') +
+                kpi('📈', 'Doanh thu TB / ngày', money(avgRev), 'Trung bình mỗi ngày trong chu kỳ', 'icon-violet') +
+                kpi('✕', 'Đơn bị hủy', cancelOrd, 'Số đơn bị hủy trong khoảng thời gian', 'icon-orange') +
+            '</div>' +
+
+            '<div class="chart-panel">' +
+                '<div class="chart-panel-head">' +
+                    '<div>' +
+                        '<h3>Biểu đồ cột thống kê</h3>' +
+                        '<p>Dữ liệu từ <strong>' + (fromDate || '...') + '</strong> đến <strong>' + (toDate || '...') + '</strong></p>' +
+                    '</div>' +
+                    '<div class="chart-metric-switch">' +
+                        '<button type="button" class="chart-metric-btn ' + (S.analyticsMetric === 'revenue' ? 'active' : '') + '" data-metric="revenue">Doanh thu (₫)</button>' +
+                        '<button type="button" class="chart-metric-btn ' + (S.analyticsMetric === 'orders' ? 'active' : '') + '" data-metric="orders">Số lượng đơn hàng</button>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="chart-canvas-wrap">' +
+                    (dailyList.length === 0 ? emptyMsg : '<canvas id="analyticsBarChart"></canvas>') +
+                '</div>' +
+            '</div>' +
+
+            '<div class="table-card">' +
+                '<div class="section-heading" style="padding:16px 20px 12px;margin:0;border-bottom:1px solid var(--line);">' +
+                    '<div><h3 style="margin:0;font-size:15px;font-weight:700;">Chi tiết doanh thu theo từng ngày</h3><p style="margin:2px 0 0;font-size:12px;color:#64748b;">Số liệu chi tiết tương ứng với biểu đồ cột bên trên</p></div>' +
+                '</div>' +
+                '<div class="table-scroll">' +
+                    '<table>' +
+                        '<thead><tr><th>Ngày</th><th>Doanh thu</th><th>Đơn thành công</th><th>Đơn hủy</th><th>Tỷ trọng chu kỳ</th></tr></thead>' +
+                        '<tbody>' + (rows || emptyRow(5, 'Không có số liệu trong khoảng thời gian này')) + '</tbody>' +
+                    '</table>' +
+                '</div>' +
+            '</div>';
+        }
+
+        function afterRenderAnalytics() {
+            var form = $('analytics-filter-form');
+            if (form) {
+                form.onsubmit = function(e) {
+                    e.preventDefault();
+                    var from = $('stats-from-date').value;
+                    var to = $('stats-to-date').value;
+                    if (from && to && from > to) {
+                        toast('Ngày bắt đầu không được lớn hơn ngày kết thúc!', true);
+                        return;
+                    }
+                    fetchRevenueStats(from, to);
+                };
+            }
+
+            Array.prototype.forEach.call(document.querySelectorAll('.pill-btn[data-preset]'), function(btn) {
+                btn.onclick = function() {
+                    var preset = btn.dataset.preset;
+                    var now = new Date();
+                    var toStr = now.toISOString().slice(0, 10);
+                    var fromStr = '';
+
+                    if (preset === '7d') {
+                        var d7 = new Date();
+                        d7.setDate(now.getDate() - 6);
+                        fromStr = d7.toISOString().slice(0, 10);
+                    } else if (preset === '30d') {
+                        var d30 = new Date();
+                        d30.setDate(now.getDate() - 29);
+                        fromStr = d30.toISOString().slice(0, 10);
+                    } else if (preset === 'this_month') {
+                        var dMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+                        fromStr = dMonth.toISOString().slice(0, 10);
+                    } else if (preset === 'all') {
+                        fromStr = '';
+                        toStr = '';
+                    }
+
+                    fetchRevenueStats(fromStr, toStr);
+                };
+            });
+
+            Array.prototype.forEach.call(document.querySelectorAll('.chart-metric-btn[data-metric]'), function(btn) {
+                btn.onclick = function() {
+                    S.analyticsMetric = btn.dataset.metric;
+                    renderPage();
+                };
+            });
+
+            drawAnalyticsChart();
+        }
+
+        function fetchRevenueStats(fromDate, toDate) {
+            var btn = $('btn-apply-filter');
+            if (btn) { btn.disabled = true; btn.textContent = 'Đang tải...'; }
+
+            post({
+                action: 'getRevenueStats',
+                from_date: fromDate || '',
+                to_date: toDate || ''
+            }).then(function(res) {
+                if (btn) { btn.disabled = false; btn.textContent = '⚡ Áp dụng bộ lọc'; }
+                if (res.success && res.revStats) {
+                    S.revenueStats = res.revStats;
+                    renderPage();
+                    toast('Đã cập nhật biểu đồ thống kê!');
+                } else {
+                    toast(res.message || 'Không thể tải thống kê', true);
+                }
+            }).catch(function() {
+                if (btn) { btn.disabled = false; btn.textContent = '⚡ Áp dụng bộ lọc'; }
+                toast('Lỗi kết nối máy chủ', true);
+            });
+        }
+
+        function drawAnalyticsChart() {
+            var canvas = $('analyticsBarChart');
+            if (!canvas || typeof Chart === 'undefined') return;
+
+            if (analyticsChartInstance) {
+                analyticsChartInstance.destroy();
+                analyticsChartInstance = null;
+            }
+
+            var rev = S.revenueStats || {};
+            var labels = rev.labels || [];
+            var fullDates = rev.fullDates || [];
+            var isRevenue = (S.analyticsMetric !== 'orders');
+
+            var datasetData = isRevenue ? (rev.revenueData || []) : (rev.orderData || []);
+            var datasetLabel = isRevenue ? 'Doanh thu (₫)' : 'Số lượng đơn hàng';
+            var barColor = isRevenue ? 'rgba(27, 100, 242, 0.85)' : 'rgba(16, 185, 129, 0.85)';
+            var barHoverColor = isRevenue ? 'rgba(30, 64, 175, 1)' : 'rgba(5, 150, 105, 1)';
+            var borderColor = isRevenue ? '#1b64f2' : '#10b981';
+
+            var ctx = canvas.getContext('2d');
+            analyticsChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: datasetLabel,
+                        data: datasetData,
+                        backgroundColor: barColor,
+                        hoverBackgroundColor: barHoverColor,
+                        borderColor: borderColor,
+                        borderWidth: 1,
+                        borderRadius: 6,
+                        maxBarThickness: 42
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                boxWidth: 12,
+                                font: { family: 'Inter', size: 12, weight: '600' },
+                                color: '#475569'
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.92)',
+                            titleFont: { family: 'Inter', size: 13, weight: '700' },
+                            bodyFont: { family: 'Inter', size: 12 },
+                            padding: 10,
+                            cornerRadius: 8,
+                            callbacks: {
+                                title: function(items) {
+                                    if (!items || !items.length) return '';
+                                    var idx = items[0].dataIndex;
+                                    return (fullDates && fullDates[idx]) ? fullDates[idx] : items[0].label;
+                                },
+                                label: function(item) {
+                                    var val = item.raw || 0;
+                                    return isRevenue ? ('Doanh thu: ' + (Number(val) || 0).toLocaleString('vi-VN') + ' ₫') : ('Số đơn hàng: ' + val + ' đơn');
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                font: { family: 'Inter', size: 11, weight: '500' },
+                                color: '#64748b'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: '#f1f5f9'
+                            },
+                            ticks: {
+                                font: { family: 'Inter', size: 11 },
+                                color: '#64748b',
+                                callback: function(value) {
+                                    if (isRevenue) {
+                                        if (value >= 1000000) return (value / 1000000).toFixed(1) + ' tr';
+                                        if (value >= 1000) return (value / 1000).toFixed(0) + ' k';
+                                        return value;
+                                    }
+                                    return Number.isInteger(value) ? value : '';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
         function renderPage() {
             var page = S.page;
             $('page-title').textContent = (TITLES[page] || TITLES.dashboard)[0];
             document.title = (TITLES[page] || TITLES.dashboard)[0] + ' · KeebHub';
-            $('quick-search').placeholder = page === 'dashboard' ? 'Tìm nhanh trong các mục...': 'Tìm trong ' + (page === 'users' ? 'người dùng': page === 'products' ? 'sản phẩm': 'đơn hàng') + '...';
+            $('quick-search').placeholder = (page === 'dashboard' || page === 'analytics') ? 'Tìm nhanh trong các mục...': 'Tìm trong ' + (page === 'users' ? 'người dùng': page === 'products' ? 'sản phẩm': 'đơn hàng') + '...';
             Array.prototype.forEach.call(document.querySelectorAll('[data-page]'), function (button) {
                 if (button.classList.contains('nav-item')) button.classList.toggle('active', button.dataset.page === page);
             });
             if (page === 'users') $('main-content').innerHTML = renderUsers();
             else if (page === 'products') $('main-content').innerHTML = renderProducts();
             else if (page === 'orders') $('main-content').innerHTML = renderOrders();
+            else if (page === 'analytics') {
+                $('main-content').innerHTML = renderAnalytics();
+                afterRenderAnalytics();
+            }
             else $('main-content').innerHTML = renderDashboard();
             bindAddButtons();
         }
@@ -554,7 +835,7 @@
         });
 
         $('quick-search').addEventListener('input', function () {
-            if (S.page !== 'dashboard') renderPage();
+            if (S.page !== 'dashboard' && S.page !== 'analytics') renderPage();
         });
         window.addEventListener('keydown', function (event) {
             if (event.key === 'Escape') $('modal-container').innerHTML = '';

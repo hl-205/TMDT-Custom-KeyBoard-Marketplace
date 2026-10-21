@@ -18,6 +18,8 @@ public class LoginServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        String redirect = request.getParameter("redirect");
+        request.setAttribute("redirect", redirect);
         request.getRequestDispatcher("login.jsp").forward(request, response);
     }
 
@@ -27,10 +29,12 @@ public class LoginServlet extends HttpServlet {
         String account = request.getParameter("account");
         String password = request.getParameter("password");
         String remember = request.getParameter("remember");
+        String redirect = request.getParameter("redirect");
 
         if (account == null || account.trim().isEmpty() || password == null || password.isEmpty()) {
             request.setAttribute("error", "Vui lòng nhập đầy đủ Email/Số điện thoại và mật khẩu.");
             request.setAttribute("account", account);
+            request.setAttribute("redirect", redirect);
             request.getRequestDispatcher("login.jsp").forward(request, response);
             return;
         }
@@ -72,10 +76,15 @@ public class LoginServlet extends HttpServlet {
                 response.addCookie(c);
             }
 
+            if (redirect != null && !redirect.isBlank() && !redirect.contains("login")) {
+                response.sendRedirect(redirect);
+                return;
+            }
             response.sendRedirect("index.jsp");
         } else {
             request.setAttribute("error", "Email/Số điện thoại hoặc mật khẩu không chính xác.");
             request.setAttribute("account", account);
+            request.setAttribute("redirect", redirect);
             request.getRequestDispatcher("login.jsp").forward(request, response);
         }
     }

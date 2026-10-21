@@ -45,6 +45,7 @@ public class AdminServlet extends HttpServlet {
             var shops = dao.getShops();
             var categories = dao.getCategories();
             var stats = dao.getStats();
+            var revenueStats = dao.getRevenueStats(null, null);
 
             req.setAttribute("usersJson", gson.toJson(users));
             req.setAttribute("ordersJson", gson.toJson(orders));
@@ -52,6 +53,7 @@ public class AdminServlet extends HttpServlet {
             req.setAttribute("shopsJson", gson.toJson(shops));
             req.setAttribute("categoriesJson", gson.toJson(categories));
             req.setAttribute("statsJson", gson.toJson(stats));
+            req.setAttribute("revenueStatsJson", gson.toJson(revenueStats));
             req.getRequestDispatcher("/admin.jsp").forward(req, resp);
         } catch (SQLException e) {
             getServletContext().log("Lỗi tải dữ liệu admin", e);
@@ -156,6 +158,12 @@ public class AdminServlet extends HttpServlet {
                     if (id <= 0) throw new IllegalArgumentException("Thiếu ID đơn hàng cần xóa.");
                     dao.deleteOrder(id);
                     sendJson(resp, true, "Đã xóa đơn hàng và các chi tiết liên quan.", id, dao.getStats(), null);
+                }
+                case "getRevenueStats" -> {
+                    String fromDate = trim(req.getParameter("from_date"));
+                    String toDate = trim(req.getParameter("to_date"));
+                    var revStats = dao.getRevenueStats(fromDate, toDate);
+                    sendJson(resp, true, "Tải thống kê doanh thu thành công.", 0, null, revStats);
                 }
                 default -> sendJson(resp, false, "Thao tác không hợp lệ.", 0, null, null);
             }

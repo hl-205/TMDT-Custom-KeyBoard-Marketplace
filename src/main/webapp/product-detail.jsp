@@ -159,7 +159,8 @@
                             ProductOption opt = plateOptions.get(i);
                     %>
                     <button type="button"
-                            class="pd-opt-btn <%= i == defaultPlateIndex ? "active" : "" %>"
+                            class="pd-opt-btn <%= i == defaultPlateIndex ? "active" : "" %> <%= !opt.isAvailable() ? "disabled" : "" %>"
+                            <%= !opt.isAvailable() ? "disabled" : "" %>
                             data-extra="<%= opt.getExtraPrice() %>"
                             data-label="<%= opt.getOptionName() %>">
                         <%= opt.getOptionName() %>
@@ -188,6 +189,8 @@
             <form method="post" action="<%= request.getContextPath() %>/cart" id="cartForm" class="pd-buy-actions">
                 <input type="hidden" name="productId" value="<%= product.getId() %>">
                 <input type="hidden" name="quantity" id="cartQty" value="1">
+                <input type="hidden" name="color" id="cartColor" value="">
+                <input type="hidden" name="plate" id="cartPlate" value="">
                 <button type="submit" class="btn-add-cart">🛒 Thêm vào giỏ</button>
                 <button type="submit" name="buyNow" value="1" class="btn-buy-now">Mua ngay</button>
             </form>
@@ -541,7 +544,7 @@
     });
 
     // 4. Tương tác chọn Plate & Tự động cập nhật Giá tiền theo Plate đã chọn
-    const plateBtns = document.querySelectorAll('#plateGroup .pd-opt-btn');
+    const plateBtns = document.querySelectorAll('#plateGroup .pd-opt-btn:not(.disabled)');
     const selectedPlateText = document.getElementById('selectedPlateText');
     const displayPrice = document.getElementById('displayPrice');
     const displayOldPrice = document.getElementById('displayOldPrice');
@@ -583,6 +586,8 @@
     // Gửi số lượng đang chọn cùng form thêm vào giỏ
     document.getElementById('cartForm').addEventListener('submit', () => {
         document.getElementById('cartQty').value = parseInt(qtyInput.value, 10) || 1;
+        document.getElementById('cartColor').value = document.querySelector('#colorGroup .pd-opt-btn.active:not(.disabled)')?.getAttribute('data-label') || '';
+        document.getElementById('cartPlate').value = document.querySelector('#plateGroup .pd-opt-btn.active:not(.disabled)')?.getAttribute('data-label') || '';
     });
 
     qtyMinus.addEventListener('click', () => {

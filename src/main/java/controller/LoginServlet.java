@@ -48,26 +48,29 @@ public class LoginServlet extends HttpServlet {
             session.setAttribute("userFullName", user.getFullName());
             session.setAttribute("userEmail", user.getEmail());
 
-            // --- XỬ LÝ ĐỒNG BỘ GIỎ HÀNG VÀO DATABASE ---
-            Map<Integer, CartItem> dbCart = cartDAO.getCartByUserId(user.getId());
-
-            @SuppressWarnings("unchecked")
-            Map<Integer, CartItem> sessionCart = (Map<Integer, CartItem>) session.getAttribute("cart");
-
-            if (sessionCart != null && !sessionCart.isEmpty()) {
-                for (CartItem item : sessionCart.values()) {
-                    int pId = item.getProduct().getId();
-                    int currentQty = dbCart.containsKey(pId) ? dbCart.get(pId).getQuantity() : 0;
-                    int newQty = currentQty + item.getQuantity();
-
-                    cartDAO.saveOrUpdateItem(user.getId(), pId, newQty);
+            // Lỗi giỏ hàng không được làm mất trạng thái đăng nhập.
+            try {
+                Map<String, CartItem> dbCart = cartDAO.getCartByUserId(user.getId());
+                @SuppressWarnings("unchecked")
+                Map<String, CartItem> sessionCart = (Map<String, CartItem>) session.getAttribute("cart");
+                if (sessionCart != null && !sessionCart.isEmpty()) {
+                    for (CartItem item : sessionCart.values()) {
+                        if (item == null || item.getProduct() == null) continue;
+                        CartItem existing = dbCart.get(item.getKey());
+                        if (existing != null && existing.getExtraPrice() == item.getExtraPrice()) {
+                            existing.setQuantity(Math.min(99, existing.getQuantity() + item.getQuantity()));
+                        } else {
+                            dbCart.put(item.getKey(), item);
+                        }
+                    }
+                    cartDAO.syncCart(user.getId(), dbCart);
                 }
-                // Tải lại giỏ hàng đầy đủ từ DB sau khi đã gộp
-                dbCart = cartDAO.getCartByUserId(user.getId());
+                session.setAttribute("cart", dbCart);
+            } catch (RuntimeException ex) {
+                log("Đăng nhập thành công nhưng đồng bộ giỏ hàng thất bại", ex);
+                // Giữ session cart hiện tại; không ghi đè bằng một giỏ hàng rỗng.
+                session.setAttribute("cartSyncError", "Không đồng bộ được giỏ hàng. Vui lòng thử lại sau.");
             }
-
-            // Cập nhật lại giỏ hàng trong Session
-            session.setAttribute("cart", dbCart);
 
             // --- XỬ LÝ LƯU COOKIE GHI NHỚ TÀI KHOẢN ---
             if ("on".equals(remember)) {
@@ -76,11 +79,11 @@ public class LoginServlet extends HttpServlet {
                 response.addCookie(c);
             }
 
-            if (redirect != null && !redirect.isBlank() && !redirect.contains("login")) {
+            if (redirect != null && !redirect.isBlank() && redirect.startsWith(request.getContextPath() + "/") && !redirect.contains("//")) {
                 response.sendRedirect(redirect);
-                return;
+            } else {
+                response.sendRedirect(request.getContextPath() + "/index.jsp");
             }
-            response.sendRedirect("index.jsp");
         } else {
             request.setAttribute("error", "Email/Số điện thoại hoặc mật khẩu không chính xác.");
             request.setAttribute("account", account);

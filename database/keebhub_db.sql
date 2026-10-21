@@ -219,10 +219,10 @@ CREATE TABLE coupons (
 ) ENGINE=InnoDB;
 
 INSERT INTO coupons (code, description, discount_type, discount_value, max_discount, min_order_amount, usage_limit, is_active) VALUES
-('KEEB10', 'Giảm 10% (tối đa 150.000₫) cho đơn hàng từ 200.000₫', 'PERCENT', 10, 150000, 200000, 200, 1),
-('KEEBHUB50', 'Giảm trực tiếp 50.000₫ cho đơn hàng từ 300.000₫', 'FIXED', 50000, 0, 300000, 150, 1),
-('VIPKEYBOARD', 'Ưu đãi cao cấp giảm 15% (tối đa 300.000₫) cho đơn từ 1.000.000₫', 'PERCENT', 15, 300000, 1000000, 100, 1),
-('FREESHIP30', 'Hỗ trợ 30.000₫ phí vận chuyển cho đơn từ 100.000₫', 'FIXED', 30000, 0, 100000, 300, 1);
+                                                                                                                                   ('KEEB10', 'Giảm 10% (tối đa 150.000₫) cho đơn hàng từ 200.000₫', 'PERCENT', 10, 150000, 200000, 200, 1),
+                                                                                                                                   ('KEEBHUB50', 'Giảm trực tiếp 50.000₫ cho đơn hàng từ 300.000₫', 'FIXED', 50000, 0, 300000, 150, 1),
+                                                                                                                                   ('VIPKEYBOARD', 'Ưu đãi cao cấp giảm 15% (tối đa 300.000₫) cho đơn từ 1.000.000₫', 'PERCENT', 15, 300000, 1000000, 100, 1),
+                                                                                                                                   ('FREESHIP30', 'Hỗ trợ 30.000₫ phí vận chuyển cho đơn từ 100.000₫', 'FIXED', 30000, 0, 100000, 300, 1);
 
 -- =====================================================================
 -- 1. BẢNG USERS (35 TÀI KHOẢN: 1 CUSTOMER CHÍNH, 1 ADMIN, 30 SELLERS, 3 CUSTOMERS PHỤ)
@@ -514,3 +514,18 @@ INSERT INTO order_progress (order_id, step_number, step_title, step_desc, status
                                                                                                     (1, 3, 'Cân stabilizer', 'Clip + lube Durock V2 cho phím Space, Enter, Backspace, 2 Shift. Đã căn wire thẳng tắp, hết rattle.', 'COMPLETED', '16/10 · 10:05'),
                                                                                                     (1, 4, 'Lắp ráp & test toàn phím', 'Lắp switch, gắn keycap, test từng phím bằng phần mềm VIA và kiểm tra âm thanh.', 'IN_PROGRESS', 'Đang thực hiện'),
                                                                                                     (1, 5, 'Đóng gói & bàn giao vận chuyển', 'Quay video soundtest cuối, đóng thùng chống sốc bàn giao vận chuyển.', 'PENDING', 'Dự kiến 18/10');
+-- Migration an toàn cho giỏ hàng có phân loại và phụ phí.
+USE keebhub_db;
+SET @has_label = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cart_items' AND COLUMN_NAME = 'variant_label');
+SET @sql = IF(@has_label = 0, 'ALTER TABLE cart_items ADD COLUMN variant_label VARCHAR(255) NOT NULL DEFAULT \'\' ', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @has_extra = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cart_items' AND COLUMN_NAME = 'extra_price');
+SET @sql = IF(@has_extra = 0, 'ALTER TABLE cart_items ADD COLUMN extra_price BIGINT NOT NULL DEFAULT 0', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @has_old = (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cart_items' AND INDEX_NAME = 'user_product_unique');
+SET @sql = IF(@has_old > 0, 'ALTER TABLE cart_items DROP INDEX user_product_unique', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @has_new = (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cart_items' AND INDEX_NAME = 'user_product_variant_unique');
+SET @sql = IF(@has_new > 0, 'ALTER TABLE cart_items DROP INDEX user_product_variant_unique', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+ALTER TABLE cart_items ADD UNIQUE KEY user_product_variant_unique (user_id, product_id, variant_label, extra_price);

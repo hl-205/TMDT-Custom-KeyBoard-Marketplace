@@ -7,7 +7,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -145,6 +148,124 @@ public class AdminDAO extends DBContext {
             stats.put("orderStatusStats", orderStatusStats);
         }
         return stats;
+    }
+
+    public Map<String, Object> getRevenueStats(String fromDateStr, String toDateStr) throws SQLException {
+        Map<String, Object> result = new LinkedHashMap<>();
+        LocalDate today = LocalDate.now();
+        LocalDate toDate;
+        LocalDate fromDate;
+
+        try {
+            toDate = (toDateStr != null && !toDateStr.isBlank()) ? LocalDate.parse(toDateStr.trim()) : today;
+        } catch (Exception e) {
+            toDate = today;
+        }
+
+        try {
+            fromDate = (fromDateStr != null && !fromDateStr.isBlank()) ? LocalDate.parse(fromDateStr.trim()) : toDate.minusDays(29);
+        } catch (Exception e) {
+            fromDate = toDate.minusDays(29);
+        }
+
+        if (fromDate.isAfter(toDate)) {
+            LocalDate tmp = fromDate;
+            fromDate = toDate;
+            toDate = tmp;
+        }
+
+        DateTimeFormatter dtfIso = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        DateTimeFormatter dtfShort = DateTimeFormatter.ofPattern("dd/MM");
+
+        String sql = "SELECT DATE(created_at) AS order_date, "
+                + "COUNT(*) AS total_orders, "
+                + "COALESCE(SUM(total_amount), 0) AS total_revenue "
+                + "FROM orders "
+                + "WHERE order_status <> 'CANCELLED' "
+                + "  AND DATE(created_at) >= ? AND DATE(created_at) <= ? "
+                + "GROUP BY DATE(created_at) "
+                + "ORDER BY order_date ASC";
+
+        Map<String, Long> revenueMap = new HashMap<>();
+        Map<String, Integer> orderCountMap = new HashMap<>();
+
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, fromDate.format(dtfIso));
+            ps.setString(2, toDate.format(dtfIso));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String d = rs.getString("order_date");
+                    orderCountMap.put(d, rs.getInt("total_orders"));
+                    revenueMap.put(d, rs.getLong("total_revenue"));
+                }
+            }
+        }
+
+        // Lấy số đơn bị hủy trong kỳ
+        int cancelledOrders = 0;
+        String cancelSql = "SELECT COUNT(*) FROM orders WHERE order_status = 'CANCELLED' AND DATE(created_at) >= ? AND DATE(created_at) <= ?";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(cancelSql)) {
+            ps.setString(1, fromDate.format(dtfIso));
+            ps.setString(2, toDate.format(dtfIso));
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) cancelledOrders = rs.getInt(1);
+            }
+        }
+
+        // Tạo mảng liên tục cho từng ngày
+        List<String> labels = new ArrayList<>();
+        List<String> fullDates = new ArrayList<>();
+        List<Long> revenueData = new ArrayList<>();
+        List<Integer> orderData = new ArrayList<>();
+        List<Map<String, Object>> dailyList = new ArrayList<>();
+
+        long totalRevenue = 0;
+        int totalOrders = 0;
+
+        LocalDate curr = fromDate;
+        while (!curr.isAfter(toDate)) {
+            String iso = curr.format(dtfIso);
+            String label = curr.format(dtfShort);
+            long rev = revenueMap.getOrDefault(iso, 0L);
+            int orders = orderCountMap.getOrDefault(iso, 0);
+
+            labels.add(label);
+            fullDates.add(iso);
+            revenueData.add(rev);
+            orderData.add(orders);
+
+            totalRevenue += rev;
+            totalOrders += orders;
+
+            Map<String, Object> dayRow = new LinkedHashMap<>();
+            dayRow.put("date", iso);
+            dayRow.put("label", label);
+            dayRow.put("orders", orders);
+            dayRow.put("revenue", rev);
+            dailyList.add(dayRow);
+
+            curr = curr.plusDays(1);
+        }
+
+        long dayCount = Math.max(1, java.time.temporal.ChronoUnit.DAYS.between(fromDate, toDate) + 1);
+        long avgRevenuePerDay = totalRevenue / dayCount;
+
+        result.put("fromDate", fromDate.format(dtfIso));
+        result.put("toDate", toDate.format(dtfIso));
+        result.put("dayCount", dayCount);
+        result.put("totalRevenue", totalRevenue);
+        result.put("totalOrders", totalOrders);
+        result.put("cancelledOrders", cancelledOrders);
+        result.put("avgRevenuePerDay", avgRevenuePerDay);
+        result.put("labels", labels);
+        result.put("fullDates", fullDates);
+        result.put("revenueData", revenueData);
+        result.put("orderData", orderData);
+        result.put("dailyList", dailyList);
+
+        return result;
     }
 
     private int count(Connection conn, String sql) throws SQLException {

@@ -198,3 +198,157 @@ td strong { color: #28344a; font-weight: 700; }
 @media(max-width:1250px) { .admin-shell { grid-template-columns: 220px minmax(0,1fr); } .content-area { padding: 25px; } .topbar { padding: 20px 25px; } .stat-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } .dashboard-grid { grid-template-columns: 1fr; } .side-panels { grid-template-columns: 1fr 1fr; } .page-footer { padding-left: 25px; } }
 @media(max-width:850px) { .admin-shell { grid-template-columns: 75px minmax(0,1fr); } .sidebar { padding: 20px 10px; } .brand { padding: 0 8px 32px; } .brand > span:last-child, .sidebar-label, .nav-item:not(.active) { font-size: 0; } .brand-mark { width: 39px; height: 39px; } .brand > span:last-child { display: none; } .nav-item { justify-content: center; padding: 13px 6px; font-size: 0; gap: 0; } .nav-icon { font-size: 20px; } .sidebar-bottom { flex-wrap: wrap; justify-content: center; } .admin-account, .sidebar-logout { display: none; } .topbar { height: auto; min-height: 90px; padding: 18px 20px; } .content-area { padding: 22px 20px; } .search-field { width: 220px; } .top-avatar { display: none; } .dashboard-grid { grid-template-columns: minmax(0,1fr); } }
 @media(max-width:600px) { .admin-shell { display: block; } .sidebar { position: static; height: auto; min-height: 0; padding: 12px 14px; display: flex; flex-direction: row; align-items: center; justify-content: space-between; } .brand { padding: 0; } .brand-mark { width: 34px; height: 34px; border-radius: 9px; font-size: 18px; } .brand strong { font-size: 14px; } .brand small { font-size: 7px; } .sidebar-label, .sidebar-bottom { display: none; } .sidebar-nav { display: flex; gap: 2px; } .nav-item { width: 36px; height: 36px; border-radius: 8px; padding: 0; } .nav-icon { font-size: 17px; } .topbar { padding: 18px 15px; align-items: flex-start; gap: 12px; } .topbar h1 { font-size: 19px; } .topbar-actions { gap: 8px; flex-wrap: wrap; justify-content: flex-end; } .search-field { width: 155px; height: 34px; } .content-area { padding: 19px 13px; } .page-footer { padding: 12px 13px 18px; } .stat-grid { grid-template-columns: 1fr 1fr; gap: 9px; } .stat-card { padding: 13px; } .stat-value { font-size: 20px; } .stat-icon { height: 31px; width: 31px; } .welcome-row { align-items: flex-start; flex-direction: column; } .welcome-row h2 { font-size: 18px; } .side-panels { grid-template-columns: 1fr; } .section-heading { align-items: flex-start; } .section-heading h2 { font-size: 17px; } .section-heading p { max-width: 220px; line-height: 1.5; } .section-heading .btn { padding: 9px 10px; font-size: 10px; } .table-footer { align-items: flex-start; flex-direction: column; gap: 5px; } .modal-backdrop { padding: 10px; } .modal-dialog { max-height: calc(100vh - 20px); } .modal-heading { padding: 17px; } .record-form { padding: 16px 17px 0; } .form-grid { grid-template-columns: 1fr; gap: 13px; } .full-field { grid-column: auto; } .modal-footer { align-items: flex-start; flex-wrap: wrap; } .form-note { display: none; } .modal-footer-actions { width: 100%; justify-content: flex-end; } .modal-footer > #modal-delete { margin-right: auto; } th, td { padding: 12px 13px; } }
+
+/* ==========================================================================
+   ANALYTICS & BAR CHART STYLES
+   ========================================================================== */
+.analytics-filter-card {
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px 22px;
+    margin-bottom: 22px;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+}
+.analytics-filter-card .filter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #f1f5f9;
+}
+.analytics-filter-card .filter-header h3 {
+    margin: 0 0 4px;
+    font-size: 16px;
+    font-weight: 800;
+    color: #0f172a;
+}
+.analytics-filter-card .filter-header p {
+    margin: 0;
+    font-size: 12px;
+    color: #64748b;
+}
+.quick-filter-pills {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.quick-filter-pills .pill-btn {
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #475569;
+    padding: 6px 13px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.quick-filter-pills .pill-btn:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+}
+.quick-filter-pills .pill-btn.active {
+    background: #1b64f2;
+    color: #ffffff;
+    border-color: #1b64f2;
+    box-shadow: 0 2px 6px rgba(27, 100, 242, 0.25);
+}
+.filter-inputs-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.date-input-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #334155;
+}
+.date-input-group input[type="date"] {
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 7px 11px;
+    font-size: 12px;
+    color: #0f172a;
+    background: #fff;
+    outline: none;
+    font-family: inherit;
+    transition: border 0.2s, box-shadow 0.2s;
+}
+.date-input-group input[type="date"]:focus {
+    border-color: #1b64f2;
+    box-shadow: 0 0 0 3px rgba(27, 100, 242, 0.12);
+}
+.chart-panel {
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 22px;
+    margin-bottom: 22px;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+}
+.chart-panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 20px;
+}
+.chart-panel-head h3 {
+    margin: 0 0 4px;
+    font-size: 16px;
+    font-weight: 800;
+    color: #0f172a;
+}
+.chart-panel-head p {
+    margin: 0;
+    font-size: 12px;
+    color: #64748b;
+}
+.chart-metric-switch {
+    display: flex;
+    gap: 6px;
+    background: #f1f5f9;
+    padding: 4px;
+    border-radius: 10px;
+}
+.chart-metric-btn {
+    border: none;
+    background: transparent;
+    padding: 6px 14px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.chart-metric-btn.active {
+    background: #ffffff;
+    color: #0f172a;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.chart-canvas-wrap {
+    position: relative;
+    width: 100%;
+    min-height: 280px;
+    max-height: 380px;
+}
+.chart-empty-state {
+    text-align: center;
+    padding: 48px 16px;
+    color: #64748b;
+}
+.chart-empty-state .icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+    display: block;
+}

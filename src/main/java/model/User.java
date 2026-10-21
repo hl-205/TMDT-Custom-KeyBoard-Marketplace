@@ -16,6 +16,7 @@ public class User {
     private int points;
     private boolean isVerified;
     private String status;
+    private String address;
 
     public User() {}
 
@@ -94,4 +95,7 @@ public class User {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public String getAddress() { return address; }
+    public void setAddress(String address) { this.address = address; }
 }

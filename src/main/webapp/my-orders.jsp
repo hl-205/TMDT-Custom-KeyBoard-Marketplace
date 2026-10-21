@@ -46,6 +46,8 @@
                 </div>
             </div>
 
+            <div class="acc-nav-group-title">Tài khoản</div>
+            <a href="profile" class="acc-nav-link"><span>👤 Thông tin tài khoản</span></a>
             <div class="acc-nav-group-title">Mua hàng</div>
             <a href="my-orders" class="acc-nav-link active"><span>📦 Đơn hàng của tôi</span><span class="badge"><%= userOrders.size() %></span></a>
             <a href="my-reviews" class="acc-nav-link"><span>⭐ Đánh giá của tôi</span></a>

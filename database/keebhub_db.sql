@@ -16,6 +16,7 @@ CREATE TABLE users (
                        points INT DEFAULT 0,
                        is_verified TINYINT(1) DEFAULT 1,
                        status VARCHAR(20) DEFAULT 'ACTIVE',
+                       address VARCHAR(255) DEFAULT '',
                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
@@ -200,6 +201,28 @@ CREATE TABLE order_progress (
                                 updated_time VARCHAR(50),
                                 CONSTRAINT fk_progress_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
+CREATE TABLE coupons (
+                         id INT AUTO_INCREMENT PRIMARY KEY,
+                         code VARCHAR(50) NOT NULL UNIQUE,
+                         description VARCHAR(255) NOT NULL,
+                         discount_type VARCHAR(20) DEFAULT 'PERCENT',
+                         discount_value DECIMAL(12,0) NOT NULL,
+                         max_discount DECIMAL(12,0) DEFAULT 0,
+                         min_order_amount DECIMAL(12,0) DEFAULT 0,
+                         usage_limit INT DEFAULT 100,
+                         used_count INT DEFAULT 0,
+                         start_date DATE,
+                         end_date DATE,
+                         is_active TINYINT(1) DEFAULT 1,
+                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+INSERT INTO coupons (code, description, discount_type, discount_value, max_discount, min_order_amount, usage_limit, is_active) VALUES
+('KEEB10', 'Giảm 10% (tối đa 150.000₫) cho đơn hàng từ 200.000₫', 'PERCENT', 10, 150000, 200000, 200, 1),
+('KEEBHUB50', 'Giảm trực tiếp 50.000₫ cho đơn hàng từ 300.000₫', 'FIXED', 50000, 0, 300000, 150, 1),
+('VIPKEYBOARD', 'Ưu đãi cao cấp giảm 15% (tối đa 300.000₫) cho đơn từ 1.000.000₫', 'PERCENT', 15, 300000, 1000000, 100, 1),
+('FREESHIP30', 'Hỗ trợ 30.000₫ phí vận chuyển cho đơn từ 100.000₫', 'FIXED', 30000, 0, 100000, 300, 1);
 
 -- =====================================================================
 -- 1. BẢNG USERS (35 TÀI KHOẢN: 1 CUSTOMER CHÍNH, 1 ADMIN, 30 SELLERS, 3 CUSTOMERS PHỤ)

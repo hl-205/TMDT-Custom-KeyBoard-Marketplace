@@ -17,6 +17,7 @@ public class Order {
     private String orderStatus;
     private BigDecimal subtotal;
     private BigDecimal shippingFee;
+    private BigDecimal discountAmount = BigDecimal.ZERO;
     private BigDecimal totalAmount;
     private Timestamp createdAt;
     private List<OrderItem> items;
@@ -107,6 +108,14 @@ public class Order {
 
     public void setShippingFee(BigDecimal shippingFee) {
         this.shippingFee = shippingFee;
+    }
+
+    public BigDecimal getDiscountAmount() {
+        return discountAmount != null ? discountAmount : BigDecimal.ZERO;
+    }
+
+    public void setDiscountAmount(BigDecimal discountAmount) {
+        this.discountAmount = discountAmount;
     }
 
     public BigDecimal getTotalAmount() {

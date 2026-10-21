@@ -1,38 +1,33 @@
 package controller;
 
+import dao.CouponDAO;
 import dao.OrderDAO;
+import dao.UserDAO;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
-import jakarta.servlet.*;
 import model.CartItem;
 import model.User;
+
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.*;
 
 @WebServlet("/checkout")
 public class CheckoutServlet extends HttpServlet {
 
+    private final OrderDAO orderDAO = new OrderDAO();
+    private final UserDAO userDAO = new UserDAO();
+    private final CouponDAO couponDAO = new CouponDAO();
+
     @Override
     @SuppressWarnings("unchecked")
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        Map<Integer, CartItem> cart = (Map<Integer, CartItem>) req.getSession().getAttribute("cart");
-        if (cart == null || cart.isEmpty()) {
-            resp.sendRedirect(req.getContextPath() + "/cart");
-            return;
-        }
-
-        req.setAttribute("cartItems", cart.values());
-        req.getRequestDispatcher("checkout.jsp").forward(req, resp);
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         HttpSession session = req.getSession(false);
-        User user = (session == null) ? null : (User) session.getAttribute("user");
+        User sessionUser = (session != null) ? (User) session.getAttribute("user") : null;
 
-        if (user == null) {
-            resp.sendRedirect(req.getContextPath() + "login.jsp");
+        if (sessionUser == null) {
+            resp.sendRedirect(req.getContextPath() + "/login");
             return;
         }
 
@@ -42,10 +37,51 @@ public class CheckoutServlet extends HttpServlet {
             return;
         }
 
+        // Lấy thông tin mới nhất của khách hàng từ DB để tự động điền họ tên, sđt, địa chỉ
+        User customer = userDAO.getUserById(sessionUser.getId());
+        if (customer != null) {
+            session.setAttribute("user", customer);
+            req.setAttribute("customer", customer);
+        } else {
+            req.setAttribute("customer", sessionUser);
+        }
+
+        // Lấy danh sách mã khuyến mãi khả dụng trong hệ thống
+        req.setAttribute("availableCoupons", couponDAO.getAvailableCoupons());
+        req.setAttribute("cartItems", cart.values());
+
+        req.getRequestDispatcher("checkout.jsp").forward(req, resp);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         req.setCharacterEncoding("UTF-8");
+        resp.setCharacterEncoding("UTF-8");
+
+        HttpSession session = req.getSession(false);
+        User user = (session == null) ? null : (User) session.getAttribute("user");
+
+        if (user == null) {
+            resp.sendRedirect(req.getContextPath() + "/login");
+            return;
+        }
+
+        Map<Integer, CartItem> cart = (Map<Integer, CartItem>) session.getAttribute("cart");
+        if (cart == null || cart.isEmpty()) {
+            resp.sendRedirect(req.getContextPath() + "/cart");
+            return;
+        }
+
         String name = req.getParameter("receiverName");
         String phone = req.getParameter("receiverPhone");
         String address = req.getParameter("shippingAddress");
+        String paymentMethod = req.getParameter("paymentMethod");
+        String couponCode = req.getParameter("couponCode");
+
+        if (paymentMethod == null || paymentMethod.isBlank()) {
+            paymentMethod = "COD";
+        }
 
         if (isBlank(name) || isBlank(phone) || isBlank(address)) {
             req.setAttribute("error", "Vui lòng nhập đầy đủ thông tin giao hàng.");
@@ -53,16 +89,51 @@ public class CheckoutServlet extends HttpServlet {
             return;
         }
 
+        // Tính toán tổng tiền sản phẩm trong giỏ hàng
+        List<CartItem> cartList = new ArrayList<>(cart.values());
+        BigDecimal subtotal = cartList.stream()
+                .map(CartItem::getLineTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Xác thực mã khuyến mãi phía máy chủ
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        if (couponCode != null && !couponCode.trim().isEmpty()) {
+            CouponDAO.DiscountResult result = couponDAO.calculateDiscount(couponCode.trim(), subtotal);
+            if (result.isValid()) {
+                discountAmount = result.getDiscountAmount();
+                couponCode = result.getCoupon().getCode();
+            } else {
+                // Mã không hợp lệ nhưng vẫn cho phép tiếp tục đặt hàng không giảm giá, hoặc thông báo
+                couponCode = null;
+            }
+        }
+
         try {
-            int id = new OrderDAO().createOrder(
+            int orderId = orderDAO.createOrder(
                     user.getId(),
                     name.trim(),
                     phone.trim(),
                     address.trim(),
-                    new ArrayList<>(cart.values())
+                    cartList,
+                    discountAmount,
+                    paymentMethod,
+                    couponCode
             );
+
+            // Dọn sạch giỏ hàng và session voucher
             cart.clear();
-            resp.sendRedirect(req.getContextPath() + "/orders?success=1&orderId=" + id);
+            session.removeAttribute("appliedCouponCode");
+            session.removeAttribute("appliedDiscountAmount");
+
+            // Điều hướng theo phương thức thanh toán đã chọn
+            if ("VNPAY-QR".equalsIgnoreCase(paymentMethod)) {
+                resp.sendRedirect(req.getContextPath() + "/vnpay-payment?orderId=" + orderId);
+            } else if ("VIETQR".equalsIgnoreCase(paymentMethod)) {
+                resp.sendRedirect(req.getContextPath() + "/payment-qr?orderId=" + orderId);
+            } else {
+                resp.sendRedirect(req.getContextPath() + "/my-orders?success=1&orderId=" + orderId);
+            }
+
         } catch (Exception e) {
             req.setAttribute("error", e.getMessage());
             doGet(req, resp);

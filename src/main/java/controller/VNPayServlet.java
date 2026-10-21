@@ -32,7 +32,7 @@ public class VNPayServlet extends HttpServlet {
             int orderId = Integer.parseInt(orderIdStr.trim());
             Order order = orderDAO.getOrderById(orderId);
             if (order == null) {
-                resp.sendRedirect(req.getContextPath() + "/orders");
+                resp.sendRedirect(req.getContextPath() + "/my-orders");
                 return;
             }
 
@@ -52,9 +52,12 @@ public class VNPayServlet extends HttpServlet {
             vnp_Params.put("vnp_Amount", String.valueOf(amount));
             vnp_Params.put("vnp_CurrCode", "VND");
             vnp_Params.put("vnp_TxnRef", vnp_TxnRef);
-            vnp_Params.put("vnp_OrderInfo", "Thanh toan don hang KeebHub #" + order.getOrderCode());
+            // vnp_OrderInfo bắt buộc Tiếng Việt không dấu, KHÔNG chứa ký tự đặc biệt như #, @, $
+            vnp_Params.put("vnp_OrderInfo", "Thanh toan don hang KeebHub " + order.getOrderCode());
             vnp_Params.put("vnp_OrderType", orderType);
             vnp_Params.put("vnp_Locale", "vn");
+            // vnp_IpAddr là trường BẮT BUỘC trong VNPay 2.1.0
+            vnp_Params.put("vnp_IpAddr", vnp_IpAddr);
 
             // Xây dựng Return URL động theo máy chủ hiện hành
             String scheme = req.getScheme();
@@ -65,8 +68,11 @@ public class VNPayServlet extends HttpServlet {
             String returnUrl = scheme + "://" + serverName + portStr + contextPath + "/vnpay-return";
             vnp_Params.put("vnp_ReturnUrl", returnUrl);
 
-            Calendar cld = Calendar.getInstance(TimeZone.getTimeZone("Etc/GMT+7"));
+            // Chuẩn hóa định dạng ngày giờ theo múi giờ Việt Nam GMT+7
+            TimeZone tz = TimeZone.getTimeZone("Asia/Ho_Chi_Minh");
+            Calendar cld = Calendar.getInstance(tz);
             SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
+            formatter.setTimeZone(tz);
             String vnp_CreateDate = formatter.format(cld.getTime());
             vnp_Params.put("vnp_CreateDate", vnp_CreateDate);
 
@@ -74,29 +80,62 @@ public class VNPayServlet extends HttpServlet {
             String vnp_ExpireDate = formatter.format(cld.getTime());
             vnp_Params.put("vnp_ExpireDate", vnp_ExpireDate);
 
+            // Kiểm tra nếu người dùng chọn chế độ mô phỏng nhanh (Demo Simulation)
+            String simulate = req.getParameter("simulate");
+            if ("1".equals(simulate) || "true".equalsIgnoreCase(simulate)) {
+                Map<String, String> returnParams = new HashMap<>();
+                returnParams.put("vnp_Amount", String.valueOf(amount));
+                returnParams.put("vnp_BankCode", "NCB");
+                returnParams.put("vnp_BankTranNo", "VNP" + System.currentTimeMillis());
+                returnParams.put("vnp_CardType", "ATM");
+                returnParams.put("vnp_OrderInfo", "Thanh toan don hang KeebHub " + order.getOrderCode());
+                returnParams.put("vnp_PayDate", vnp_CreateDate);
+                returnParams.put("vnp_ResponseCode", "00");
+                returnParams.put("vnp_TmnCode", vnp_TmnCode);
+                returnParams.put("vnp_TransactionNo", String.valueOf(System.currentTimeMillis()));
+                returnParams.put("vnp_TransactionStatus", "00");
+                returnParams.put("vnp_TxnRef", vnp_TxnRef);
+
+                List<String> simFieldNames = new ArrayList<>(returnParams.keySet());
+                Collections.sort(simFieldNames);
+                StringBuilder simHashData = new StringBuilder();
+                StringBuilder simQuery = new StringBuilder();
+                for (String fieldName : simFieldNames) {
+                    String fieldValue = returnParams.get(fieldName);
+                    if (fieldValue != null && !fieldValue.isEmpty()) {
+                        if (simHashData.length() > 0) {
+                            simHashData.append('&');
+                            simQuery.append('&');
+                        }
+                        simHashData.append(fieldName).append('=').append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII.toString()));
+                        simQuery.append(URLEncoder.encode(fieldName, StandardCharsets.US_ASCII.toString()))
+                                .append('=')
+                                .append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII.toString()));
+                    }
+                }
+                String simSecureHash = VNPayConfig.hmacSHA512(VNPayConfig.VNP_HASH_SECRET, simHashData.toString());
+                simQuery.append("&vnp_SecureHash=").append(simSecureHash);
+                resp.sendRedirect(req.getContextPath() + "/vnpay-return?" + simQuery.toString());
+                return;
+            }
+
+            // Sắp xếp tham số theo alphabet và băm checksum theo chuẩn VNPay
             List<String> fieldNames = new ArrayList<>(vnp_Params.keySet());
             Collections.sort(fieldNames);
             StringBuilder hashData = new StringBuilder();
             StringBuilder query = new StringBuilder();
 
-            Iterator<String> itr = fieldNames.iterator();
-            while (itr.hasNext()) {
-                String fieldName = itr.next();
+            for (String fieldName : fieldNames) {
                 String fieldValue = vnp_Params.get(fieldName);
-                if ((fieldValue != null) && (!fieldValue.isEmpty())) {
-                    // Build hash data
-                    hashData.append(fieldName);
-                    hashData.append('=');
-                    hashData.append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII.toString()));
-
-                    // Build query
-                    query.append(URLEncoder.encode(fieldName, StandardCharsets.US_ASCII.toString()));
-                    query.append('=');
-                    query.append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII.toString()));
-                    if (itr.hasNext()) {
-                        query.append('&');
+                if (fieldValue != null && !fieldValue.isEmpty()) {
+                    if (hashData.length() > 0) {
                         hashData.append('&');
+                        query.append('&');
                     }
+                    hashData.append(fieldName).append('=').append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII.toString()));
+                    query.append(URLEncoder.encode(fieldName, StandardCharsets.US_ASCII.toString()))
+                            .append('=')
+                            .append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII.toString()));
                 }
             }
 
@@ -113,3 +152,4 @@ public class VNPayServlet extends HttpServlet {
         }
     }
 }
+

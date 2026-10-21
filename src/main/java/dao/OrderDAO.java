@@ -47,10 +47,15 @@ public class OrderDAO {
         }
 
         String initialStatus = "PENDING";
+        int firstProductId = cart.get(0).getProduct().getId();
+        String variantSummary = cart.get(0).getProduct().getName() + " · ×" + cart.get(0).getQuantity();
+        if (cart.size() > 1) {
+            variantSummary += " (+" + (cart.size() - 1) + " sản phẩm khác)";
+        }
 
-        String sql = "INSERT INTO orders(order_code, user_id, shop_id, receiver_name, receiver_phone, shipping_address, "
-                + "subtotal, shipping_fee, discount_amount, total_amount, payment_method, order_status, progress_percent) "
-                + "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)";
+        String sql = "INSERT INTO orders(order_code, user_id, shop_id, product_id, variant_summary, receiver_name, receiver_phone, shipping_address, "
+                + "is_custom_order, subtotal, shipping_fee, discount_amount, total_amount, payment_method, order_status, progress_percent) "
+                + "VALUES(?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, 0)";
 
         try (Connection c = DBContext.getConnection()) {
             if (c == null) {
@@ -64,15 +69,17 @@ public class OrderDAO {
                     ps.setString(1, code);
                     ps.setInt(2, userId);
                     ps.setInt(3, shopId);
-                    ps.setString(4, receiverName);
-                    ps.setString(5, phone);
-                    ps.setString(6, address);
-                    ps.setBigDecimal(7, subtotal);
-                    ps.setBigDecimal(8, shipping);
-                    ps.setBigDecimal(9, discountAmount);
-                    ps.setBigDecimal(10, total);
-                    ps.setString(11, paymentMethod);
-                    ps.setString(12, initialStatus);
+                    ps.setInt(4, firstProductId);
+                    ps.setString(5, variantSummary);
+                    ps.setString(6, receiverName);
+                    ps.setString(7, phone);
+                    ps.setString(8, address);
+                    ps.setBigDecimal(9, subtotal);
+                    ps.setBigDecimal(10, shipping);
+                    ps.setBigDecimal(11, discountAmount);
+                    ps.setBigDecimal(12, total);
+                    ps.setString(13, paymentMethod);
+                    ps.setString(14, initialStatus);
                     ps.executeUpdate();
 
                     try (ResultSet rs = ps.getGeneratedKeys()) {
@@ -158,7 +165,7 @@ public class OrderDAO {
     }
 
     public boolean updatePaymentSuccess(int orderId, String paymentMethod) throws SQLException {
-        String sql = "UPDATE orders SET payment_method = ?, order_status = 'CONFIRMED' WHERE id = ?";
+        String sql = "UPDATE orders SET payment_method = ?, order_status = 'CONFIRMED', progress_percent = 20 WHERE id = ?";
         try (Connection c = DBContext.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, paymentMethod);
@@ -168,7 +175,7 @@ public class OrderDAO {
     }
 
     public boolean updatePaymentSuccessByCode(String orderCode, String paymentMethod) throws SQLException {
-        String sql = "UPDATE orders SET payment_method = ?, order_status = 'CONFIRMED' WHERE order_code = ?";
+        String sql = "UPDATE orders SET payment_method = ?, order_status = 'CONFIRMED', progress_percent = 20 WHERE order_code = ?";
         try (Connection c = DBContext.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, paymentMethod);

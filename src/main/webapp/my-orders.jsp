@@ -76,11 +76,21 @@
                         <span style="font-size:12px;color:#64748B;margin-left:8px;">Mã đơn <strong>#<%= ord.getOrderCode() %></strong></span>
                     </div>
                     <% if ("PROCESSING".equals(ord.getOrderStatus())) { %>
-                    <span style="background:#FFF7ED;color:#EA580C;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;">⚙️ Đang gia công · <%= ord.getProgressPercent() %>%</span>
+                    <span style="background:#FFF7ED;color:#EA580C;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;">⚙️ Đang xử lý · <%= ord.getProgressPercent() %>%</span>
+                    <% } else if ("CONFIRMED".equals(ord.getOrderStatus())) { %>
+                    <span style="background:#ECFDF5;color:#059669;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;">✓ Đã xác nhận / Đã thanh toán</span>
                     <% } else if ("COMPLETED".equals(ord.getOrderStatus())) { %>
                     <span style="background:#DCFCE7;color:#15803D;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;">✓ Hoàn thành</span>
+                    <% } else if ("CANCELLED".equals(ord.getOrderStatus())) { %>
+                    <span style="background:#F1F5F9;color:#64748B;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;">✕ Đã hủy</span>
                     <% } else if ("PENDING".equals(ord.getOrderStatus())) { %>
-                    <span style="background:#FEF2F2;color:#DC2626;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;">🕒 Chờ xưởng xác nhận & báo giá</span>
+                        <% if (ord.isCustomOrder()) { %>
+                        <span style="background:#FEF2F2;color:#DC2626;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;">🕒 Chờ xưởng xác nhận & báo giá</span>
+                        <% } else if ("COD".equalsIgnoreCase(ord.getPaymentMethod())) { %>
+                        <span style="background:#FFFBEB;color:#D97706;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;">💵 Chờ giao hàng & thu COD</span>
+                        <% } else { %>
+                        <span style="background:#FEF2F2;color:#DC2626;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;">⏳ Chờ thanh toán (<%= ord.getPaymentMethod() %>)</span>
+                        <% } %>
                     <% } else { %>
                     <span style="background:#EFF6FF;color:#1B64F2;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;"><%= ord.getOrderStatus() %></span>
                     <% } %>
@@ -102,7 +112,15 @@
 
                 <div class="order-card-foot">
                     <div>Tổng thanh toán chốt: <strong style="font-size:16px;color:#EA580C;"><%= ord.getFormattedTotal() %></strong></div>
-                    <div style="display:flex;gap:10px;">
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                        <% if ("PENDING".equals(ord.getOrderStatus()) && !ord.isCustomOrder()) { %>
+                            <% if ("VNPAY-QR".equalsIgnoreCase(ord.getPaymentMethod())) { %>
+                            <a href="vnpay-payment?orderId=<%= ord.getId() %>" class="btn btn-blue" style="background:#1D4ED8;">💳 Thanh toán VNPAY ngay</a>
+                            <% } else if ("VIETQR".equalsIgnoreCase(ord.getPaymentMethod())) { %>
+                            <a href="payment-qr?orderId=<%= ord.getId() %>" class="btn btn-blue" style="background:#D97706;">📱 Mở mã VietQR</a>
+                            <% } %>
+                        <% } %>
+
                         <a href="order-detail?id=<%= ord.getId() %>" class="btn btn-blue">Xem chi tiết & Tiến độ</a>
                         <a href="product-detail?id=<%= ord.getProductId() %>" class="btn btn-outline-gray">Xem sản phẩm</a>
 

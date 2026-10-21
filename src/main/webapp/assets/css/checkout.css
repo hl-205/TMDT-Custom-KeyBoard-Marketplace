@@ -262,6 +262,16 @@ body .summary-totals .row {
     color: #64748b !important;
 }
 
+body .summary-totals .row.discount-row {
+    display: none !important;
+    color: #16a34a !important;
+    font-weight: 700 !important;
+}
+
+body .summary-totals .row.discount-row.show {
+    display: flex !important;
+}
+
 body .summary-totals .free-shipping {
     color: #16a34a !important;
     font-weight: 600 !important;

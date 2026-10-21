@@ -1136,6 +1136,11 @@ body.cb-page {
     font-weight: 800;
     flex-shrink: 0;
 }
+.cb-c-icon.warn { background: var(--cb-amber-bg); color: #B45309; }
+.cb-c-icon.err { background: var(--cb-red-bg); color: var(--cb-red); }
+.cb-side-compat-status.compat-warn { background: var(--cb-amber-bg); color: #92400E; border: 1px solid var(--cb-amber-border); }
+.cb-side-compat-status.compat-err { background: var(--cb-red-bg); color: #B91C1C; border: 1px solid var(--cb-red-border); }
+.cb-badge-compat.incompat { background: var(--cb-red-bg); color: var(--cb-red); }
 
 .cb-c-text strong {
     display: block;

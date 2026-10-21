@@ -58,6 +58,16 @@
         </aside>
 
         <section>
+            <%
+                String bSuccess = (String) session.getAttribute("builderSuccess");
+                if (bSuccess != null) {
+                    session.removeAttribute("builderSuccess");
+            %>
+            <div style="background:#ECFDF5;border:1px solid #A7F3D0;color:#065F46;padding:14px 18px;border-radius:10px;font-size:14px;font-weight:600;margin-bottom:18px;display:flex;align-items:center;gap:10px;">
+                <span style="font-size:20px;">🎉</span>
+                <span><%= bSuccess %></span>
+            </div>
+            <% } %>
             <% if (userOrders.isEmpty()) { %>
             <div class="order-card-box" style="text-align:center;padding:48px 24px;">
                 <h3 style="font-size:18px;margin-bottom:8px;">Bạn chưa có đơn hàng nào</h3>

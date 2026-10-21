@@ -28,6 +28,11 @@
     int selService = (Integer) (request.getAttribute("selService") != null ? request.getAttribute("selService") : 0);
     int currentStep = (Integer) (request.getAttribute("currentStep") != null ? request.getAttribute("currentStep") : 2);
 
+    BuilderProduct selectedKit    = (BuilderProduct) request.getAttribute("selectedKit");
+    BuilderProduct selectedSwitch = (BuilderProduct) request.getAttribute("selectedSwitch");
+    BuilderProduct selectedKeycap = (BuilderProduct) request.getAttribute("selectedKeycap");
+    BuilderProduct selectedStab   = (BuilderProduct) request.getAttribute("selectedStab");
+
     String flashSuccess = (String) session.getAttribute("builderSuccess");
     String flashError   = (String) session.getAttribute("builderError");
     session.removeAttribute("builderSuccess");
@@ -60,23 +65,23 @@
 
     <!-- Stepper 5 bước đúng chuẩn Figma -->
     <div class="cb-nav-stepper" id="cbStepper">
-        <div class="cb-step-pill <%= selKit > 0 ? "done" : "" %> <%= currentStep == 1 ? "active" : "" %>" onclick="goToStep(1)">
-            <span class="cb-step-badge"><%= selKit > 0 ? "✓" : "1" %></span>
+        <div class="cb-step-pill <%= currentStep == 1 ? "active" : (selKit > 0 ? "done" : "") %>" data-step="1" onclick="goToStep(1)">
+            <span class="cb-step-badge"><%= currentStep == 1 ? "1" : (selKit > 0 ? "✓" : "1") %></span>
             <span class="cb-step-label">Kit</span>
         </div>
-        <div class="cb-step-pill <%= selSwitch > 0 ? "done" : "" %> <%= currentStep == 2 ? "active" : "" %>" onclick="goToStep(2)">
-            <span class="cb-step-badge"><%= selSwitch > 0 && currentStep > 2 ? "✓" : "2" %></span>
+        <div class="cb-step-pill <%= currentStep == 2 ? "active" : (selSwitch > 0 && currentStep > 2 ? "done" : "") %>" data-step="2" onclick="goToStep(2)">
+            <span class="cb-step-badge"><%= currentStep == 2 ? "2" : (selSwitch > 0 && currentStep > 2 ? "✓" : "2") %></span>
             <span class="cb-step-label">Switch</span>
         </div>
-        <div class="cb-step-pill <%= selKeycap > 0 ? "done" : "" %> <%= currentStep == 3 ? "active" : "" %>" onclick="goToStep(3)">
-            <span class="cb-step-badge"><%= selKeycap > 0 && currentStep > 3 ? "✓" : "3" %></span>
+        <div class="cb-step-pill <%= currentStep == 3 ? "active" : (selKeycap > 0 && currentStep > 3 ? "done" : "") %>" data-step="3" onclick="goToStep(3)">
+            <span class="cb-step-badge"><%= currentStep == 3 ? "3" : (selKeycap > 0 && currentStep > 3 ? "✓" : "3") %></span>
             <span class="cb-step-label">Keycap</span>
         </div>
-        <div class="cb-step-pill <%= (selStab > 0 || selService > 0) ? "done" : "" %> <%= currentStep == 4 ? "active" : "" %>" onclick="goToStep(4)">
-            <span class="cb-step-badge"><%= (selStab > 0 || selService > 0) && currentStep > 4 ? "✓" : "4" %></span>
+        <div class="cb-step-pill <%= currentStep == 4 ? "active" : ((selStab > 0 || selService > 0) && currentStep > 4 ? "done" : "") %>" data-step="4" onclick="goToStep(4)">
+            <span class="cb-step-badge"><%= currentStep == 4 ? "4" : ((selStab > 0 || selService > 0) && currentStep > 4 ? "✓" : "4") %></span>
             <span class="cb-step-label">Gia công</span>
         </div>
-        <div class="cb-step-pill <%= currentStep == 5 ? "active" : "" %>" onclick="goToStep(5)">
+        <div class="cb-step-pill <%= currentStep == 5 ? "active" : "" %>" data-step="5" onclick="goToStep(5)">
             <span class="cb-step-badge">5</span>
             <span class="cb-step-label">Xem lại</span>
         </div>
@@ -132,10 +137,14 @@
                 <div class="cb-product-card <%= p.getId() == selKit ? "selected" : "" %>"
                      data-id="<%= p.getId() %>"
                      data-type="<%= p.getLayout() != null ? p.getLayout() : "" %> <%= p.getMountType() != null ? p.getMountType() : "" %>"
+                     data-layout="<%= p.getLayout() != null ? p.getLayout() : "60%" %>"
+                     data-pin="<%= p.getPinType() != null ? p.getPinType() : "5-pin" %>"
+                     data-mount="<%= p.getMountType() != null ? p.getMountType() : "Gasket mount" %>"
                      data-name="<%= p.getName().replace("\"","&quot;") %>"
                      data-shortname="<%= p.getShortName().replace("\"","&quot;") %>"
                      data-price="<%= p.getPrice() %>"
-                     data-specs="<%= p.getOptionSpecs() != null && !p.getOptionSpecs().isEmpty() ? p.getOptionSpecs() : (p.getBrand() + " · " + (p.getLayout()!=null?p.getLayout():"") + " · " + (p.getMountType()!=null?p.getMountType():"")) %>">
+                     data-specs="<%= p.getOptionSpecs() != null && !p.getOptionSpecs().isEmpty() ? p.getOptionSpecs() : (p.getBrand() + " · " + (p.getLayout()!=null?p.getLayout():"") + " · " + (p.getMountType()!=null?p.getMountType():"")) %>"
+                     onclick="selectPart('kit', this)">
                     <div class="cb-card-badge-row">
                         <span class="cb-badge-compat">✓ Tương thích</span>
                         <span class="cb-badge-stock"><%= p.getStockText() %></span>
@@ -159,7 +168,7 @@
                         </div>
                     </div>
                     <div class="cb-card-action">
-                        <button type="button" class="cb-btn-select <%= p.getId() == selKit ? "is-selected" : "" %>" onclick="selectPart('kit', this)">
+                        <button type="button" class="cb-btn-select <%= p.getId() == selKit ? "is-selected" : "" %>">
                             <%= p.getId() == selKit ? "✓ Đã chọn" : "Chọn kit này" %>
                         </button>
                     </div>
@@ -184,7 +193,7 @@
                 <div class="cb-step-title-wrap">
                     <h2>Bước 2 · Chọn switch</h2>
                     <p class="cb-step-sub" id="switchKitSubtitle">
-                        Đang lọc theo kit đã chọn: <strong>Tofu60 2.0 Aluminium</strong> · hotswap 5-pin · south-facing LED
+                        Đang lọc theo kit đã chọn: <strong><%= selectedKit != null ? selectedKit.getName() : "Kit Tofu60 2.0 Aluminium" %></strong> · <%= selectedKit != null && selectedKit.getPinType() != null ? selectedKit.getPinType() : "hotswap 5-pin" %> · south-facing LED
                     </p>
                 </div>
                 <label class="cb-toggle-compat">
@@ -202,7 +211,7 @@
                 <span class="cb-filter-pill" onclick="filterSwitch('Clicky', this)">Clicky</span>
                 <span class="cb-filter-pill" onclick="filterSwitch('Lube', this)">Đã lube sẵn</span>
                 <span class="cb-filter-pill" onclick="filterSwitch('Under1M', this)">Dưới 1 triệu</span>
-                <span class="cb-filter-count-note">Cần 70 switch cho layout 60%</span>
+                <span class="cb-filter-count-note" id="switchCountNote">Cần 70 switch cho layout <%= selectedKit != null && selectedKit.getLayout() != null ? selectedKit.getLayout() : "60%" %></span>
             </div>
 
             <!-- ⚠️ Amber Compatibility Alert Box (Exact Figma 06) -->
@@ -211,7 +220,7 @@
                 <div class="cb-warning-content">
                     <div class="cb-warning-title">1 linh kiện trong danh sách không lắp vừa kit của bạn</div>
                     <div class="cb-warning-desc">
-                        <strong>Kailh Box Jade</strong> dùng chân 3 pin đời cũ, không tương thích socket hotswap của Tofu60 2.0. Hệ thống đã khoá lựa chọn này để tránh hỏng PCB.
+                        <strong>Kailh Box Jade</strong> dùng chân 3 pin đời cũ, không tương thích socket hotswap của <%= selectedKit != null ? selectedKit.getShortName() : "kit" %>. Hệ thống đã khoá lựa chọn này để tránh hỏng PCB.
                     </div>
                     <div class="cb-warning-actions">
                         <button type="button" class="cb-btn-warn-action" onclick="filterSwitch('Clicky', null)">Xem switch clicky thay thế</button>
@@ -229,12 +238,14 @@
                 <div class="cb-product-card <%= p.getId() == selSwitch ? "selected" : "" %> <%= !isCompat ? "incompatible-card" : "" %>"
                      data-id="<%= p.getId() %>"
                      data-compat="<%= isCompat ? "1" : "0" %>"
+                     data-pin="<%= p.getPinType() != null ? p.getPinType() : "5-pin" %>"
                      data-type="<%= p.getSwitchType() != null ? p.getSwitchType() : "Linear" %> <%= p.getName().contains("lube") ? "Lube" : "" %> <%= p.getPrice() < 1000000 ? "Under1M" : "" %>"
                      data-name="<%= p.getName().replace("\"","&quot;") %>"
                      data-shortname="<%= p.getShortName().replace("\"","&quot;") %>"
                      data-price="<%= p.getPrice() %>"
                      data-color="<%= colorClass %>"
-                     data-specs="<%= p.getOptionSpecs() != null && !p.getOptionSpecs().isEmpty() ? p.getOptionSpecs() : (p.getSwitchType() + " · " + p.getPinType()) %>">
+                     data-specs="<%= p.getOptionSpecs() != null && !p.getOptionSpecs().isEmpty() ? p.getOptionSpecs() : (p.getSwitchType() + " · " + p.getPinType()) %>"
+                     onclick="selectPart('sw', this)">
 
                     <!-- Badge Row -->
                     <div class="cb-card-badge-row">
@@ -268,8 +279,7 @@
                     <!-- Button & Incompat Note -->
                     <div class="cb-card-action">
                         <% if (isCompat) { %>
-                        <button type="button" class="cb-btn-select <%= p.getId() == selSwitch ? "is-selected" : "" %>"
-                                onclick="selectPart('sw', this)">
+                        <button type="button" class="cb-btn-select <%= p.getId() == selSwitch ? "is-selected" : "" %>">
                             <%= p.getId() == selSwitch ? "✔ Đã chọn" : "Chọn" %>
                         </button>
                         <% } else { %>
@@ -340,11 +350,13 @@
                 <div class="cb-product-card <%= p.getId() == selKeycap ? "selected" : "" %> <%= !isCompat ? "incompatible-card" : "" %>"
                      data-id="<%= p.getId() %>"
                      data-compat="<%= isCompat ? "1" : "0" %>"
+                     data-layout="<%= p.getLayout() != null ? p.getLayout() : "" %>"
                      data-type="<%= p.getName() %> <%= p.getLayout() != null ? p.getLayout() : "" %>"
                      data-name="<%= p.getName().replace("\"","&quot;") %>"
                      data-shortname="<%= p.getShortName().replace("\"","&quot;") %>"
                      data-price="<%= p.getPrice() %>"
-                     data-specs="<%= p.getOptionSpecs() != null ? p.getOptionSpecs() : p.getBrand() %>">
+                     data-specs="<%= p.getOptionSpecs() != null ? p.getOptionSpecs() : p.getBrand() %>"
+                     onclick="selectPart('keycap', this)">
 
                     <div class="cb-card-badge-row">
                         <% if (isCompat) { %>
@@ -371,7 +383,7 @@
 
                     <div class="cb-card-action">
                         <% if (isCompat) { %>
-                        <button type="button" class="cb-btn-select <%= p.getId() == selKeycap ? "is-selected" : "" %>" onclick="selectPart('keycap', this)">
+                        <button type="button" class="cb-btn-select <%= p.getId() == selKeycap ? "is-selected" : "" %>">
                             <%= p.getId() == selKeycap ? "✓ Đã chọn" : "Chọn" %>
                         </button>
                         <% } else { %>
@@ -436,10 +448,12 @@
                     <div class="cb-product-card <%= p.getId() == selStab ? "selected" : "" %> <%= !isCompat ? "incompatible-card" : "" %>"
                          data-id="<%= p.getId() %>"
                          data-compat="<%= isCompat ? "1" : "0" %>"
+                         data-mount="<%= p.getMountType() != null ? p.getMountType() : "" %>"
                          data-name="<%= p.getName().replace("\"","&quot;") %>"
                          data-shortname="<%= p.getShortName().replace("\"","&quot;") %>"
                          data-price="<%= p.getPrice() %>"
-                         data-specs="<%= p.getOptionSpecs() %>">
+                         data-specs="<%= p.getOptionSpecs() %>"
+                         onclick="selectPart('stab', this)">
                         <div class="cb-card-badge-row">
                             <% if (isCompat) { %>
                             <span class="cb-badge-compat">Tương thích</span>
@@ -464,7 +478,7 @@
                         </div>
                         <div class="cb-card-action">
                             <% if (isCompat) { %>
-                            <button type="button" class="cb-btn-select <%= p.getId() == selStab ? "is-selected" : "" %>" onclick="selectPart('stab', this)">
+                            <button type="button" class="cb-btn-select <%= p.getId() == selStab ? "is-selected" : "" %>">
                                 <%= p.getId() == selStab ? "✓ Đã chọn" : "Chọn" %>
                             </button>
                             <% } else { %>
@@ -621,37 +635,35 @@
             <div class="cb-compat-check-panel">
                 <div class="cb-compat-panel-head">
                     <span class="cb-compat-panel-title">🛡️ Xác nhận kiểm tra tương thích hệ thống (UC27)</span>
-                    <span class="cb-badge-compat">✓ 100% Tương thích hoàn hảo</span>
+                    <%
+                        boolean isAllOk = compatResults != null && compatResults.stream().allMatch(CompatResult::isCompatible);
+                    %>
+                    <span class="cb-badge-compat <%= isAllOk ? "" : "cb-badge-incompat" %>" id="step5CompatBadge">
+                        <%= isAllOk ? "✓ 100% Tương thích hoàn hảo" : "⚠️ Cần lưu ý độ tương thích" %>
+                    </span>
                 </div>
-                <div class="cb-compat-checklist">
+                <div class="cb-compat-checklist" id="step5CompatChecklist">
+                    <% if (compatResults != null) {
+                        for (CompatResult cr : compatResults) {
+                            String iconClass = "ok";
+                            String iconChar = "✓";
+                            if ("WARN".equalsIgnoreCase(cr.getLevel())) {
+                                iconClass = "warn";
+                                iconChar = "⚠️";
+                            } else if ("ERROR".equalsIgnoreCase(cr.getLevel())) {
+                                iconClass = "err";
+                                iconChar = "✕";
+                            }
+                    %>
                     <div class="cb-c-item">
-                        <span class="cb-c-icon ok">✓</span>
+                        <span class="cb-c-icon <%= iconClass %>"><%= iconChar %></span>
                         <div class="cb-c-text">
-                            <strong>Kit ↔ Switch: Socket Hotswap 5-pin</strong>
-                            <span>PCB nhận cả switch 3-pin và 5-pin, chân switch chuẩn MX khít chắc socket không cong vênh.</span>
+                            <strong><%= cr.getTitle() %></strong>
+                            <span><%= cr.getMessage() %></span>
                         </div>
                     </div>
-                    <div class="cb-c-item">
-                        <span class="cb-c-icon ok">✓</span>
-                        <div class="cb-c-text">
-                            <strong>Kit ↔ Keycap: Layout 60% ANSI</strong>
-                            <span>Bộ keycap bao phủ toàn bộ 61 nút tiêu chuẩn, đầy đủ phím Space 6.25u và hàng dưới 1.25u.</span>
-                        </div>
-                    </div>
-                    <div class="cb-c-item">
-                        <span class="cb-c-icon ok">✓</span>
-                        <div class="cb-c-text">
-                            <strong>Kit ↔ Stabilizer: PCB Screw-in</strong>
-                            <span>Cấu trúc Gasket mount và PCB khoét lỗ screw-in cố định stab chắc chắn, không bị lọc xọc.</span>
-                        </div>
-                    </div>
-                    <div class="cb-c-item">
-                        <span class="cb-c-icon ok">✓</span>
-                        <div class="cb-c-text">
-                            <strong>Đèn LED ↔ Keycap: South-facing</strong>
-                            <span>Bóng LED hướng nam hoàn toàn không cấn cạnh với profile Cherry của keycap GMK.</span>
-                        </div>
-                    </div>
+                    <%  }
+                    } %>
                 </div>
             </div>
 
@@ -948,32 +960,35 @@
     const buildState = {
         kit: {
             id: <%= selKit %>,
-            name: 'Kit Tofu60 2.0 Aluminium — Hotswap, gasket mount',
-            shortName: 'Tofu60 2.0 Aluminium',
-            price: 2690000,
-            specs: 'Silver · Brass plate'
+            name: '<%= selectedKit != null ? selectedKit.getName().replace("\\", "\\\\").replace("'", "\\'") : "" %>',
+            shortName: '<%= selectedKit != null ? selectedKit.getShortName().replace("\\", "\\\\").replace("'", "\\'") : "" %>',
+            price: <%= selectedKit != null ? selectedKit.getPrice() : 0 %>,
+            specs: '<%= selectedKit != null && selectedKit.getOptionSpecs() != null ? selectedKit.getOptionSpecs().replace("\\", "\\\\").replace("'", "\\'") : "" %>',
+            layout: '<%= selectedKit != null && selectedKit.getLayout() != null ? selectedKit.getLayout().replace("'", "\\'") : "60%" %>',
+            pinType: '<%= selectedKit != null && selectedKit.getPinType() != null ? selectedKit.getPinType().replace("'", "\\'") : "5-pin" %>',
+            mountType: '<%= selectedKit != null && selectedKit.getMountType() != null ? selectedKit.getMountType().replace("'", "\\'") : "Gasket mount" %>'
         },
         sw: {
             id: <%= selSwitch %>,
-            name: 'Gateron Oil King — Linear 55g, lube nhà máy',
-            shortName: 'Gateron Oil King ×70',
-            price: 890000,
-            specs: 'Linear 55g · lube nhà máy',
-            color: 'black'
+            name: '<%= selectedSwitch != null ? selectedSwitch.getName().replace("\\", "\\\\").replace("'", "\\'") : "" %>',
+            shortName: '<%= selectedSwitch != null ? selectedSwitch.getShortName().replace("\\", "\\\\").replace("'", "\\'") : "" %>',
+            price: <%= selectedSwitch != null ? selectedSwitch.getPrice() : 0 %>,
+            specs: '<%= selectedSwitch != null && selectedSwitch.getOptionSpecs() != null ? selectedSwitch.getOptionSpecs().replace("\\", "\\\\").replace("'", "\\'") : "" %>',
+            color: '<%= selectedSwitch != null && selectedSwitch.getSwitchColor() != null ? selectedSwitch.getSwitchColor() : "black" %>'
         },
         keycap: {
             id: <%= selKeycap %>,
-            name: '<%= selKeycap > 0 ? "GMK Olivia++ Cherry profile" : "" %>',
-            shortName: '<%= selKeycap > 0 ? "GMK Olivia++ Cherry" : "" %>',
-            price: <%= selKeycap > 0 ? 4150000 : 0 %>,
-            specs: '<%= selKeycap > 0 ? "Cherry profile · 137 phím" : "" %>'
+            name: '<%= selectedKeycap != null ? selectedKeycap.getName().replace("\\", "\\\\").replace("'", "\\'") : "" %>',
+            shortName: '<%= selectedKeycap != null ? selectedKeycap.getShortName().replace("\\", "\\\\").replace("'", "\\'") : "" %>',
+            price: <%= selectedKeycap != null ? selectedKeycap.getPrice() : 0 %>,
+            specs: '<%= selectedKeycap != null && selectedKeycap.getOptionSpecs() != null ? selectedKeycap.getOptionSpecs().replace("\\", "\\\\").replace("'", "\\'") : "" %>'
         },
         stab: {
             id: <%= selStab %>,
-            name: 'Stabilizer Durock V2 PCB-mount — đã lube sẵn',
-            shortName: 'Durock V2 screw-in',
-            price: 420000,
-            specs: 'PCB-mount · đã lube'
+            name: '<%= selectedStab != null ? selectedStab.getName().replace("\\", "\\\\").replace("'", "\\'") : "" %>',
+            shortName: '<%= selectedStab != null ? selectedStab.getShortName().replace("\\", "\\\\").replace("'", "\\'") : "" %>',
+            price: <%= selectedStab != null ? selectedStab.getPrice() : 0 %>,
+            specs: '<%= selectedStab != null && selectedStab.getOptionSpecs() != null ? selectedStab.getOptionSpecs().replace("\\", "\\\\").replace("'", "\\'") : "" %>'
         },
         svc: {
             id: <%= selService %>,
@@ -985,8 +1000,59 @@
         }
     };
 
-    // ── Stepper Navigation ─────────────────────────────────────────
+    // ── Stepper Navigation & State ────────────────────────────────
+    const completedSteps = new Set();
+    if (<%= selKit > 0 %>) completedSteps.add(1);
+    if (<%= selSwitch > 0 && currentStep > 2 %>) completedSteps.add(2);
+    if (<%= selKeycap > 0 && currentStep > 3 %>) completedSteps.add(3);
+    if (<%= (selStab > 0 || selService > 0) && currentStep > 4 %>) completedSteps.add(4);
+
+    function updateStepperUI() {
+        const pills = document.querySelectorAll('#cbStepper .cb-step-pill');
+        pills.forEach((pill, idx) => {
+            const stepNum = idx + 1;
+            const badge = pill.querySelector('.cb-step-badge');
+
+            pill.classList.remove('active', 'done');
+
+            if (stepNum === currentStep) {
+                pill.classList.add('active');
+                if (badge) badge.textContent = stepNum;
+            } else if (isStepEligibleDone(stepNum)) {
+                pill.classList.add('done');
+                if (badge) badge.textContent = '✓';
+            } else {
+                if (badge) badge.textContent = stepNum;
+            }
+        });
+    }
+
+    function isStepEligibleDone(stepNum) {
+        if (stepNum === 1) {
+            return (buildState.kit && buildState.kit.id > 0) && (stepNum < currentStep || completedSteps.has(1));
+        }
+        if (stepNum === 2) {
+            return (buildState.sw && buildState.sw.id > 0) && (stepNum < currentStep || completedSteps.has(2));
+        }
+        if (stepNum === 3) {
+            return (buildState.keycap && (buildState.keycap.id > 0 || (buildState.keycap.shortName && buildState.keycap.shortName.length > 0))) && (stepNum < currentStep || completedSteps.has(3));
+        }
+        if (stepNum === 4) {
+            return ((buildState.stab && buildState.stab.id > 0) || (buildState.svc && buildState.svc.id > 0) || completedSteps.has(4)) && (stepNum < currentStep || completedSteps.has(4));
+        }
+        return false;
+    }
+
     function goToStep(step) {
+        if (step < 1 || step > 5) return;
+
+        // Nếu chuyển sang bước sau, đánh dấu bước trước đã hoàn tất
+        if (currentStep < step) {
+            for (let i = 1; i < step; i++) {
+                completedSteps.add(i);
+            }
+        }
+
         currentStep = step;
 
         // Cập nhật view các bước
@@ -995,11 +1061,7 @@
         if (targetView) targetView.classList.add('active');
 
         // Cập nhật pills stepper trên navbar
-        document.querySelectorAll('#cbStepper .cb-step-pill').forEach((pill, idx) => {
-            const stepNum = idx + 1;
-            pill.classList.remove('active');
-            if (stepNum === step) pill.classList.add('active');
-        });
+        updateStepperUI();
 
         // Cập nhật text nút CTA sidebar
         const primaryCta = document.getElementById('sidePrimaryCta');
@@ -1026,19 +1088,27 @@
     }
 
     // ── Chọn linh kiện ─────────────────────────────────────────────
-    function selectPart(type, card) {
-        const grid = card.closest('.cb-cards-grid');
-        if (!grid) return;
+    function selectPart(type, el) {
+        if (!el) return;
+        const card = el.classList.contains('cb-product-card') ? el : el.closest('.cb-product-card');
+        if (!card) return;
 
-        // Bỏ chọn các card khác trong grid
-        grid.querySelectorAll('.cb-product-card').forEach(c => {
-            c.classList.remove('selected');
-            const btn = c.querySelector('.cb-btn-select');
-            if (btn) {
-                btn.classList.remove('is-selected');
-                btn.textContent = (c.classList.contains('none-card')) ? 'Bỏ qua' : 'Chọn';
-            }
-        });
+        // Bỏ qua nếu card không tương thích và người dùng click vào nút disabled
+        if (card.classList.contains('incompatible-card') && (el.classList.contains('cb-btn-disabled') || el.closest('.cb-btn-disabled'))) {
+            return;
+        }
+
+        const grid = card.closest('.cb-cards-grid');
+        if (grid) {
+            grid.querySelectorAll('.cb-product-card').forEach(c => {
+                c.classList.remove('selected');
+                const btn = c.querySelector('.cb-btn-select');
+                if (btn) {
+                    btn.classList.remove('is-selected');
+                    btn.textContent = (c.classList.contains('none-card')) ? 'Bỏ qua' : 'Chọn';
+                }
+            });
+        }
 
         // Chọn card này
         card.classList.add('selected');
@@ -1056,12 +1126,208 @@
         const specs = card.dataset.specs || '';
         const color = card.dataset.color || 'black';
 
-        buildState[type] = { id, name, shortName, price, specs, color };
+        if (type === 'kit') {
+            const layout = card.dataset.layout || '60%';
+            const pinType = card.dataset.pin || '5-pin';
+            const mountType = card.dataset.mount || 'Gasket mount';
+            buildState.kit = { id, name, shortName, price, specs, layout, pinType, mountType };
+            completedSteps.add(1);
+            onKitChanged();
+        } else if (type === 'sw') {
+            buildState.sw = { id, name, shortName, price, specs, color };
+            completedSteps.add(2);
+        } else if (type === 'keycap') {
+            buildState.keycap = { id, name, shortName, price, specs };
+            completedSteps.add(3);
+        } else if (type === 'stab') {
+            buildState.stab = { id, name, shortName, price, specs };
+            completedSteps.add(4);
+        }
 
-        // Cập nhật UI Preview & Sidebar
+        // Cập nhật UI Preview, Sidebar, Stepper
         updateSidebarDisplay();
         updateKeyboardGraphic();
         syncFormInputs();
+        updateStepperUI();
+        checkLiveCompatibility();
+    }
+
+    // ── Xử lý khi Kit thay đổi ─────────────────────────────────────
+    function onKitChanged() {
+        const kit = buildState.kit;
+        // Cập nhật tiêu đề bước 2
+        const sub = document.getElementById('switchKitSubtitle');
+        if (sub) {
+            sub.innerHTML = 'Đang lọc theo kit đã chọn: <strong>' + escapeHtml(kit.name) + '</strong> · ' + escapeHtml(kit.pinType) + ' · south-facing LED';
+        }
+
+        // Cập nhật số switch cần thiết
+        let reqSwitches = 70;
+        if (kit.layout.includes('Full') || kit.layout.includes('100%')) reqSwitches = 108;
+        else if (kit.layout.includes('TKL') || kit.layout.includes('87')) reqSwitches = 87;
+        else if (kit.layout.includes('75%')) reqSwitches = 84;
+        else if (kit.layout.includes('65%')) reqSwitches = 68;
+
+        const countNote = document.getElementById('switchCountNote');
+        if (countNote) countNote.textContent = 'Cần ' + reqSwitches + ' switch cho layout ' + kit.layout;
+        const countStatus = document.getElementById('switchCountStatus');
+        if (countStatus) countStatus.textContent = 'Đã chọn ' + reqSwitches + '/' + reqSwitches + ' switch';
+        const finalSwQty = document.getElementById('finalSwQty');
+        if (finalSwQty) finalSwQty.value = reqSwitches;
+
+        const prevBadge = document.getElementById('previewLayoutBadge');
+        if (prevBadge) prevBadge.textContent = kit.layout + ' ANSI';
+
+        // Cập nhật độ tương thích Switch cards
+        document.querySelectorAll('#switchGrid .cb-product-card').forEach(card => {
+            const swPin = card.dataset.pin || '5-pin';
+            const swName = card.dataset.name || '';
+            let isCompat = true;
+            let reason = '';
+            if (swPin === '3-pin-old' || (swName.includes('Box Jade') && swPin.includes('3-pin'))) {
+                isCompat = false;
+                reason = '✕ Switch dùng chân 3-pin đời cũ, không tương thích socket hotswap của ' + kit.shortName + '.';
+            } else if (kit.pinType === '3-pin' && swPin === '5-pin') {
+                isCompat = false;
+                reason = '✕ PCB của kit chỉ hỗ trợ 3-pin. Switch 5-pin cần cắt bỏ 2 chân định vị.';
+            }
+            applyCardCompat(card, isCompat, reason, 'sw');
+        });
+
+        // Cập nhật độ tương thích Keycap cards
+        document.querySelectorAll('#keycapGrid .cb-product-card').forEach(card => {
+            if (card.classList.contains('none-card')) return;
+            const kcLayout = card.dataset.layout || '';
+            const kcName = card.dataset.name || '';
+            let isCompat = true;
+            let reason = '';
+            if (kcLayout.includes('ISO') || kcName.includes('ISO')) {
+                isCompat = false;
+                reason = '✕ Layout ISO không vừa layout ANSI của kit ' + kit.name + '.';
+            } else if (!kit.layout.includes('60') && (kcLayout.includes('60%') || kcName.includes('61 phím')) && !kcLayout.toLowerCase().includes('all') && !kcLayout.includes('75')) {
+                isCompat = false;
+                reason = '✕ Bộ keycap chỉ có 61 phím (60%), thiếu cụm điều hướng cho kit ' + kit.layout + '.';
+            }
+            applyCardCompat(card, isCompat, reason, 'keycap');
+        });
+
+        // Cập nhật độ tương thích Stabilizer cards
+        document.querySelectorAll('#stabGrid .cb-product-card').forEach(card => {
+            if (card.classList.contains('none-card')) return;
+            const stMount = card.dataset.mount || '';
+            const stName = card.dataset.name || '';
+            let isCompat = true;
+            let reason = '';
+            if (stMount.toLowerCase().includes('plate') || stName.toLowerCase().includes('plate')) {
+                isCompat = false;
+                reason = '✕ Kit ' + kit.shortName + ' dùng cấu trúc ' + kit.mountType + ' và mạch PCB screw-in, không gắn được stab plate-mount.';
+            }
+            applyCardCompat(card, isCompat, reason, 'stab');
+        });
+    }
+
+    function applyCardCompat(card, isCompat, reason, type) {
+        card.dataset.compat = isCompat ? '1' : '0';
+        const badgeRow = card.querySelector('.cb-card-badge-row');
+        if (badgeRow) {
+            const compatBadge = badgeRow.querySelector('.cb-badge-compat, .cb-badge-incompat');
+            if (compatBadge) {
+                compatBadge.className = isCompat ? 'cb-badge-compat' : 'cb-badge-incompat';
+                compatBadge.textContent = isCompat ? 'Tương thích' : 'Không lắp vừa';
+            }
+        }
+
+        const actionDiv = card.querySelector('.cb-card-action');
+        if (actionDiv) {
+            const isSelected = buildState[type] && buildState[type].id === parseInt(card.dataset.id);
+            if (isCompat) {
+                card.classList.remove('incompatible-card');
+                actionDiv.innerHTML = '<button type="button" class="cb-btn-select ' + (isSelected ? 'is-selected' : '') + '">' + (isSelected ? '✓ Đã chọn' : 'Chọn') + '</button>';
+            } else {
+                card.classList.add('incompatible-card');
+                actionDiv.innerHTML = '<button type="button" class="cb-btn-disabled" disabled>Không tương thích</button><div class="cb-card-error-text">' + escapeHtml(reason) + '</div>';
+            }
+        }
+    }
+
+    // ── Kiểm tra tương thích Realtime (AJAX UC27) ──────────────────
+    function checkLiveCompatibility() {
+        const params = new URLSearchParams({
+            action: 'check-compat',
+            format: 'json',
+            kitId: buildState.kit.id,
+            switchId: buildState.sw.id,
+            keycapId: buildState.keycap.id,
+            stabId: buildState.stab.id,
+            serviceId: buildState.svc.id,
+            step: currentStep
+        });
+
+        fetch('custom-builder', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: params.toString()
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (!data || !data.success) return;
+            const isAllOk = data.allCompatible;
+
+            // 1. Cập nhật Sidebar badge
+            const sideStatus = document.getElementById('sideCompatStatus');
+            if (sideStatus) {
+                if (isAllOk) {
+                    sideStatus.className = 'cb-side-compat-status';
+                    sideStatus.textContent = '✓ Tất cả linh kiện đã chọn đều tương thích (UC27)';
+                } else {
+                    sideStatus.className = 'cb-side-compat-status compat-warn';
+                    sideStatus.textContent = '⚠️ Có linh kiện chưa tương thích hoàn hảo (UC27)';
+                }
+            }
+
+            // 2. Cập nhật Badge bước 5
+            const step5Badge = document.getElementById('step5CompatBadge');
+            if (step5Badge) {
+                if (isAllOk) {
+                    step5Badge.className = 'cb-badge-compat';
+                    step5Badge.textContent = '✓ 100% Tương thích hoàn hảo';
+                } else {
+                    step5Badge.className = 'cb-badge-compat cb-badge-incompat';
+                    step5Badge.textContent = '⚠️ Cần lưu ý độ tương thích';
+                }
+            }
+
+            // 3. Cập nhật danh sách checklist bước 5
+            const checklist = document.getElementById('step5CompatChecklist');
+            if (checklist && data.results) {
+                let html = '';
+                data.results.forEach(cr => {
+                    let iconClass = 'ok';
+                    let iconChar = '✓';
+                    if (cr.level === 'WARN') {
+                        iconClass = 'warn';
+                        iconChar = '⚠️';
+                    } else if (cr.level === 'ERROR') {
+                        iconClass = 'err';
+                        iconChar = '✕';
+                    }
+                    html += '<div class="cb-c-item">' +
+                        '<span class="cb-c-icon ' + iconClass + '">' + iconChar + '</span>' +
+                        '<div class="cb-c-text">' +
+                            '<strong>' + escapeHtml(cr.title) + '</strong>' +
+                            '<span>' + escapeHtml(cr.message) + '</span>' +
+                        '</div>' +
+                    '</div>';
+                });
+                checklist.innerHTML = html;
+            }
+        })
+        .catch(err => {
+            console.warn('Live compatibility check error:', err);
+        });
     }
 
     // ── Chọn gói dịch vụ ───────────────────────────────────────────
@@ -1085,8 +1351,10 @@
         }
 
         buildState.svc = { id, name, shortName: name, price, shopName: wsName, duration };
+        completedSteps.add(4);
         updateSidebarDisplay();
         syncFormInputs();
+        updateStepperUI();
     }
 
     function selectNoWorkshop(tab) {
@@ -1234,7 +1502,7 @@
         if (!keebCase) return;
 
         // Đổi màu case phím theo Kit
-        if (buildState.kit.name.toLowerCase().contains('black')) {
+        if (buildState.kit.name && buildState.kit.name.toLowerCase().includes('black')) {
             keebCase.style.borderColor = '#1E293B';
             keebCase.style.background = '#0F172A';
         } else {
@@ -1244,8 +1512,8 @@
 
         // Đổi màu keycap theo loại keycap đã chọn
         const keys = keebCase.querySelectorAll('.cb-k');
-        if (buildState.keycap.id > 0) {
-            if (buildState.keycap.name.contains('Olivia')) {
+        if (buildState.keycap.id > 0 && buildState.keycap.name) {
+            if (buildState.keycap.name.includes('Olivia')) {
                 keys.forEach(k => {
                     if (k.classList.contains('accent')) {
                         k.style.background = '#FBCFE8'; // Hồng Olivia
@@ -1255,7 +1523,7 @@
                         k.style.borderColor = '#334155';
                     }
                 });
-            } else if (buildState.keycap.name.contains('Pink')) {
+            } else if (buildState.keycap.name.includes('Pink')) {
                 keys.forEach(k => {
                     if (k.classList.contains('accent')) {
                         k.style.background = '#FB7185';
@@ -1379,8 +1647,36 @@
         }
     }
 
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;')
+                  .replace(/</g, '&lt;')
+                  .replace(/>/g, '&gt;')
+                  .replace(/"/g, '&quot;')
+                  .replace(/'/g, '&#39;');
+    }
+
     // ── Khởi tạo trang ─────────────────────────────────────────────
     window.addEventListener('DOMContentLoaded', () => {
+        // Lắng nghe chọn phương thức thanh toán
+        document.querySelectorAll('.cb-pay-option').forEach(opt => {
+            opt.addEventListener('click', () => {
+                document.querySelectorAll('.cb-pay-option').forEach(o => o.classList.remove('active'));
+                opt.classList.add('active');
+            });
+        });
+
+        // Khởi tạo thông tin gói dịch vụ nếu đã có selService
+        const activeSvc = document.querySelector('.cb-service-card.selected');
+        if (activeSvc) {
+            const sid = parseInt(activeSvc.dataset.id) || 0;
+            const sname = activeSvc.dataset.name || '';
+            const sprice = parseInt(activeSvc.dataset.price) || 0;
+            const sws = activeSvc.dataset.ws || 'SwitchHouse';
+            const sdur = activeSvc.dataset.duration || '5-7 ngày';
+            buildState.svc = { id: sid, name: sname, shortName: sname, price: sprice, shopName: sws, duration: sdur };
+        }
+
         updateSidebarDisplay();
         updateKeyboardGraphic();
         syncFormInputs();

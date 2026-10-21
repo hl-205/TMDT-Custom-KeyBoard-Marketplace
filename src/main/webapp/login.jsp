@@ -95,7 +95,16 @@
 
             <div class="auth-divider">hoặc đăng nhập bằng email</div>
 
+            <%
+                String redirectVal = request.getParameter("redirect");
+                if (redirectVal == null || redirectVal.isBlank()) {
+                    redirectVal = (String) request.getAttribute("redirect");
+                }
+            %>
             <form action="login" method="POST">
+                <% if (redirectVal != null && !redirectVal.isBlank()) { %>
+                <input type="hidden" name="redirect" value="<%= redirectVal %>">
+                <% } %>
                 <div class="form-group">
                     <label>Email hoặc số điện thoại</label>
                     <input type="text" name="account" class="form-control"

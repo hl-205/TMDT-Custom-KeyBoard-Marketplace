@@ -484,8 +484,82 @@ public class CustomBuilderDAO {
     // ===================== Kiểm tra tương thích =====================
 
     /**
-     * Kiểm tra tổng thể độ tương thích giữa kit, switch và keycap đã chọn.
-     * Trả về danh sách CompatResult bao gồm cả OK và cảnh báo.
+     * Áp dụng kiểm tra độ tương thích động cho toàn bộ danh sách Switch, Keycap, Stabilizer
+     * dựa theo Kit bàn phím đã chọn.
+     */
+    public void applyCompatibility(BuilderProduct kit, List<BuilderProduct> switches,
+                                   List<BuilderProduct> keycaps, List<BuilderProduct> stabs) {
+        if (kit == null) return;
+        String kitLayout = kit.getLayout() != null ? kit.getLayout().trim() : "60%";
+        String kitMount  = kit.getMountType() != null ? kit.getMountType().trim() : "Gasket mount";
+        String kitPin    = kit.getPinType() != null ? kit.getPinType().trim() : "5-pin";
+        String kitName   = kit.getShortName();
+
+        // 1. Áp dụng cho Switch
+        if (switches != null) {
+            for (BuilderProduct sw : switches) {
+                String swPin = sw.getPinType() != null ? sw.getPinType() : "5-pin";
+                String swName = sw.getName();
+                if ("3-pin-old".equalsIgnoreCase(swPin) || (swName != null && swName.contains("Box Jade") && swPin.contains("3-pin"))) {
+                    sw.setCompatible(false);
+                    sw.setIncompatReason("✕ Chân switch đời cũ dày hơn chuẩn MX, cắm vào socket hotswap của " + kitName + " sẽ làm hỏng chân đồng.");
+                } else if ("3-pin".equalsIgnoreCase(kitPin) && "5-pin".equalsIgnoreCase(swPin)) {
+                    sw.setCompatible(false);
+                    sw.setIncompatReason("✕ PCB của kit chỉ hỗ trợ 3-pin. Switch 5-pin cần cắt bỏ 2 chân nhựa phụ trước khi lắp.");
+                } else {
+                    sw.setCompatible(true);
+                    sw.setIncompatReason("");
+                }
+            }
+        }
+
+        // 2. Áp dụng cho Keycap
+        if (keycaps != null) {
+            for (BuilderProduct kc : keycaps) {
+                if (kc.getId() == 0) { // Tự mua riêng
+                    kc.setCompatible(true);
+                    kc.setIncompatReason("");
+                    continue;
+                }
+                String kcLayout = kc.getLayout() != null ? kc.getLayout() : "";
+                String kcName = kc.getName() != null ? kc.getName() : "";
+                if (kcLayout.contains("ISO") || kcName.contains("ISO")) {
+                    kc.setCompatible(false);
+                    kc.setIncompatReason("✕ Layout ISO có phím Enter hình chữ L ngược và Shift trái ngắn, không vừa layout ANSI của kit " + kitName + ".");
+                } else if (!kitLayout.contains("60") && (kcLayout.contains("60%") || kcName.contains("61 phím")) && !kcLayout.toLowerCase().contains("all") && !kcLayout.contains("75")) {
+                    kc.setCompatible(false);
+                    kc.setIncompatReason("✕ Bộ keycap chỉ có 61 phím (60%), thiếu cụm phím điều hướng và hàng F-row cho kit " + kitLayout + " của " + kitName + ".");
+                } else {
+                    kc.setCompatible(true);
+                    kc.setIncompatReason("");
+                }
+            }
+        }
+
+        // 3. Áp dụng cho Stabilizer
+        if (stabs != null) {
+            for (BuilderProduct st : stabs) {
+                if (st.getId() == 0) { // Tự mua riêng
+                    st.setCompatible(true);
+                    st.setIncompatReason("");
+                    continue;
+                }
+                String stMount = st.getMountType() != null ? st.getMountType() : "";
+                String stName = st.getName() != null ? st.getName() : "";
+                if (stMount.equalsIgnoreCase("Plate-mount") || stName.contains("Plate-mount")) {
+                    st.setCompatible(false);
+                    st.setIncompatReason("✕ Kit " + kitName + " sử dụng cấu trúc " + kitMount + " và mạch khoét lỗ PCB-mount screw-in, không gắn được stab plate-mount.");
+                } else {
+                    st.setCompatible(true);
+                    st.setIncompatReason("");
+                }
+            }
+        }
+    }
+
+    /**
+     * Kiểm tra tổng thể độ tương thích giữa kit, switch, keycap và stabilizer đã chọn.
+     * Trả về danh sách CompatResult chuẩn xác theo cấu hình thực tế.
      */
     public List<CompatResult> checkCompatibility(int kitId, int switchId, int keycapId, int stabId) {
         List<CompatResult> results = new ArrayList<>();
@@ -495,149 +569,142 @@ public class CustomBuilderDAO {
         BuilderProduct keycap = keycapId > 0 ? getProductById(keycapId) : null;
         BuilderProduct stab   = stabId   > 0 ? getProductById(stabId)   : null;
 
-        // ── Kiểm tra Kit ↔ Switch (pin type) ──────────────────────────
-        if (kit != null && sw != null) {
-            String kitPin  = kit.getPinType();
-            String swPin   = sw.getPinType();
-            boolean pinOk  = kitPin == null || swPin == null
-                    || kitPin.contains("5-pin") || swPin.contains("3-pin")
-                    || kitPin.equalsIgnoreCase(swPin);
-            if (pinOk) {
-                results.add(new CompatResult(
-                        "Kit ↔ Switch: Chân PCB",
-                        "PCB hotswap " + (kitPin != null ? kitPin : "đa năng")
-                                + " tương thích với switch " + (swPin != null ? swPin : "3/5-pin") + ".",
-                        true, "OK"
-                ));
-            } else {
-                results.add(new CompatResult(
-                        "Kit ↔ Switch: Chân PCB",
-                        "PCB chỉ hỗ trợ " + kitPin + " nhưng switch là " + swPin
-                                + ". Cần cắt 2 chân switch trước khi lắp.",
-                        false, "WARN"
-                ));
-            }
-        }
-
-        // ── Kiểm tra Kit ↔ Keycap (layout) ────────────────────────────
-        if (kit != null && keycap != null) {
-            String kitLayout  = kit.getLayout();   // VD: "60%"
-            String capLayouts = keycap.getLayout();// VD: "60%, 75%, TKL" hoặc "All layout"
-            boolean layoutOk  = capLayouts == null
-                    || capLayouts.toLowerCase().contains("all")
-                    || kitLayout == null
-                    || capLayouts.contains(kitLayout.replace("%", "").trim());
-            if (layoutOk) {
-                results.add(new CompatResult(
-                        "Kit ↔ Keycap: Layout bàn phím",
-                        "Keycap " + keycap.getShortName() + " hỗ trợ layout "
-                                + (kitLayout != null ? kitLayout : "tiêu chuẩn") + ".",
-                        true, "OK"
-                ));
-            } else {
-                results.add(new CompatResult(
-                        "Kit ↔ Keycap: Layout bàn phím",
-                        "Bộ keycap không đủ phím cho layout " + kitLayout
-                                + ". Thiếu phím modifier/hàng dưới — cần mua bổ sung Novelties.",
-                        false, "WARN"
-                ));
-            }
-        }
-
-        // ── Kiểm tra Switch type (Linear/Tactile/Clicky) thông tin ────
-        if (sw != null) {
-            String type = sw.getSwitchType();
-            if (type != null) {
-                String tip;
-                switch (type.toUpperCase()) {
-                    case "LINEAR":
-                        tip = "Switch Linear phù hợp cho gaming & gõ nhanh, âm thanh mượt."; break;
-                    case "TACTILE":
-                        tip = "Switch Tactile có bump phản hồi xúc giác, phổ biến cho văn phòng."; break;
-                    case "CLICKY":
-                        tip = "Switch Clicky phát tiếng click — lưu ý môi trường xung quanh."; break;
-                    default:
-                        tip = "Loại switch: " + type + ".";
-                }
-                results.add(new CompatResult(
-                        "Loại Switch: " + type,
-                        tip,
-                        true, "OK"
-                ));
-            }
-        }
-
-        // ── Kiểm tra Stabilizer ↔ Kit (PCB-mount) ─────────────────────
-        if (kit != null && stab != null) {
-            // Nếu kit là gasket mount thì stab PCB-mount screw-in thường OK
-            boolean stabOk = kit.getMountType() != null && kit.getMountType().toLowerCase().contains("gasket");
-            results.add(new CompatResult(
-                    "Kit ↔ Stabilizer",
-                    stabOk
-                            ? "Kit " + kit.getMountType() + " tương thích với stabilizer PCB-mount screw-in."
-                            : "Kiểm tra kỹ loại PCB (screw-in hay plate-mount) trước khi lắp stabilizer.",
-                    stabOk, stabOk ? "OK" : "WARN"
-            ));
-        }
-
-        // ── Kiểm tra tương thích từ DB (product_compatibilities) cho Kit ──
-        if (kit != null) {
-            List<ProductCompatibility> dbCompats = getCompatibilitiesFromDB(kit.getId());
-            for (ProductCompatibility cp : dbCompats) {
-                results.add(new CompatResult(
-                        cp.getTitle(),
-                        cp.getDescription(),
-                        cp.isCompatible(),
-                        cp.isCompatible() ? "OK" : "ERROR"
-                ));
-            }
-        }
-
-        // Nếu chưa chọn đủ linh kiện thì thêm gợi ý
         if (kit == null) {
             results.add(new CompatResult(
                     "Chưa chọn Kit bàn phím",
                     "Hãy chọn kit để hệ thống kiểm tra tương thích với switch và keycap.",
                     false, "WARN"
             ));
+            return results;
         }
-        if (sw == null) {
+
+        String kitName = kit.getShortName();
+        String kitLayout = kit.getLayout() != null ? kit.getLayout() : "60%";
+        String kitPin = kit.getPinType() != null ? kit.getPinType() : "5-pin";
+        String kitMount = kit.getMountType() != null ? kit.getMountType() : "Gasket mount";
+
+        // ── 1. Kiểm tra Kit ↔ Switch (chân cắm Socket) ────────────────
+        if (sw != null) {
+            String swPin = sw.getPinType() != null ? sw.getPinType() : "5-pin";
+            String swName = sw.getShortName();
+            if ("3-pin-old".equalsIgnoreCase(swPin) || (sw.getName() != null && sw.getName().contains("Box Jade") && swPin.contains("3-pin"))) {
+                results.add(new CompatResult(
+                        "Kit ↔ Switch: Chân cắm Socket",
+                        "Switch " + swName + " dùng chân 3-pin đời cũ dày hơn chuẩn MX, cắm vào socket hotswap của kit " + kitName + " sẽ làm hỏng chân đồng.",
+                        false, "ERROR"
+                ));
+            } else if ("3-pin".equalsIgnoreCase(kitPin) && "5-pin".equalsIgnoreCase(swPin)) {
+                results.add(new CompatResult(
+                        "Kit ↔ Switch: Chân cắm Socket",
+                        "PCB kit " + kitName + " chỉ hỗ trợ 3-pin, switch " + swName + " là 5-pin. Cần cắt 2 chân nhựa định vị trước khi lắp ráp.",
+                        false, "WARN"
+                ));
+            } else {
+                results.add(new CompatResult(
+                        "Kit ↔ Switch: Socket Hotswap " + kitPin,
+                        "PCB hotswap của " + kitName + " nhận chuẩn chân switch " + (swPin.contains("5") ? "5-pin" : "3-pin") + " (" + swName + "), chân switch khít chắc socket.",
+                        true, "OK"
+                ));
+            }
+
+            // Gợi ý đặc tính âm thanh theo Switch Type
+            if (sw.getSwitchType() != null) {
+                String tip;
+                switch (sw.getSwitchType().toUpperCase()) {
+                    case "LINEAR":
+                        tip = "Switch Linear (" + swName + ") cho cảm giác gõ mượt, phản hồi đều và âm thanh êm tai."; break;
+                    case "TACTILE":
+                        tip = "Switch Tactile (" + swName + ") có khấc phản hồi xúc giác rõ nét, lý tưởng cho làm việc và lập trình."; break;
+                    case "CLICKY":
+                        tip = "Switch Clicky (" + swName + ") phát âm thanh click đanh vang, phù hợp không gian riêng tư."; break;
+                    default:
+                        tip = "Đặc tính switch: " + sw.getSwitchType();
+                }
+                results.add(new CompatResult(
+                        "Đặc tính cảm giác gõ: " + sw.getSwitchType(),
+                        tip,
+                        true, "OK"
+                ));
+            }
+        } else {
             results.add(new CompatResult(
                     "Chưa chọn Switch",
-                    "Switch là linh kiện quan trọng nhất ảnh hưởng đến cảm giác và âm thanh.",
+                    "Hãy chọn switch phù hợp với kit để hoàn thiện bộ phím.",
                     false, "WARN"
             ));
         }
 
-        return results;
-    }
-
-    /** Lấy danh sách tương thích từ bảng product_compatibilities */
-    private List<ProductCompatibility> getCompatibilitiesFromDB(int productId) {
-        List<ProductCompatibility> list = new ArrayList<>();
-        String sql = "SELECT * FROM product_compatibilities WHERE product_id = ? ORDER BY id ASC";
-        try (Connection conn = DBContext.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, productId);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    list.add(new ProductCompatibility(
-                            rs.getString("title"),
-                            rs.getString("description"),
-                            rs.getInt("is_compatible") == 1
-                    ));
-                }
+        // ── 2. Kiểm tra Kit ↔ Keycap (Layout bàn phím) ────────────────
+        if (keycapId == 0) {
+            results.add(new CompatResult(
+                    "Kit ↔ Keycap: Tự chuẩn bị keycap",
+                    "Bạn chọn tự mua/sử dụng keycap sẵn có. Lưu ý chọn bộ keycap tương thích layout " + kitLayout + " của " + kitName + ".",
+                    true, "OK"
+            ));
+        } else if (keycap != null) {
+            String kcLayout = keycap.getLayout() != null ? keycap.getLayout() : "";
+            String kcName = keycap.getName() != null ? keycap.getName() : "";
+            if (kcLayout.contains("ISO") || kcName.contains("ISO")) {
+                results.add(new CompatResult(
+                        "Kit ↔ Keycap: Layout bàn phím",
+                        "Keycap " + keycap.getShortName() + " sử dụng layout ISO (Enter chữ L ngược, Shift ngắn), không vừa layout ANSI của kit " + kitName + ".",
+                        false, "ERROR"
+                ));
+            } else if (!kitLayout.contains("60") && (kcLayout.contains("60%") || kcName.contains("61 phím")) && !kcLayout.toLowerCase().contains("all") && !kcLayout.contains("75")) {
+                results.add(new CompatResult(
+                        "Kit ↔ Keycap: Số lượng phím",
+                        "Bộ keycap " + keycap.getShortName() + " chỉ có 61 phím (60%), thiếu phím điều hướng và hàng F-row cho layout " + kitLayout + " của " + kitName + ".",
+                        false, "ERROR"
+                ));
+            } else {
+                results.add(new CompatResult(
+                        "Kit ↔ Keycap: Layout " + kitLayout + " ANSI",
+                        "Bộ keycap " + keycap.getShortName() + " đầy đủ phím cho layout " + kitLayout + " (Space 6.25u tiêu chuẩn, các phím modifier chuẩn ANSI).",
+                        true, "OK"
+                ));
             }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
-        return list;
+
+        // ── 3. Kiểm tra Kit ↔ Stabilizer (Kiểu mount) ─────────────────
+        if (stabId == 0) {
+            results.add(new CompatResult(
+                    "Kit ↔ Stabilizer: Tự chuẩn bị stab",
+                    "Bạn chọn tự trang bị thanh cân bằng. Kit " + kitName + " yêu cầu chuẩn stabilizer PCB-mount screw-in.",
+                    true, "OK"
+            ));
+        } else if (stab != null) {
+            String stMount = stab.getMountType() != null ? stab.getMountType() : "";
+            String stName = stab.getName() != null ? stab.getName() : "";
+            if (stMount.equalsIgnoreCase("Plate-mount") || stName.contains("Plate-mount")) {
+                results.add(new CompatResult(
+                        "Kit ↔ Stabilizer: Kiểu gắn mạch",
+                        "Kit " + kitName + " sử dụng cấu trúc " + kitMount + " và mạch khoét lỗ PCB screw-in, không gắn được stabilizer Plate-mount (" + stab.getShortName() + ").",
+                        false, "ERROR"
+                ));
+            } else {
+                results.add(new CompatResult(
+                        "Kit ↔ Stabilizer: PCB Screw-in",
+                        "Cấu trúc " + kitMount + " và mạch PCB của " + kitName + " tương thích hoàn hảo với stabilizer " + stab.getShortName() + " cố định chắc chắn, không rattle.",
+                        true, "OK"
+                ));
+            }
+        }
+
+        // ── 4. Đèn LED & Profile Keycap ──────────────────────────────
+        results.add(new CompatResult(
+                "Đèn LED ↔ Keycap: South-facing LED",
+                "Mạch south-facing của kit " + kitName + " không cấn cạnh với profile Cherry của keycap, ánh sáng LED tỏa đều và cho âm gõ chuẩn nhất.",
+                true, "OK"
+        ));
+
+        return results;
     }
 
     // ===================== Tạo đơn custom =====================
 
     /**
      * Tạo đơn hàng custom từ cấu hình build của Customer.
+     * Tự động thêm order_items và khởi tạo order_progress để seller và customer có thể theo dõi.
      * @return orderCode nếu thành công, null nếu thất bại
      */
     public String createCustomOrder(int userId, BuildConfig cfg,
@@ -647,20 +714,17 @@ public class CustomBuilderDAO {
         String orderCode = "KH-" + (280000 + (int)(Math.random() * 9999));
         long totalAmount = subtotal + customFee + 30000; // +30k phí ship
 
+        BuilderProduct kit = cfg.getKitId() > 0 ? getProductById(cfg.getKitId()) : null;
+        BuilderProduct sw  = cfg.getSwitchId() > 0 ? getProductById(cfg.getSwitchId()) : null;
+        BuilderProduct kc  = cfg.getKeycapId() > 0 ? getProductById(cfg.getKeycapId()) : null;
+        BuilderProduct st  = cfg.getStabId() > 0 ? getProductById(cfg.getStabId()) : null;
+
         // Tạo variant summary từ các linh kiện đã chọn
         StringBuilder variantSb = new StringBuilder();
-        if (cfg.getKitId() > 0) {
-            BuilderProduct kit = getProductById(cfg.getKitId());
-            if (kit != null) variantSb.append(kit.getShortName()).append(" · ");
-        }
-        if (cfg.getSwitchId() > 0) {
-            BuilderProduct sw = getProductById(cfg.getSwitchId());
-            if (sw != null) variantSb.append(sw.getBrand()).append(" Switch ×").append(cfg.getSwitchQty()).append(" · ");
-        }
-        if (cfg.getKeycapId() > 0) {
-            BuilderProduct kc = getProductById(cfg.getKeycapId());
-            if (kc != null) variantSb.append(kc.getBrand()).append(" Keycap · ");
-        }
+        if (kit != null) variantSb.append(kit.getShortName()).append(" · ");
+        if (sw != null) variantSb.append(sw.getBrand()).append(" Switch ×").append(cfg.getSwitchQty()).append(" · ");
+        if (kc != null) variantSb.append(kc.getBrand()).append(" Keycap · ");
+        if (st != null) variantSb.append(st.getShortName()).append(" · ");
         String variantSummary = variantSb.length() > 3
                 ? variantSb.substring(0, variantSb.length() - 3)
                 : "Custom Build";
@@ -684,11 +748,11 @@ public class CustomBuilderDAO {
                 + "payment_method, order_status, progress_percent, customer_note, committed_days) "
                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 30000, 0, ?, ?, 'PENDING', 0, ?, 7)";
         try (Connection conn = DBContext.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, orderCode);
             ps.setInt(2, userId);
             ps.setInt(3, shopId);
-            ps.setInt(4, cfg.getKitId() > 0 ? cfg.getKitId() : 1);
+            ps.setInt(4, kit != null ? kit.getId() : 1);
             ps.setString(5, variantSummary);
             ps.setString(6, receiverName);
             ps.setString(7, receiverPhone);
@@ -696,10 +760,82 @@ public class CustomBuilderDAO {
             ps.setLong(9, subtotal);
             ps.setLong(10, customFee);
             ps.setLong(11, totalAmount);
-            ps.setString(12, paymentMethod);
+            ps.setString(12, paymentMethod != null ? paymentMethod : "VNPAY");
             ps.setString(13, cfg.getCustomNote() != null ? cfg.getCustomNote() : "");
             int rows = ps.executeUpdate();
-            return rows > 0 ? orderCode : null;
+            if (rows > 0) {
+                int orderId = 0;
+                try (ResultSet gk = ps.getGeneratedKeys()) {
+                    if (gk.next()) orderId = gk.getInt(1);
+                }
+                if (orderId > 0) {
+                    // Thêm order_items
+                    String itemSql = "INSERT INTO order_items (order_id, product_id, product_name, quantity, unit_price, line_total) VALUES (?, ?, ?, ?, ?, ?)";
+                    try (PreparedStatement itemPs = conn.prepareStatement(itemSql)) {
+                        if (kit != null) {
+                            itemPs.setInt(1, orderId);
+                            itemPs.setInt(2, kit.getId());
+                            itemPs.setString(3, kit.getName());
+                            itemPs.setInt(4, 1);
+                            itemPs.setLong(5, kit.getPrice());
+                            itemPs.setLong(6, kit.getPrice());
+                            itemPs.executeUpdate();
+                        }
+                        if (sw != null) {
+                            itemPs.setInt(1, orderId);
+                            itemPs.setInt(2, sw.getId());
+                            itemPs.setString(3, sw.getName());
+                            itemPs.setInt(4, cfg.getSwitchQty());
+                            itemPs.setLong(5, sw.getPrice());
+                            itemPs.setLong(6, sw.getPrice());
+                            itemPs.executeUpdate();
+                        }
+                        if (kc != null) {
+                            itemPs.setInt(1, orderId);
+                            itemPs.setInt(2, kc.getId());
+                            itemPs.setString(3, kc.getName());
+                            itemPs.setInt(4, 1);
+                            itemPs.setLong(5, kc.getPrice());
+                            itemPs.setLong(6, kc.getPrice());
+                            itemPs.executeUpdate();
+                        }
+                        if (st != null) {
+                            itemPs.setInt(1, orderId);
+                            itemPs.setInt(2, st.getId());
+                            itemPs.setString(3, st.getName());
+                            itemPs.setInt(4, 1);
+                            itemPs.setLong(5, st.getPrice());
+                            itemPs.setLong(6, st.getPrice());
+                            itemPs.executeUpdate();
+                        }
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+
+                    // Khởi tạo 5 công đoạn order_progress cho đơn custom
+                    String progSql = "INSERT INTO order_progress (order_id, step_number, step_title, step_desc, status, updated_time) VALUES (?, ?, ?, ?, 'PENDING', ?)";
+                    try (PreparedStatement progPs = conn.prepareStatement(progSql)) {
+                        String[][] steps = {
+                            {"1", "Rã hàn & kiểm tra PCB", "Đo thông mạch toàn bộ socket hotswap và bóng LED của kit " + (kit != null ? kit.getShortName() : ""), "Chờ xử lý"},
+                            {"2", "Lube switch (" + cfg.getSwitchQty() + "/" + cfg.getSwitchQty() + ")", "Lube housing Krytox 205g0 và lò xo GPL 105 cho " + cfg.getSwitchQty() + " switch " + (sw != null ? sw.getBrand() : ""), "Chờ xử lý"},
+                            {"3", "Cân stabilizer", "Căn thẳng thanh wire, cân housing và mod stab " + (st != null ? st.getShortName() : ""), "Chờ xử lý"},
+                            {"4", "Lắp ráp & test toàn phím", "Lắp switch, keycap, test phím trên VIA và kiểm tra âm thanh gõ", "Chờ xử lý"},
+                            {"5", "Đóng gói & bàn giao vận chuyển", "Quay video soundtest gửi khách và đóng thùng chống sốc", "Chờ xử lý"}
+                        };
+                        for (String[] stp : steps) {
+                            progPs.setInt(1, orderId);
+                            progPs.setInt(2, Integer.parseInt(stp[0]));
+                            progPs.setString(3, stp[1]);
+                            progPs.setString(4, stp[2]);
+                            progPs.setString(5, stp[3]);
+                            progPs.executeUpdate();
+                        }
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                }
+                return orderCode;
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }

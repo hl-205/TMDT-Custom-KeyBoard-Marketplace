@@ -192,7 +192,14 @@
                 </div>
 
                 <div class="result-actions">
-                    <a href="${pageContext.request.contextPath}/checkout" class="btn btn-blue">Thử lại</a>
+                    <c:choose>
+                        <c:when test="${not empty order}">
+                            <a href="${pageContext.request.contextPath}/vnpay-payment?orderId=${order.id}" class="btn btn-blue">Thử lại thanh toán</a>
+                        </c:when>
+                        <c:otherwise>
+                            <a href="${pageContext.request.contextPath}/my-orders" class="btn btn-blue">Xem đơn hàng</a>
+                        </c:otherwise>
+                    </c:choose>
                     <a href="${pageContext.request.contextPath}/my-orders" class="btn btn-light">Về danh sách đơn hàng</a>
                 </div>
             </c:otherwise>

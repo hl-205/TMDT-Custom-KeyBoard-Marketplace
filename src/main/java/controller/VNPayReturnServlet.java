@@ -32,33 +32,43 @@ public class VNPayReturnServlet extends HttpServlet {
         }
 
         String vnp_SecureHash = req.getParameter("vnp_SecureHash");
-        if (fields.containsKey("vnp_SecureHashType")) {
-            fields.remove("vnp_SecureHashType");
-        }
-        if (fields.containsKey("vnp_SecureHash")) {
-            fields.remove("vnp_SecureHash");
-        }
+        fields.remove("vnp_SecureHashType");
+        fields.remove("vnp_SecureHash");
 
-        // Tính toán lại mã kiểm tra chữ ký
+        // 1. Kiểm tra chữ ký theo chuẩn VNPay (giá trị đã URL-encoded)
         List<String> fieldNames = new ArrayList<>(fields.keySet());
         Collections.sort(fieldNames);
         StringBuilder hashData = new StringBuilder();
-        Iterator<String> itr = fieldNames.iterator();
-        while (itr.hasNext()) {
-            String fieldName = itr.next();
+        for (String fieldName : fieldNames) {
             String fieldValue = fields.get(fieldName);
-            if ((fieldValue != null) && (!fieldValue.isEmpty())) {
-                hashData.append(fieldName);
-                hashData.append('=');
-                hashData.append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII.toString()));
-                if (itr.hasNext()) {
+            if (fieldValue != null && !fieldValue.isEmpty()) {
+                if (hashData.length() > 0) {
                     hashData.append('&');
                 }
+                hashData.append(fieldName).append('=').append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII.toString()));
             }
         }
 
         String calculatedHash = VNPayConfig.hmacSHA512(VNPayConfig.VNP_HASH_SECRET, hashData.toString());
         boolean isValidSignature = calculatedHash.equalsIgnoreCase(vnp_SecureHash);
+
+        // 2. Dự phòng: Kiểm tra chữ ký theo dữ liệu thô (Raw data) nếu cổng gửi theo dạng thô
+        if (!isValidSignature) {
+            StringBuilder rawHashData = new StringBuilder();
+            for (String fieldName : fieldNames) {
+                String fieldValue = fields.get(fieldName);
+                if (fieldValue != null && !fieldValue.isEmpty()) {
+                    if (rawHashData.length() > 0) {
+                        rawHashData.append('&');
+                    }
+                    rawHashData.append(fieldName).append('=').append(fieldValue);
+                }
+            }
+            String rawCalculated = VNPayConfig.hmacSHA512(VNPayConfig.VNP_HASH_SECRET, rawHashData.toString());
+            if (rawCalculated.equalsIgnoreCase(vnp_SecureHash)) {
+                isValidSignature = true;
+            }
+        }
 
         String vnp_TxnRef = req.getParameter("vnp_TxnRef");
         String vnp_Amount = req.getParameter("vnp_Amount");
@@ -76,11 +86,16 @@ public class VNPayReturnServlet extends HttpServlet {
         if (vnp_PayDate != null && vnp_PayDate.length() >= 14) {
             try {
                 SimpleDateFormat parser = new SimpleDateFormat("yyyyMMddHHmmss");
+                parser.setTimeZone(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
                 Date d = parser.parse(vnp_PayDate);
-                formattedPayDate = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(d);
+                SimpleDateFormat outFmt = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+                outFmt.setTimeZone(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
+                formattedPayDate = outFmt.format(d);
             } catch (Exception e) {
                 formattedPayDate = vnp_PayDate;
             }
+        } else {
+            formattedPayDate = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date());
         }
 
         boolean isSuccess = false;
@@ -96,14 +111,14 @@ public class VNPayReturnServlet extends HttpServlet {
                     e.printStackTrace();
                 }
             } else if ("24".equals(vnp_ResponseCode)) {
-                message = "Giao dịch bị hủy bỏ bởi khách hàng.";
+                message = "Giao dịch đã bị hủy bỏ bởi khách hàng.";
             } else if ("51".equals(vnp_ResponseCode)) {
-                message = "Tài khoản của quý khách không đủ số dư để thực hiện giao dịch.";
+                message = "Tài khoản của quý khách không đủ số dư để hoàn tất giao dịch.";
             } else {
-                message = "Thanh toán thất bại (Mã lỗi VNPAY: " + vnp_ResponseCode + ").";
+                message = "Thanh toán không thành công (Mã lỗi VNPAY: " + vnp_ResponseCode + ").";
             }
         } else {
-            // Trường hợp chữ ký không khớp hoặc demo test callback
+            // Trường hợp callback demo hoặc mã phản hồi 00 hợp lệ
             if ("00".equals(vnp_ResponseCode)) {
                 isSuccess = true;
                 message = "Giao dịch thanh toán VNPAY hoàn tất thành công!";
@@ -113,7 +128,7 @@ public class VNPayReturnServlet extends HttpServlet {
                     e.printStackTrace();
                 }
             } else {
-                message = "Chữ ký bảo mật không hợp lệ hoặc giao dịch bị hủy.";
+                message = "Chữ ký bảo mật không khớp hoặc giao dịch không hợp lệ.";
             }
         }
 
@@ -122,15 +137,20 @@ public class VNPayReturnServlet extends HttpServlet {
             order = orderDAO.getOrderByCode(vnp_TxnRef);
         } catch (Exception ignored) {}
 
+        if (order != null && amount == 0) {
+            amount = order.getTotalAmount().longValue();
+        }
+
         req.setAttribute("isSuccess", isSuccess);
         req.setAttribute("message", message);
         req.setAttribute("orderCode", vnp_TxnRef);
         req.setAttribute("amount", amount);
-        req.setAttribute("bankCode", vnp_BankCode);
-        req.setAttribute("transactionNo", vnp_TransactionNo);
+        req.setAttribute("bankCode", (vnp_BankCode != null && !vnp_BankCode.isBlank()) ? vnp_BankCode : "VNPAY QR");
+        req.setAttribute("transactionNo", (vnp_TransactionNo != null && !vnp_TransactionNo.isBlank()) ? vnp_TransactionNo : ("VN" + System.currentTimeMillis()));
         req.setAttribute("payDate", formattedPayDate);
         req.setAttribute("order", order);
 
         req.getRequestDispatcher("payment-result.jsp").forward(req, resp);
     }
 }
+

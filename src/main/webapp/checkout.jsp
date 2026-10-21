@@ -334,20 +334,40 @@
           <span>Tạm tính</span>
           <span id="subtotalVal"><fmt:formatNumber value="${total}" pattern="#,###"/>₫</span>
         </div>
-        <div class="row discount-row" id="discountRow">
-          <span>
-            Giảm giá voucher (<span id="appliedCodeText"></span>)
-            <span class="btn-remove-coupon" onclick="removeCoupon()">[Bỏ]</span>
-          </span>
-          <span id="discountVal">-0₫</span>
-        </div>
+        <c:choose>
+          <c:when test="${not empty sessionScope.appliedCouponCode && not empty sessionScope.appliedDiscountAmount}">
+            <div class="row discount-row show" id="discountRow">
+              <span>
+                Giảm giá voucher (<span id="appliedCodeText">${sessionScope.appliedCouponCode}</span>)
+                <span class="btn-remove-coupon" onclick="removeCoupon()">[Bỏ]</span>
+              </span>
+              <span id="discountVal">-<fmt:formatNumber value="${sessionScope.appliedDiscountAmount}" pattern="#,###"/>₫</span>
+            </div>
+          </c:when>
+          <c:otherwise>
+            <div class="row discount-row" id="discountRow">
+              <span>
+                Giảm giá voucher (<span id="appliedCodeText"></span>)
+                <span class="btn-remove-coupon" onclick="removeCoupon()">[Bỏ]</span>
+              </span>
+              <span id="discountVal">-0₫</span>
+            </div>
+          </c:otherwise>
+        </c:choose>
         <div class="row">
           <span>Phí vận chuyển</span>
           <span class="free-shipping">Thỏa thuận</span>
         </div>
         <div class="row grand">
           <span>Tổng thanh toán</span>
-          <span class="grand-total" id="grandTotalVal"><fmt:formatNumber value="${total}" pattern="#,###"/>₫</span>
+          <c:set var="finalPayTotal" value="${total}"/>
+          <c:if test="${not empty sessionScope.appliedDiscountAmount}">
+            <c:set var="finalPayTotal" value="${total - sessionScope.appliedDiscountAmount}"/>
+            <c:if test="${finalPayTotal < 0}">
+              <c:set var="finalPayTotal" value="${0}"/>
+            </c:if>
+          </c:if>
+          <span class="grand-total" id="grandTotalVal"><fmt:formatNumber value="${finalPayTotal}" pattern="#,###"/>₫</span>
         </div>
       </div>
 

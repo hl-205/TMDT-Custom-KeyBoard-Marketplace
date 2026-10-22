@@ -214,6 +214,22 @@ public class AdminDAO extends DBContext {
             }
         }
 
+        // Thống kê trạng thái đơn trong cùng khoảng ngày với biểu đồ doanh thu.
+        Map<String, Integer> orderStatusBreakdown = new LinkedHashMap<>();
+        String statusSql = "SELECT COALESCE(order_status, 'UNKNOWN') AS status, COUNT(*) AS total "
+                + "FROM orders WHERE created_at >= ? AND created_at < ? AND (order_status IS NULL OR order_status <> 'CANCELLED') "
+                + "GROUP BY COALESCE(order_status, 'UNKNOWN') ORDER BY status";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(statusSql)) {
+            ps.setTimestamp(1, java.sql.Timestamp.valueOf(fromDate.atStartOfDay()));
+            ps.setTimestamp(2, java.sql.Timestamp.valueOf(toDate.plusDays(1).atStartOfDay()));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    orderStatusBreakdown.put(rs.getString("status"), rs.getInt("total"));
+                }
+            }
+        }
+
         // Tạo mảng liên tục cho từng ngày
         List<String> labels = new ArrayList<>();
         List<String> fullDates = new ArrayList<>();
@@ -264,6 +280,7 @@ public class AdminDAO extends DBContext {
         result.put("revenueData", revenueData);
         result.put("orderData", orderData);
         result.put("dailyList", dailyList);
+        result.put("orderStatusBreakdown", orderStatusBreakdown);
 
         return result;
     }

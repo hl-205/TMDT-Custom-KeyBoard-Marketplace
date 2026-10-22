@@ -100,6 +100,7 @@
           <% } %>
           <a href="profile" class="dropdown-item">👤 Thông tin tài khoản</a>
           <a href="my-orders" class="dropdown-item">📦 Đơn hàng của tôi</a>
+          <a href="order-history" class="dropdown-item">📋 Xem lịch sử mua hàng</a>
           <a href="my-reviews" class="dropdown-item">⭐ Đánh giá của tôi</a>
           <a href="cart" class="dropdown-item">🛒 Giỏ hàng (<%= cartItemCount %>)</a>
           <div class="dropdown-divider"></div>

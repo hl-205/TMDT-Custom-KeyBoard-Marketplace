@@ -235,7 +235,7 @@ public class CartServlet extends HttpServlet {
                     if (quantity > limit - reserved) throw new IllegalArgumentException("Số lượng vượt tồn kho.");
                     if (existing == null) cart.put(key, incoming);
                     else existing.setQuantity(current + quantity);
-                    session.setAttribute("flashSuccess", "Đã thêm sản phẩm vào giỏ hàng.");
+                    session.removeAttribute("flashSuccess");
                     break;
                 }
                 case "addBundle": {
@@ -265,7 +265,7 @@ public class CartServlet extends HttpServlet {
                         if (existing == null) cart.put(incoming.getKey(), incoming);
                         else existing.setQuantity(existing.getQuantity() + 1);
                     }
-                    session.setAttribute("flashSuccess", "Đã thêm " + toAdd.size() + " sản phẩm trong combo vào giỏ hàng.");
+                    session.removeAttribute("flashSuccess");
                     break;
                 }
                 case "update": {

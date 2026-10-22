@@ -2,6 +2,7 @@ package controller;
 
 import com.google.gson.Gson;
 import dao.AdminDAO;
+import dao.OrderHistoryDAO;
 import model.User;
 
 import jakarta.servlet.ServletException;
@@ -21,6 +22,7 @@ import java.util.regex.Pattern;
 @WebServlet("/admin")
 public class AdminServlet extends HttpServlet {
     private final AdminDAO dao = new AdminDAO();
+    private final OrderHistoryDAO historyDAO = new OrderHistoryDAO();
     private final Gson gson = new Gson();
 
     private static final List<String> ROLES = Arrays.asList("CUSTOMER", "USER", "SELLER", "ADMIN", "MODERATOR");
@@ -132,7 +134,7 @@ public class AdminServlet extends HttpServlet {
                     String email = required(req, "customer_email", "Email khách hàng").toLowerCase();
                     String phone = required(req, "receiver_phone", "Số điện thoại người nhận");
                     String address = required(req, "shipping_address", "Địa chỉ giao hàng");
-                    String status = oneOf(req.getParameter("status"), ORDER_STATUS, "Trạng thái");
+                    String status = id > 0 ? "PENDING" : "PENDING"; // Đơn mới mặc định chờ xác nhận; chỉ tab trạng thái được đổi trạng thái.
                     String orderCode = trim(req.getParameter("order_code"));
 
                     if (!EMAIL_PATTERN.matcher(email).matches()) throw new IllegalArgumentException("Email khách hàng không đúng định dạng.");
@@ -153,6 +155,14 @@ public class AdminServlet extends HttpServlet {
                     }
                     sendJson(resp, true, id > 0 ? "Đã cập nhật đơn hàng thành công." : "Đã tạo đơn hàng mới thành công.",
                             savedId, dao.getStats(), extra);
+                }
+                case "updateOrderStatus" -> {
+                    if (id <= 0) throw new IllegalArgumentException("Thiếu ID đơn hàng.");
+                    String status = oneOf(req.getParameter("status"), ORDER_STATUS, "Trạng thái");
+                    if (!historyDAO.changeStatus(id, currentUserId(req), "ADMIN", status)) {
+                        throw new IllegalArgumentException("Không thể chuyển trạng thái này. Hãy tải lại danh sách và kiểm tra trạng thái hiện tại.");
+                    }
+                    sendJson(resp, true, "Đã cập nhật trạng thái đơn hàng.", id, dao.getStats(), null);
                 }
                 case "deleteOrder" -> {
                     if (id <= 0) throw new IllegalArgumentException("Thiếu ID đơn hàng cần xóa.");

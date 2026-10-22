@@ -25,7 +25,8 @@
             <button type="button" class="nav-item" data-page="analytics"><span class="nav-icon">📊</span>Thống kê biểu đồ</button>
             <button type="button" class="nav-item" data-page="users"><span class="nav-icon">♙</span>Người dùng</button>
             <button type="button" class="nav-item" data-page="products"><span class="nav-icon">⌨</span>Sản phẩm</button>
-            <button type="button" class="nav-item" data-page="orders"><span class="nav-icon">▤</span>Đơn hàng</button>
+            <button type="button" class="nav-item" data-page="orders"><span class="nav-icon">▤</span>Quản lý đơn hàng</button>
+            <button type="button" class="nav-item" data-page="order-status"><span class="nav-icon">✓</span>Cập nhật trạng thái đơn hàng</button>
         </nav>
         <div class="sidebar-bottom">
             <div class="admin-avatar">AD</div>
@@ -116,7 +117,8 @@
             analytics: ['Thống kê & Biểu đồ', 'Biểu đồ cột doanh thu và biểu đồ tròn tỷ lệ trạng thái đơn hàng.'],
             users: ['Quản lý người dùng', 'Thêm, cập nhật vai trò và trạng thái tài khoản.'],
             products: ['Quản lý sản phẩm', 'Quản lý thông tin, cửa hàng, danh mục và tồn kho.'],
-            orders: ['Quản lý đơn hàng', 'Theo dõi thông tin giao hàng và cập nhật trạng thái đơn.']
+            orders: ['Quản lý đơn hàng', 'Chỉnh sửa thông tin đơn hàng và quản lý danh sách.'],
+            'order-status': ['Cập nhật trạng thái đơn hàng', 'Xác nhận, xử lý, giao hàng, hoàn thành hoặc hủy đơn hàng.']
         };
 
         function esc(value) {
@@ -152,7 +154,7 @@
             if (['active', 'completed', 'confirmed', 'shipped'].indexOf(state) >= 0) css = 'status-success';
             else if (['pending', 'processing', 'shipping'].indexOf(state) >= 0) css = 'status-warning';
             else if (['inactive', 'blocked', 'cancelled'].indexOf(state) >= 0) css = 'status-danger';
-            return '<span class="status-pill ' + css + '">' + esc(nice(value)) + '</span>';
+            return '<span class="status-pill ' + css + '">' + esc((typeof ORDER_STATUS_LABELS !== 'undefined' && ORDER_STATUS_LABELS[value]) || nice(value)) + '</span>';
         }
         function emptyRow(columns, message) {
             return '<tr><td colspan="' + columns + '" class="empty-cell"><span class="empty-icon">⌕</span><strong>' + esc(message) + '</strong><small>Thử thay đổi từ khóa hoặc tạo bản ghi mới.</small></td></tr>';
@@ -283,6 +285,34 @@
             return toolbar('Danh sách đơn hàng', S.orders.length + ' đơn hàng.', 'add-order', 'Tạo đơn hàng') +
                 '<div class="table-card"><div class="table-scroll"><table><thead><tr><th>Mã đơn</th><th>Người nhận</th><th>Sản phẩm</th><th>Tổng tiền</th><th>Trạng thái</th><th class="action-col">Thao tác</th></tr></thead><tbody>' +
                 (rows || emptyRow(6, 'Không tìm thấy đơn hàng')) + '</tbody></table></div><div class="table-footer"><span>Đang hiển thị ' + orders.length + ' / ' + S.orders.length + ' đơn hàng</span><span>Đơn mới sẽ tạo chi tiết đơn hàng</span></div></div>';
+        }
+
+        function renderOrderStatuses() {
+            var orders = filter(S.orders, ['order_code', 'receiver_name', 'customer_email', 'order_status', 'id']);
+            var rows = orders.map(function(o) {
+                var allowed = allowedOrderStatuses(o.order_status);
+                return '<tr><td class="id-cell">' + esc(o.order_code) + '</td>' +
+                    '<td><strong>' + esc(o.receiver_name) + '</strong><small class="cell-sub">' + esc(o.customer_email) + '</small></td>' +
+                    '<td class="money-cell">' + money(o.total_amount) + '</td><td>' + statusPill(o.order_status) + '</td>' +
+                    '<td><button type="button" class="btn btn-small btn-light" data-act="update-order-status" data-id="' + esc(o.id) + '"' +
+                    (allowed.length ? '' : ' disabled') + '>' + (allowed.length ? 'Cập nhật' : 'Đã kết thúc') + '</button></td></tr>';
+            }).join('');
+            return '<div class="table-card"><div class="table-scroll"><table><thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Tổng tiền</th><th>Trạng thái hiện tại</th><th>Thao tác</th></tr></thead><tbody>' +
+                (rows || emptyRow(5, 'Không tìm thấy đơn hàng')) + '</tbody></table></div></div>';
+        }
+
+        var ORDER_STATUS_LABELS = {
+            PENDING:'Chờ xác nhận', CONFIRMED:'Đã xác nhận', PROCESSING:'Đang xử lý',
+            SHIPPING:'Đang giao hàng', SHIPPED:'Đã giao hàng', COMPLETED:'Hoàn thành',
+            CANCELLED:'Đã hủy'
+        };
+        function allowedOrderStatuses(status) {
+            // Các trạng thái đã kết thúc không được thay đổi để tránh sai lệch tồn kho.
+            if (status === 'COMPLETED' || status === 'CANCELLED') return [];
+            var currentIndex = ORDER_STATUSES.indexOf(status);
+            return ORDER_STATUSES.filter(function (next, i) {
+                return next === 'CANCELLED' || (i > currentIndex && i < ORDER_STATUSES.length - 1);
+            });
         }
 
         function renderAnalytics() {
@@ -631,6 +661,7 @@
             if (page === 'users') $('main-content').innerHTML = renderUsers();
             else if (page === 'products') $('main-content').innerHTML = renderProducts();
             else if (page === 'orders') $('main-content').innerHTML = renderOrders();
+            else if (page === 'order-status') $('main-content').innerHTML = renderOrderStatuses();
             else if (page === 'analytics') {
                 $('main-content').innerHTML = renderAnalytics();
                 afterRenderAnalytics();
@@ -730,8 +761,9 @@
                 {key:'customer_email', label:'Tài khoản khách hàng', type:'select', options:userOptions(order ? order.customer_email: null), value:order ? order.customer_email: (userOptions(null)[0] ? userOptions(null)[0].value: ''), required:true, full:true},
                 {key:'receiver_phone', label:'Số điện thoại', value:order ? order.receiver_phone: '', required:true},
                 {key:'shipping_address', label:'Địa chỉ giao hàng', value:order ? order.shipping_address: '', required:true, full:true},
-                {key:'status', label:'Trạng thái đơn hàng', type:'select', options:ORDER_STATUSES, value:order ? order.order_status: 'PENDING', required:true}
+                {key:'status', label:'Trạng thái ban đầu', type:'select', options:['PENDING'], value:'PENDING', required:true}
             ];
+            if (!creating) fields.pop(); // Trạng thái chỉ thay đổi ở tab cập nhật riêng.
             if (creating) {
                 fields.splice(1, 0, {key:'product_id', label:'Sản phẩm', type:'select', options:productOptions(null), value:productOptions(null)[0] ? productOptions(null)[0].value: '', required:true, full:true});
                 fields.splice(2, 0, {key:'quantity', label:'Số lượng', type:'number', min:1, max:10000, step:1, value:1, required:true, help:'Tổng tiền sẽ tính theo giá sản phẩm × số lượng.'});
@@ -876,6 +908,23 @@
                         else deleteProduct.status = 'INACTIVE';
                     });
                 }
+            } else if (action === 'update-order-status') {
+                var selectedOrder = byId(S.orders, id);
+                if (!selectedOrder) return;
+                var current = selectedOrder.order_status;
+                var allowed = allowedOrderStatuses(current);
+                if (!allowed.length) { toast('Đơn hàng này đã hoàn tất hoặc đã hủy, không thể cập nhật tiếp.', true); return; }
+                var statusOptions = allowed.map(function (status) {
+                    return {value:status, label:ORDER_STATUS_LABELS[status] || status};
+                });
+                showModal('Cập nhật trạng thái ' + selectedOrder.order_code, [
+                    {key:'status', label:'Trạng thái mới', type:'select', options:statusOptions,
+                        value:allowed[0], required:true}
+                ], function (form) {
+                    return call({action:'updateOrderStatus', id:id, status:form.status}, function () {
+                        selectedOrder.order_status = form.status;
+                    });
+                });
             } else if (action === 'edit-order') {
                 var order = byId(S.orders, id);
                 if (!order) return;
@@ -887,8 +936,7 @@
                             receiver_name: form.receiver_name,
                             receiver_phone: form.receiver_phone,
                             shipping_address: form.shipping_address,
-                            customer_email: form.customer_email,
-                            order_status: form.status
+                            customer_email: form.customer_email
                         });
                     });
                 }, function () {

@@ -352,3 +352,14 @@ td strong { color: #28344a; font-weight: 700; }
     margin-bottom: 8px;
     display: block;
 }
+/* Thống kê biểu đồ tròn trạng thái đơn hàng */
+.pie-panel { margin-top: 20px; margin-bottom: 20px; }
+.pie-chart-layout { display: grid; grid-template-columns: minmax(220px, 360px) minmax(220px, 1fr); gap: 32px; align-items: center; justify-content: center; }
+.pie-canvas-wrap { position: relative; height: 310px; width: 100%; }
+.pie-legend { display: flex; flex-direction: column; gap: 11px; color: #475569; font-size: 13px; }
+.pie-legend-row { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.pie-legend-row strong { color: #0f172a; white-space: nowrap; }
+.pie-dot { width: 11px; height: 11px; border-radius: 50%; }
+.pie-legend-total { border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 6px; }
+.pie-legend-total strong { color: #0f172a; }
+@media(max-width: 700px) { .pie-chart-layout { grid-template-columns: 1fr; gap: 16px; } .pie-canvas-wrap { max-width: 320px; margin: auto; height: 270px; } }

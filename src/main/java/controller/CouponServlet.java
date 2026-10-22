@@ -86,9 +86,16 @@ public class CouponServlet extends HttpServlet {
 
     @SuppressWarnings("unchecked")
     private BigDecimal calculateCartSubtotal(HttpSession session) {
-        Map<Integer, CartItem> cart = (Map<Integer, CartItem>) session.getAttribute("cart");
+        Map<String, CartItem> cart = (Map<String, CartItem>) session.getAttribute("cart");
         if (cart == null || cart.isEmpty()) return BigDecimal.ZERO;
-        return cart.values().stream()
+        java.util.List<String> selected = (java.util.List<String>) session.getAttribute("checkoutSelectedKeys");
+        java.util.Collection<CartItem> items = cart.values();
+        if (selected != null) {
+            java.util.List<CartItem> filtered = new java.util.ArrayList<>();
+            for (String key : selected) if (cart.containsKey(key)) filtered.add(cart.get(key));
+            items = filtered;
+        }
+        return items.stream()
                 .map(CartItem::getLineTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }

@@ -9,60 +9,18 @@ import java.util.*;
 
 public class OrderDAO {
 
-    // Tương thích với CheckoutServlet: tách đơn theo từng gian hàng.
-    public List<Integer> createOrders(int userId, String receiverName, String phone,
-                                      String address, List<CartItem> cart,
-                                      String couponCode, long shippingFee,
-                                      String paymentMethod) throws SQLException {
-        if (cart == null || cart.isEmpty()) throw new SQLException("Giỏ hàng đang trống.");
-        if (shippingFee < 0) throw new SQLException("Phí vận chuyển không hợp lệ.");
-        Map<Integer, List<CartItem>> byShop = new LinkedHashMap<>();
-        BigDecimal subtotal = BigDecimal.ZERO;
-        for (CartItem item : cart) {
-            if (item == null || item.getProduct() == null || item.getQuantity() <= 0)
-                throw new SQLException("Sản phẩm trong giỏ không hợp lệ.");
-            byShop.computeIfAbsent(item.getProduct().getShopId(), k -> new ArrayList<>()).add(item);
-            subtotal = subtotal.add(item.getLineTotal());
-        }
-        BigDecimal discount = BigDecimal.ZERO;
-        if (couponCode != null && !couponCode.isBlank()) {
-            CartDAO coupons = new CartDAO();
-            Map<String, Object> coupon = coupons.findCoupon(couponCode);
-            long sub = subtotal.longValueExact();
-            if (coupons.isCouponValid(coupon, sub)) {
-                discount = BigDecimal.valueOf(Math.max(0,
-                        Math.min(sub, coupons.calculateDiscount(coupon, sub))));
-            }
-        }
-        List<Integer> ids = new ArrayList<>();
-        BigDecimal allocated = BigDecimal.ZERO;
-        int index = 0;
-        for (List<CartItem> items : byShop.values()) {
-            BigDecimal shopSubtotal = BigDecimal.ZERO;
-            for (CartItem item : items) shopSubtotal = shopSubtotal.add(item.getLineTotal());
-            BigDecimal share = (++index == byShop.size())
-                    ? discount.subtract(allocated)
-                    : discount.multiply(shopSubtotal).divide(subtotal, 0, java.math.RoundingMode.DOWN);
-            allocated = allocated.add(share);
-            // createOrder hiện chưa hỗ trợ phí vận chuyển; không âm thầm bỏ phí.
-            if (shippingFee != 0) throw new SQLException(
-                    "OrderDAO.createOrder chưa hỗ trợ shippingFee; cần cập nhật để lưu phí vận chuyển.");
-            ids.add(createOrder(userId, receiverName, phone, address, items,
-                    share, paymentMethod, null));
-        }
-        // Các đơn đã được tạo riêng lẻ; coupon chỉ ghi nhận một lần.
-        if (couponCode != null && !couponCode.isBlank() && discount.signum() > 0)
-            new CouponDAO().recordUsage(couponCode);
-        return ids;
-    }
-
-
-    public int createOrders(int userId, String receiverName, String phone, String address, List<CartItem> cart) throws SQLException {
+    public int createOrder(int userId, String receiverName, String phone, String address, List<CartItem> cart) throws SQLException {
         return createOrder(userId, receiverName, phone, address, cart, BigDecimal.ZERO, "COD", null);
     }
 
     public int createOrder(int userId, String receiverName, String phone, String address, List<CartItem> cart,
                            BigDecimal discountAmount, String paymentMethod, String couponCode) throws SQLException {
+        return createOrder(userId, receiverName, phone, address, cart, discountAmount, paymentMethod, couponCode, BigDecimal.ZERO);
+    }
+
+    public int createOrder(int userId, String receiverName, String phone, String address, List<CartItem> cart,
+                           BigDecimal discountAmount, String paymentMethod, String couponCode,
+                           BigDecimal shippingFee) throws SQLException {
         if (cart == null || cart.isEmpty()) {
             throw new SQLException("Giỏ hàng đang trống.");
         }
@@ -87,7 +45,7 @@ public class OrderDAO {
         BigDecimal subtotal = cart.stream()
                 .map(CartItem::getLineTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal shipping = BigDecimal.ZERO;
+        BigDecimal shipping = shippingFee == null || shippingFee.signum() < 0 ? BigDecimal.ZERO : shippingFee;
 
         BigDecimal total = subtotal.add(shipping).subtract(discountAmount);
         if (total.compareTo(BigDecimal.ZERO) < 0) {

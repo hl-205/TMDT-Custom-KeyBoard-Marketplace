@@ -104,6 +104,7 @@
             analyticsMetric: 'revenue'
         };
         var analyticsChartInstance = null;
+        var orderPieChartInstance = null;
         var ctxPath = "<c:out value='${pageContext.request.contextPath}'/>";
 
         var ORDER_STATUSES = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPING', 'SHIPPED', 'COMPLETED', 'CANCELLED'];
@@ -112,7 +113,7 @@
         var PRODUCT_STATUSES = ['ACTIVE', 'INACTIVE'];
         var TITLES = {
             dashboard: ['Tổng quan', 'Số liệu tổng hợp cơ sở dữ liệu.'],
-            analytics: ['Thống kê & Biểu đồ', 'Biểu đồ cột thống kê doanh thu và đơn hàng theo khoảng thời gian tùy chọn.'],
+            analytics: ['Thống kê & Biểu đồ', 'Biểu đồ cột doanh thu và biểu đồ tròn tỷ lệ trạng thái đơn hàng.'],
             users: ['Quản lý người dùng', 'Thêm, cập nhật vai trò và trạng thái tài khoản.'],
             products: ['Quản lý sản phẩm', 'Quản lý thông tin, cửa hàng, danh mục và tồn kho.'],
             orders: ['Quản lý đơn hàng', 'Theo dõi thông tin giao hàng và cập nhật trạng thái đơn.']
@@ -312,66 +313,75 @@
 
             return '<div class="analytics-filter-card">' +
                 '<div class="filter-header">' +
-                    '<div>' +
-                        '<h3 style="margin:0 0 4px;font-size:15px;font-weight:700;color:#0f172a;">Khoảng thời gian thống kê</h3>' +
-                        '<p style="margin:0;font-size:12px;color:#64748b;">Chọn khoảng ngày để lọc dữ liệu doanh thu và số lượng đơn hàng</p>' +
-                    '</div>' +
-                    '<div class="quick-filter-pills">' +
-                        '<button type="button" class="pill-btn" data-preset="7d">7 ngày qua</button>' +
-                        '<button type="button" class="pill-btn" data-preset="30d">30 ngày qua</button>' +
-                        '<button type="button" class="pill-btn" data-preset="this_month">Tháng này</button>' +
-                        '<button type="button" class="pill-btn" data-preset="all">Tất cả</button>' +
-                    '</div>' +
+                '<div>' +
+                '<h3 style="margin:0 0 4px;font-size:15px;font-weight:700;color:#0f172a;">Khoảng thời gian thống kê</h3>' +
+                '<p style="margin:0;font-size:12px;color:#64748b;">Chọn khoảng ngày để lọc dữ liệu doanh thu và số lượng đơn hàng</p>' +
+                '</div>' +
+                '<div class="quick-filter-pills">' +
+                '<button type="button" class="pill-btn" data-preset="7d">7 ngày qua</button>' +
+                '<button type="button" class="pill-btn" data-preset="30d">30 ngày qua</button>' +
+                '<button type="button" class="pill-btn" data-preset="this_month">Tháng này</button>' +
+                '<button type="button" class="pill-btn" data-preset="all">Tất cả</button>' +
+                '</div>' +
                 '</div>' +
                 '<form id="analytics-filter-form" class="filter-inputs-row" style="margin-top:14px;">' +
-                    '<div class="date-input-group">' +
-                        '<span>Từ ngày:</span>' +
-                        '<input type="date" id="stats-from-date" name="from_date" value="' + esc(fromDate) + '" required>' +
-                    '</div>' +
-                    '<div class="date-input-group">' +
-                        '<span>Đến ngày:</span>' +
-                        '<input type="date" id="stats-to-date" name="to_date" value="' + esc(toDate) + '" required>' +
-                    '</div>' +
-                    '<button type="submit" class="btn btn-primary" id="btn-apply-filter" style="padding:7px 18px;font-size:13px;">' +
-                        '<span>⚡</span> Áp dụng bộ lọc' +
-                    '</button>' +
+                '<div class="date-input-group">' +
+                '<span>Từ ngày:</span>' +
+                '<input type="date" id="stats-from-date" name="from_date" value="' + esc(fromDate) + '" required>' +
+                '</div>' +
+                '<div class="date-input-group">' +
+                '<span>Đến ngày:</span>' +
+                '<input type="date" id="stats-to-date" name="to_date" value="' + esc(toDate) + '" required>' +
+                '</div>' +
+                '<button type="submit" class="btn btn-primary" id="btn-apply-filter" style="padding:7px 18px;font-size:13px;">' +
+                '<span>⚡</span> Áp dụng bộ lọc' +
+                '</button>' +
                 '</form>' +
-            '</div>' +
+                '</div>' +
 
-            '<div class="stat-grid" style="margin-bottom:20px;">' +
+                '<div class="stat-grid" style="margin-bottom:20px;">' +
                 kpi('₫', 'Tổng doanh thu', money(totalRev), 'Doanh thu từ các đơn hoàn thành/đang xử lý', 'icon-green') +
                 kpi('▤', 'Đơn thành công', totalOrd, 'Tổng đơn hàng đã ghi nhận', 'icon-blue') +
                 kpi('📈', 'Doanh thu TB / ngày', money(avgRev), 'Trung bình mỗi ngày trong chu kỳ', 'icon-violet') +
                 kpi('✕', 'Đơn bị hủy', cancelOrd, 'Số đơn bị hủy trong khoảng thời gian', 'icon-orange') +
-            '</div>' +
+                '</div>' +
 
-            '<div class="chart-panel">' +
+                '<div class="chart-panel">' +
                 '<div class="chart-panel-head">' +
-                    '<div>' +
-                        '<h3>Biểu đồ cột thống kê</h3>' +
-                        '<p>Dữ liệu từ <strong>' + (fromDate || '...') + '</strong> đến <strong>' + (toDate || '...') + '</strong></p>' +
-                    '</div>' +
-                    '<div class="chart-metric-switch">' +
-                        '<button type="button" class="chart-metric-btn ' + (S.analyticsMetric === 'revenue' ? 'active' : '') + '" data-metric="revenue">Doanh thu (₫)</button>' +
-                        '<button type="button" class="chart-metric-btn ' + (S.analyticsMetric === 'orders' ? 'active' : '') + '" data-metric="orders">Số lượng đơn hàng</button>' +
-                    '</div>' +
+                '<div>' +
+                '<h3>Biểu đồ cột thống kê</h3>' +
+                '<p>Dữ liệu từ <strong>' + (fromDate || '...') + '</strong> đến <strong>' + (toDate || '...') + '</strong></p>' +
+                '</div>' +
+                '<div class="chart-metric-switch">' +
+                '<button type="button" class="chart-metric-btn ' + (S.analyticsMetric === 'revenue' ? 'active' : '') + '" data-metric="revenue">Doanh thu (₫)</button>' +
+                '<button type="button" class="chart-metric-btn ' + (S.analyticsMetric === 'orders' ? 'active' : '') + '" data-metric="orders">Số lượng đơn hàng</button>' +
+                '</div>' +
                 '</div>' +
                 '<div class="chart-canvas-wrap">' +
-                    (dailyList.length === 0 ? emptyMsg : '<canvas id="analyticsBarChart"></canvas>') +
+                (dailyList.length === 0 ? emptyMsg : '<canvas id="analyticsBarChart"></canvas>') +
                 '</div>' +
-            '</div>' +
+                '</div>' +
 
-            '<div class="table-card">' +
+                '<div class="chart-panel pie-panel">' +
+                '<div class="chart-panel-head"><div><h3>Biểu đồ tròn trạng thái đơn hàng</h3>' +
+                '<p>Tỷ lệ đơn hàng theo trạng thái từ <strong>' + esc(fromDate) + '</strong> đến <strong>' + esc(toDate) + '</strong></p></div></div>' +
+                '<div class="pie-chart-layout">' +
+                '<div class="pie-canvas-wrap"><canvas id="orderStatusPieChart" aria-label="Biểu đồ tròn tỷ lệ trạng thái đơn hàng" role="img"></canvas></div>' +
+                '<div id="order-pie-legend" class="pie-legend"></div>' +
+                '</div>' +
+                '</div>' +
+
+                '<div class="table-card">' +
                 '<div class="section-heading" style="padding:16px 20px 12px;margin:0;border-bottom:1px solid var(--line);">' +
-                    '<div><h3 style="margin:0;font-size:15px;font-weight:700;">Chi tiết doanh thu theo từng ngày</h3><p style="margin:2px 0 0;font-size:12px;color:#64748b;">Số liệu chi tiết tương ứng với biểu đồ cột bên trên</p></div>' +
+                '<div><h3 style="margin:0;font-size:15px;font-weight:700;">Chi tiết doanh thu theo từng ngày</h3><p style="margin:2px 0 0;font-size:12px;color:#64748b;">Số liệu chi tiết tương ứng với biểu đồ cột bên trên</p></div>' +
                 '</div>' +
                 '<div class="table-scroll">' +
-                    '<table>' +
-                        '<thead><tr><th>Ngày</th><th>Doanh thu</th><th>Đơn thành công</th><th>Đơn hủy</th><th>Tỷ trọng chu kỳ</th></tr></thead>' +
-                        '<tbody>' + (rows || emptyRow(5, 'Không có số liệu trong khoảng thời gian này')) + '</tbody>' +
-                    '</table>' +
+                '<table>' +
+                '<thead><tr><th>Ngày</th><th>Doanh thu</th><th>Đơn thành công</th><th>Đơn hủy</th><th>Tỷ trọng chu kỳ</th></tr></thead>' +
+                '<tbody>' + (rows || emptyRow(5, 'Không có số liệu trong khoảng thời gian này')) + '</tbody>' +
+                '</table>' +
                 '</div>' +
-            '</div>';
+                '</div>';
         }
 
         function afterRenderAnalytics() {
@@ -424,6 +434,64 @@
             });
 
             drawAnalyticsChart();
+            drawOrderPieChart();
+        }
+
+        function drawOrderPieChart() {
+            if (orderPieChartInstance) {
+                orderPieChartInstance.destroy();
+                orderPieChartInstance = null;
+            }
+            var canvas = $('orderStatusPieChart');
+            var legend = $('order-pie-legend');
+            if (!canvas || !legend) return;
+            var breakdown = (S.revenueStats || {}).orderStatusBreakdown || {};
+            var names = {
+                PENDING:'Chờ xác nhận', CONFIRMED:'Đã xác nhận', PROCESSING:'Đang xử lý',
+                SHIPPING:'Đang giao', SHIPPED:'Đã giao', COMPLETED:'Hoàn thành',
+                UNKNOWN:'Chưa xác định'
+            };
+            var colors = {
+                PENDING:'#f59e0b', CONFIRMED:'#3b82f6', PROCESSING:'#8b5cf6',
+                SHIPPING:'#06b6d4', SHIPPED:'#14b8a6', COMPLETED:'#10b981',
+                UNKNOWN:'#94a3b8'
+            };
+            var keys = Object.keys(breakdown).filter(function(k) { return k !== 'CANCELLED' && Number(breakdown[k]) > 0; });
+            var total = keys.reduce(function(sum, k) { return sum + Number(breakdown[k]); }, 0);
+            if (!total) {
+                canvas.style.display = 'none';
+                legend.textContent = 'Chưa có đơn hàng trong khoảng thời gian được chọn.';
+                return;
+            }
+            canvas.style.display = 'block';
+            legend.innerHTML = keys.map(function(k) {
+                var count = Number(breakdown[k]);
+                var label = names[k] || k;
+                return '<div class="pie-legend-row"><span class="pie-dot" style="background:' + (colors[k] || colors.UNKNOWN) + '"></span>' +
+                    '<span>' + esc(label) + '</span><strong>' + count + ' (' + (count / total * 100).toFixed(1) + '%)</strong></div>';
+            }).join('') + '<div class="pie-legend-total">Tổng cộng: <strong>' + total + ' đơn</strong></div>';
+            if (typeof Chart === 'undefined') {
+                legend.innerHTML += '<p>Không tải được thư viện Chart.js để vẽ biểu đồ.</p>';
+                return;
+            }
+            orderPieChartInstance = new Chart(canvas.getContext('2d'), {
+                type: 'pie',
+                data: {
+                    labels: keys.map(function(k) { return names[k] || k; }),
+                    datasets: [{data: keys.map(function(k) { return Number(breakdown[k]); }),
+                        backgroundColor: keys.map(function(k) { return colors[k] || colors.UNKNOWN; }),
+                        borderWidth: 3, borderColor: '#ffffff', hoverOffset: 10}]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: {display: false},
+                        tooltip: {callbacks: {label: function(item) {
+                                    return ' ' + item.label + ': ' + item.raw + ' đơn (' + (item.raw / total * 100).toFixed(1) + '%)';
+                                }}}
+                    }
+                }
+            });
         }
 
         function fetchRevenueStats(fromDate, toDate) {

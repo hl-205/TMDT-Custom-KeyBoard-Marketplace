@@ -109,8 +109,8 @@
             <input type="radio" name="shippingMethod" value="STANDARD" data-fee="0" checked>
             <span>
                             <b>Tiêu chuẩn</b>
-                            <small>Giao 3–5 ngày làm việc</small>
-                            <strong>30.000₫</strong>
+                            <small>Giao 5-7 ngày làm việc</small>
+                            <strong>Miễn phí</strong>
                         </span>
           </label>
 
@@ -119,7 +119,7 @@
             <span>
                             <b>Nhanh</b>
                             <small>Giao 1–2 ngày làm việc</small>
-                            <strong>50.000₫</strong>
+                            <strong>55.000₫</strong>
                         </span>
           </label>
 

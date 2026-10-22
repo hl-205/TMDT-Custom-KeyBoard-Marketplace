@@ -106,20 +106,20 @@
 
         <div class="shipping-options">
           <label class="shipping-card selected">
-            <input type="radio" name="shippingMethod" value="STANDARD" data-fee="0" checked>
+            <input type="radio" name="shippingMethod" value="STANDARD" data-fee="30000" checked>
             <span>
                             <b>Tiêu chuẩn</b>
-                            <small>Giao 5-7 ngày làm việc</small>
-                            <strong>Miễn phí</strong>
+                            <small>Giao 3-4 ngày làm việc</small>
+                            <strong>30.000₫</strong>
                         </span>
           </label>
 
           <label class="shipping-card">
-            <input type="radio" name="shippingMethod" value="EXPRESS" data-fee="55000">
+            <input type="radio" name="shippingMethod" value="EXPRESS" data-fee="50000">
             <span>
                             <b>Nhanh</b>
                             <small>Giao 1–2 ngày làm việc</small>
-                            <strong>55.000₫</strong>
+                            <strong>50.000₫</strong>
                         </span>
           </label>
 
@@ -237,7 +237,7 @@
 
           <div class="row">
             <span>Phí vận chuyển</span>
-            <b id="shippingVal">Miễn phí</b>
+            <b id="shippingVal">30.000₫</b>
           </div>
 
           <div class="row grand">

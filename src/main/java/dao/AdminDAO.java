@@ -392,8 +392,8 @@ public class AdminDAO extends DBContext {
                     // Update Order Mode
                     String finalCode = (orderCode == null || orderCode.isBlank()) ? null : orderCode.trim();
                     String sql = finalCode != null
-                            ? "UPDATE orders SET order_code=?, receiver_name=?, receiver_phone=?, shipping_address=?, user_id=?, order_status=? WHERE id=?"
-                            : "UPDATE orders SET receiver_name=?, receiver_phone=?, shipping_address=?, user_id=?, order_status=? WHERE id=?";
+                            ? "UPDATE orders SET order_code=?, receiver_name=?, receiver_phone=?, shipping_address=?, user_id=? WHERE id=?"
+                            : "UPDATE orders SET receiver_name=?, receiver_phone=?, shipping_address=?, user_id=? WHERE id=?";
 
                     try (PreparedStatement ps = conn.prepareStatement(sql)) {
                         int idx = 1;
@@ -402,7 +402,6 @@ public class AdminDAO extends DBContext {
                         ps.setString(idx++, receiverPhone);
                         ps.setString(idx++, shippingAddress);
                         ps.setInt(idx++, userId);
-                        ps.setString(idx++, status);
                         ps.setInt(idx++, id);
                         if (ps.executeUpdate() == 0) throw new SQLException("Không tìm thấy đơn hàng #" + id);
                     }

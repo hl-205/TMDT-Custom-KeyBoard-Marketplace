@@ -1,5 +1,6 @@
 package controller;
 
+import dao.CartDAO;
 import dao.CouponDAO;
 import dao.OrderDAO;
 import dao.UserDAO;
@@ -17,6 +18,7 @@ import java.util.*;
 public class CheckoutServlet extends HttpServlet {
 
     private final OrderDAO orderDAO = new OrderDAO();
+    private final CartDAO cartDAO = new CartDAO();
     private final UserDAO userDAO = new UserDAO();
     private final CouponDAO couponDAO = new CouponDAO();
 
@@ -31,12 +33,37 @@ public class CheckoutServlet extends HttpServlet {
             return;
         }
 
-        Map<Integer, CartItem> cart = (Map<Integer, CartItem>) session.getAttribute("cart");
+        Map<String, CartItem> cart = (Map<String, CartItem>) session.getAttribute("cart");
         if (cart == null || cart.isEmpty()) {
             resp.sendRedirect(req.getContextPath() + "/cart");
             return;
         }
 
+        // Chỉ các sản phẩm tích chọn tại giỏ hàng được chuyển sang thanh toán.
+        String[] selected = req.getParameterValues("sel");
+        if (selected != null) {
+            LinkedHashSet<String> keys = new LinkedHashSet<>();
+            for (String key : selected) if (cart.containsKey(key)) keys.add(key);
+            session.setAttribute("checkoutSelectedKeys", keys);
+        }
+        List<CartItem> selectedItems = getSelectedItems(session, cart);
+        if (selectedItems.isEmpty()) {
+            resp.sendRedirect(req.getContextPath() + "/cart");
+            return;
+        }
+        BigDecimal selectedTotal = selectedItems.stream().map(CartItem::getLineTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        req.setAttribute("total", selectedTotal);
+        String appliedCode = (String) session.getAttribute("appliedCouponCode");
+        BigDecimal selectedDiscount = BigDecimal.ZERO;
+        if (appliedCode != null && !appliedCode.isBlank()) {
+            CouponDAO.DiscountResult coupon = couponDAO.calculateDiscount(appliedCode, selectedTotal);
+            if (coupon.isValid()) {
+                selectedDiscount = coupon.getDiscountAmount();
+                req.setAttribute("appliedCouponCode", coupon.getCoupon().getCode());
+            }
+        }
+        req.setAttribute("appliedCouponDiscount", selectedDiscount);
         // Lấy thông tin mới nhất của khách hàng từ DB để tự động điền họ tên, sđt, địa chỉ
         User customer = userDAO.getUserById(sessionUser.getId());
         if (customer != null) {
@@ -48,7 +75,7 @@ public class CheckoutServlet extends HttpServlet {
 
         // Lấy danh sách mã khuyến mãi khả dụng trong hệ thống
         req.setAttribute("availableCoupons", couponDAO.getAvailableCoupons());
-        req.setAttribute("cartItems", cart.values());
+        req.setAttribute("cartItems", selectedItems);
 
         req.getRequestDispatcher("checkout.jsp").forward(req, resp);
     }
@@ -67,7 +94,7 @@ public class CheckoutServlet extends HttpServlet {
             return;
         }
 
-        Map<Integer, CartItem> cart = (Map<Integer, CartItem>) session.getAttribute("cart");
+        Map<String, CartItem> cart = (Map<String, CartItem>) session.getAttribute("cart");
         if (cart == null || cart.isEmpty()) {
             resp.sendRedirect(req.getContextPath() + "/cart");
             return;
@@ -81,9 +108,14 @@ public class CheckoutServlet extends HttpServlet {
         String shippingMethod = req.getParameter("shippingMethod");
         BigDecimal shippingFee;
         switch (shippingMethod == null ? "STANDARD" : shippingMethod) {
-            case "EXPRESS": shippingFee = new BigDecimal("55000"); break;
-            case "SAME_DAY": shippingFee = new BigDecimal("90000"); break;
-            default: shippingFee = new BigDecimal("30000");
+            case "EXPRESS":
+                shippingFee = new BigDecimal("50000");
+                break;
+            case "SAME_DAY":
+                shippingFee = new BigDecimal("90000");
+                break;
+            default:
+                shippingFee = new BigDecimal("30000");
         }
         if (paymentMethod == null || paymentMethod.isBlank()) {
             paymentMethod = "VNPAY-QR";
@@ -100,8 +132,12 @@ public class CheckoutServlet extends HttpServlet {
             return;
         }
 
-        // Tính toán tổng tiền sản phẩm trong giỏ hàng
-        List<CartItem> cartList = new ArrayList<>(cart.values());
+        // Chỉ tạo đơn từ lựa chọn đã lưu khi chuyển từ giỏ hàng.
+        List<CartItem> cartList = getSelectedItems(session, cart);
+        if (cartList.isEmpty()) {
+            resp.sendRedirect(req.getContextPath() + "/cart");
+            return;
+        }
         BigDecimal subtotal = cartList.stream()
                 .map(CartItem::getLineTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -132,8 +168,12 @@ public class CheckoutServlet extends HttpServlet {
                     shippingFee
             );
 
-            // Dọn sạch giỏ hàng và session voucher
-            cart.clear();
+            // Chỉ xóa các dòng đã đặt, giữ lại các dòng chưa được chọn.
+            @SuppressWarnings("unchecked")
+            Set<String> selectedKeys = (Set<String>) session.getAttribute("checkoutSelectedKeys");
+            if (selectedKeys != null) for (String key : selectedKeys) cart.remove(key);
+            cartDAO.syncCart(user.getId(), cart);
+            session.removeAttribute("checkoutSelectedKeys");
             session.removeAttribute("appliedCouponCode");
             session.removeAttribute("appliedDiscountAmount");
 
@@ -150,6 +190,18 @@ public class CheckoutServlet extends HttpServlet {
             req.setAttribute("error", e.getMessage());
             doGet(req, resp);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<CartItem> getSelectedItems(HttpSession session, Map<String, CartItem> cart) {
+        Set<String> selectedKeys = (Set<String>) session.getAttribute("checkoutSelectedKeys");
+        if (selectedKeys == null || selectedKeys.isEmpty()) return Collections.emptyList();
+        List<CartItem> result = new ArrayList<>();
+        for (String key : selectedKeys) {
+            CartItem item = cart.get(key);
+            if (item != null) result.add(item);
+        }
+        return result;
     }
 
     private boolean isBlank(String s) {

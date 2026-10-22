@@ -61,7 +61,7 @@
         String err=(String)session.getAttribute("flashError");
         String success=(String)session.getAttribute("flashSuccess");
         if(err!=null){%><div class="cart-flash error"><%=esc(err)%></div><%session.removeAttribute("flashError");}
-    if(success!=null){%><div class="cart-flash success"><%=esc(success)%></div><%session.removeAttribute("flashSuccess");}
+    if(success!=null){session.removeAttribute("flashSuccess");}
     Collection<CartItem> items=(Collection<CartItem>)request.getAttribute("cartItems");
     if(items==null)items=Collections.emptyList();
 %>
@@ -235,7 +235,7 @@
                     </div>
                 </div>
             </div>
-            <section class="side-card order-summary"><h3>Tóm tắt đơn hàng</h3><div class="summary-line"><span>Tạm tính (<%=items.size()%> sản phẩm)</span><b id="subtotal"><%=Product.formatVND(subtotal)%></b></div><div class="summary-line"><span>Phí gia công</span><b>0₫</b></div><div class="summary-line"><span>Giảm giá sản phẩm</span><b class="green">0₫</b></div><div class="summary-line"><span id="couponLabel">Mã giảm giá</span><b class="green" id="couponValue"><%= ((Number)(request.getAttribute("appliedCouponDiscount") == null ? 0L : request.getAttribute("appliedCouponDiscount"))).longValue() > 0 ? "−" + Product.formatVND(((Number)request.getAttribute("appliedCouponDiscount")).longValue()) : "0₫" %></b></div><div class="summary-line"><span>Phí vận chuyển</span><b class="green">Miễn phí</b></div><div class="summary-total"><span>Tổng cộng</span><div class="total-right"><strong id="grandTotal"><%=Product.formatVND(Math.max(0, subtotal - ((Number)(request.getAttribute("appliedCouponDiscount") == null ? 0L : request.getAttribute("appliedCouponDiscount"))).longValue()))%></strong><small class="vat-note">Đã bao gồm VAT</small></div></div><button type="submit" form="cartForm" id="buyBtn" class="checkout-btn">Tiến hành thanh toán</button><p class="secure-note">🔒 Sản phẩm được bảo vệ khi thanh toán</p></section>
+            <section class="side-card order-summary"><h3>Tóm tắt đơn hàng</h3><div class="summary-line"><span>Tạm tính (<span id="selectedCount"><%=items.size()%></span> sản phẩm)</span><b id="subtotal"><%=Product.formatVND(subtotal)%></b></div><div class="summary-line"><span>Phí gia công</span><b>0₫</b></div><div class="summary-line"><span>Giảm giá sản phẩm</span><b class="green">0₫</b></div><div class="summary-line"><span id="couponLabel">Mã giảm giá</span><b class="green" id="couponValue"><%= ((Number)(request.getAttribute("appliedCouponDiscount") == null ? 0L : request.getAttribute("appliedCouponDiscount"))).longValue() > 0 ? "−" + Product.formatVND(((Number)request.getAttribute("appliedCouponDiscount")).longValue()) : "0₫" %></b></div><div class="summary-line"><span>Phí vận chuyển</span><b class="green">Miễn phí</b></div><div class="summary-total"><span>Tổng cộng</span><div class="total-right"><strong id="grandTotal"><%=Product.formatVND(Math.max(0, subtotal - ((Number)(request.getAttribute("appliedCouponDiscount") == null ? 0L : request.getAttribute("appliedCouponDiscount"))).longValue()))%></strong><small class="vat-note">Đã bao gồm VAT</small></div></div><button type="submit" form="cartForm" id="buyBtn" class="checkout-btn">Tiến hành thanh toán</button><p class="secure-note">🔒 Sản phẩm được bảo vệ khi thanh toán</p></section>
             <div class="gift-card"><b>🎁 Mua thêm 540.000₫ để nhận quà</b><p>Tặng bộ keycap quà tặng khi đơn hàng đạt điều kiện.</p></div>
         </aside></div>
     <%}%>
@@ -285,6 +285,7 @@
             var sum = selectedSubtotal();
 
             document.getElementById('subtotal').textContent = fmt(sum);
+            document.getElementById('selectedCount').textContent = count;
 
 // Chỉ tính tạm thời ở giao diện; server vẫn là nguồn xác thực.
             document.getElementById('grandTotal').textContent =

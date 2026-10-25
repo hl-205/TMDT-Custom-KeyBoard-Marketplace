@@ -210,6 +210,7 @@ public class CartServlet extends HttpServlet {
         }
 
         boolean ajax = "XMLHttpRequest".equalsIgnoreCase(req.getHeader("X-Requested-With"));
+        boolean buyNow = "1".equals(req.getParameter("buyNow"));
         try {
             switch (action) {
                 case "add": {
@@ -224,6 +225,13 @@ public class CartServlet extends HttpServlet {
                     long extra = validatedExtraPrice(productId, plate);
                     if (extra < 0) throw new IllegalArgumentException("Phụ phí không hợp lệ.");
                     CartItem incoming = createItem(product, quantity, color, plate, extra);
+                    if (buyNow) {
+                        // Mua ngay: không đụng tới giỏ hàng, chỉ giữ riêng 1 sản phẩm cho lượt thanh toán này.
+                        if (quantity > Math.min(99, product.getStock()))
+                            throw new IllegalArgumentException("Số lượng vượt tồn kho.");
+                        session.setAttribute("buyNowItem", incoming);
+                        break;
+                    }
                     String key = incoming.getKey();
                     CartItem existing = cart.get(key);
                     int current = existing == null ? 0 : existing.getQuantity();
@@ -294,7 +302,9 @@ public class CartServlet extends HttpServlet {
             if (user != null) cartDAO.syncCart(user.getId(), cart);
             // Mã vẫn lưu trong session nhưng sẽ được kiểm tra lại theo giá trị giỏ hàng.
             if (ajax) json(resp, true, "Cập nhật giỏ hàng thành công.", 0, subtotal(cart.values()), null);
-            else resp.sendRedirect(req.getContextPath() + "/cart");
+            else if (buyNow && "add".equals(action)) {
+                resp.sendRedirect(req.getContextPath() + "/checkout?buyNow=1");
+            } else resp.sendRedirect(req.getContextPath() + "/cart");
         } catch (Exception e) {
             log("Lỗi thao tác giỏ hàng", e);
             if (ajax) {

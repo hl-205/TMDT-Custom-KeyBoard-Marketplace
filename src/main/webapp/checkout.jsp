@@ -9,7 +9,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Thanh toán - KeebHub</title>
+  <title>Đặt hàng và Thanh toán - KeebHub</title>
 
   <link rel="stylesheet" href="assets/css/style.css">
   <link rel="stylesheet" href="assets/css/checkout.css">
@@ -182,7 +182,10 @@
       <div class="order-summary">
         <div class="summary-header">
           <h2>Đơn hàng</h2>
-          <a href="${pageContext.request.contextPath}/cart">Sửa</a>
+          <c:choose>
+            <c:when test="${buyNowMode}"><a href="javascript:history.back()">Sửa</a></c:when>
+            <c:otherwise><a href="${pageContext.request.contextPath}/cart">Sửa</a></c:otherwise>
+          </c:choose>
         </div>
 
         <div class="summary-items-list">

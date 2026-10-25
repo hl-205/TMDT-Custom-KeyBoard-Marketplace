@@ -116,7 +116,7 @@ public class OrderDAO {
                         ps.setInt(2, item.getProduct().getId());
                         ps.setString(3, item.getProduct().getName());
                         ps.setInt(4, item.getQuantity());
-                        ps.setBigDecimal(5, BigDecimal.valueOf(item.getProduct().getPrice()));
+                        ps.setBigDecimal(5, BigDecimal.valueOf(item.getUnitPrice()));
                         ps.setBigDecimal(6, item.getLineTotal());
                         ps.executeUpdate();
                     }
@@ -135,6 +135,133 @@ public class OrderDAO {
             } finally {
                 c.setAutoCommit(true);
             }
+        }
+    }
+
+
+    /** Creates one order per shop in a single database transaction. */
+    public List<Integer> createOrders(int userId, String receiverName, String phone, String address,
+                                      List<CartItem> cart, BigDecimal discount, String paymentMethod, String couponCode,
+                                      BigDecimal shippingFee) throws SQLException {
+        if (cart == null || cart.isEmpty()) throw new SQLException("Giỏ hàng đang trống.");
+        Map<Integer,List<CartItem>> byShop = new LinkedHashMap<>();
+        for (CartItem item : cart) {
+            if (item == null || item.getProduct() == null || item.getQuantity() <= 0)
+                throw new SQLException("Sản phẩm không hợp lệ.");
+            byShop.computeIfAbsent(item.getProduct().getShopId(), k -> new ArrayList<>()).add(item);
+        }
+        BigDecimal subtotal = cart.stream().map(CartItem::getLineTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (subtotal.signum() <= 0) throw new SQLException("Tổng giá trị đơn hàng không hợp lệ.");
+        BigDecimal remainingDiscount = (discount == null ? BigDecimal.ZERO : discount).max(BigDecimal.ZERO).min(subtotal);
+        BigDecimal remainingShipping = shippingFee == null ? BigDecimal.ZERO : shippingFee.max(BigDecimal.ZERO);
+        String batch = "KH" + System.currentTimeMillis() + String.format("%04d", new java.security.SecureRandom().nextInt(10000));
+        String sql = "INSERT INTO orders(order_code,user_id,shop_id,product_id,variant_summary,receiver_name,receiver_phone,shipping_address,is_custom_order,subtotal,shipping_fee,discount_amount,total_amount,payment_method,order_status,progress_percent) VALUES(?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,0)";
+        String lineSql = "INSERT INTO order_items(order_id,product_id,product_name,quantity,unit_price,line_total) VALUES(?,?,?,?,?,?)";
+        String stockSql = "UPDATE products SET stock=stock-?,sold_count=sold_count+? WHERE id=? AND stock>=?";
+        List<Integer> ids = new ArrayList<>();
+        try (Connection c = DBContext.getConnection()) {
+            if (c == null) throw new SQLException("Không kết nối được database.");
+            c.setAutoCommit(false);
+            try {
+                int index=0, size=byShop.size();
+                for (Map.Entry<Integer,List<CartItem>> entry : byShop.entrySet()) {
+                    index++;
+                    List<CartItem> items=entry.getValue();
+                    BigDecimal shopSubtotal=items.stream().map(CartItem::getLineTotal)
+                            .reduce(BigDecimal.ZERO,BigDecimal::add);
+                    BigDecimal shopDiscount, shopShipping;
+                    if (index == size) {
+                        shopDiscount=remainingDiscount;
+                        shopShipping=remainingShipping;
+                    } else {
+                        shopDiscount=discount == null ? BigDecimal.ZERO : discount.max(BigDecimal.ZERO).min(subtotal)
+                                .multiply(shopSubtotal).divide(subtotal,0,java.math.RoundingMode.DOWN);
+                        shopShipping=(shippingFee == null ? BigDecimal.ZERO : shippingFee.max(BigDecimal.ZERO))
+                                .multiply(shopSubtotal).divide(subtotal,0,java.math.RoundingMode.DOWN);
+                        remainingDiscount=remainingDiscount.subtract(shopDiscount);
+                        remainingShipping=remainingShipping.subtract(shopShipping);
+                    }
+                    String code = batch + "-" + index;
+                    String summary = items.get(0).getProduct().getName() + " · ×" + items.get(0).getQuantity()
+                            + (items.size()>1 ? " (+"+(items.size()-1)+" sản phẩm khác)" : "");
+                    int id;
+                    try (PreparedStatement ps=c.prepareStatement(sql,Statement.RETURN_GENERATED_KEYS)) {
+                        ps.setString(1,code); ps.setInt(2,userId); ps.setInt(3,entry.getKey());
+                        ps.setInt(4,items.get(0).getProduct().getId()); ps.setString(5,summary);
+                        ps.setString(6,receiverName); ps.setString(7,phone); ps.setString(8,address);
+                        ps.setBigDecimal(9,shopSubtotal); ps.setBigDecimal(10,shopShipping);
+                        ps.setBigDecimal(11,shopDiscount);
+                        ps.setBigDecimal(12,shopSubtotal.add(shopShipping).subtract(shopDiscount));
+                        ps.setString(13,paymentMethod); ps.setString(14,"PENDING");
+                        ps.executeUpdate();
+                        try (ResultSet rs=ps.getGeneratedKeys()) {
+                            if(!rs.next()) throw new SQLException("Không thể tạo đơn hàng.");
+                            id=rs.getInt(1);
+                        }
+                    }
+                    ids.add(id);
+                    for(CartItem item:items) {
+                        int q=item.getQuantity();
+                        try(PreparedStatement ps=c.prepareStatement(stockSql)) {
+                            ps.setInt(1,q);ps.setInt(2,q);ps.setInt(3,item.getProduct().getId());ps.setInt(4,q);
+                            if(ps.executeUpdate()!=1) throw new SQLException("Không đủ tồn kho: " + item.getProduct().getName());
+                        }
+                        try(PreparedStatement ps=c.prepareStatement(lineSql)) {
+                            ps.setInt(1,id);ps.setInt(2,item.getProduct().getId());
+                            String name=item.getProduct().getName();
+                            if(item.getVariantLabel()!=null && !item.getVariantLabel().isBlank()) name += " ("+item.getVariantLabel()+")";
+                            ps.setString(3,name);ps.setInt(4,q);
+                            ps.setBigDecimal(5,BigDecimal.valueOf(item.getUnitPrice()));
+                            ps.setBigDecimal(6,item.getLineTotal());ps.executeUpdate();
+                        }
+                    }
+                }
+                c.commit();
+            } catch(Exception e) {
+                c.rollback();
+                if(e instanceof SQLException) throw (SQLException)e;
+                throw new SQLException("Không thể tạo đơn hàng.",e);
+            } finally {c.setAutoCommit(true);}
+        }
+        if(couponCode!=null&&!couponCode.isBlank()) new CouponDAO().recordUsage(couponCode);
+        return ids;
+    }
+
+    private String groupPrefix(String code) {
+        if(code == null || !code.matches("KH[0-9]{13,17}-[0-9]+")) return null;
+        return code.substring(0,code.lastIndexOf('-'));
+    }
+
+    public BigDecimal getPaymentGroupTotal(String code, int userId) throws SQLException {
+        String prefix=groupPrefix(code);
+        String sql=prefix==null ? "SELECT COALESCE(SUM(total_amount),0) FROM orders WHERE order_code=? AND user_id=?"
+                : "SELECT COALESCE(SUM(total_amount),0) FROM orders WHERE order_code LIKE ? AND user_id=?";
+        try(Connection c=DBContext.getConnection(); PreparedStatement ps=c.prepareStatement(sql)) {
+            ps.setString(1,prefix==null ? code : prefix+"-%"); ps.setInt(2,userId);
+            try(ResultSet rs=ps.executeQuery()){rs.next();return rs.getBigDecimal(1);}
+        }
+    }
+
+    public boolean updatePaymentGroupByCode(String code,String method,BigDecimal paid) throws SQLException {
+        String prefix=groupPrefix(code);
+        try(Connection c=DBContext.getConnection()) {
+            c.setAutoCommit(false);
+            try {
+                String where=prefix==null ? "order_code=?" : "order_code LIKE ?";
+                String parameter=prefix==null ? code : prefix+"-%";
+                BigDecimal total;
+                try(PreparedStatement ps=c.prepareStatement("SELECT COALESCE(SUM(total_amount),0) FROM orders WHERE " + where)) {
+                    ps.setString(1,parameter);
+                    try(ResultSet rs=ps.executeQuery()){rs.next();total=rs.getBigDecimal(1);}
+                }
+                if(total.signum()<=0 || paid == null || total.compareTo(paid)!=0) {c.rollback();return false;}
+                int updated;
+                try(PreparedStatement ps=c.prepareStatement("UPDATE orders SET payment_method=?,order_status='CONFIRMED',progress_percent=20 WHERE " + where + " AND order_status IN ('PENDING','CONFIRMED')")) {
+                    ps.setString(1,method);ps.setString(2,parameter);updated=ps.executeUpdate();
+                }
+                c.commit();return updated>0;
+            }catch(SQLException e){c.rollback();throw e;}finally{c.setAutoCommit(true);}
         }
     }
 

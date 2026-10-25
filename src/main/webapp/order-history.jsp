@@ -164,7 +164,15 @@
                             <% } %>
                             <div class="oh-product-facts">
                                 <span>Số lượng: <b><%=item.getQuantity()%></b></span>
-                                <span>Đơn giá: <%=money.format(item.getUnitPrice())%>đ</span>
+                                <span>Đơn giá: <%=money.format(
+                                        item.getQuantity() > 0 && item.getLineTotal() != null
+                                                ? item.getLineTotal().divide(
+                                                java.math.BigDecimal.valueOf(item.getQuantity()),
+                                                0,
+                                                java.math.RoundingMode.HALF_UP
+                                        )
+                                                : item.getUnitPrice()
+                                )%>đ</span>
                             </div>
                         </div>
                         <div class="oh-product-total">

@@ -363,3 +363,34 @@ td strong { color: #28344a; font-weight: 700; }
 .pie-legend-total { border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 6px; }
 .pie-legend-total strong { color: #0f172a; }
 @media(max-width: 700px) { .pie-chart-layout { grid-template-columns: 1fr; gap: 16px; } .pie-canvas-wrap { max-width: 320px; margin: auto; height: 270px; } }
+
+.category-payment-charts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.category-payment-charts .pie-chart-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+}
+
+.category-payment-charts .pie-canvas-wrap {
+    position: relative;
+    width: 100%;
+    height: 260px;
+    min-height: 260px;
+}
+
+.category-payment-charts .pie-legend {
+    width: 100%;
+    min-width: 0;
+}
+
+@media (max-width: 900px) {
+    .category-payment-charts {
+        grid-template-columns: 1fr;
+    }
+}

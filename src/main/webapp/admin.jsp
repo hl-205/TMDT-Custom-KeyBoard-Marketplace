@@ -106,6 +106,8 @@
         };
         var analyticsChartInstance = null;
         var orderPieChartInstance = null;
+        var categoryPieChartInstance = null;
+        var paymentPieChartInstance = null;
         var ctxPath = "<c:out value='${pageContext.request.contextPath}'/>";
 
         var ORDER_STATUSES = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPING', 'SHIPPED', 'COMPLETED', 'CANCELLED'];
@@ -393,12 +395,48 @@
                 '</div>' +
 
                 '<div class="chart-panel pie-panel">' +
-                '<div class="chart-panel-head"><div><h3>Biểu đồ tròn trạng thái đơn hàng</h3>' +
-                '<p>Tỷ lệ đơn hàng theo trạng thái từ <strong>' + esc(fromDate) + '</strong> đến <strong>' + esc(toDate) + '</strong></p></div></div>' +
+                '<div class="chart-panel-head"><div>' +
+                '<h3>Biểu đồ tròn trạng thái đơn hàng</h3>' +
+                '<p> Tỷ lệ trạng thái đơn hàng</p>' +
+                '</div></div>' +
                 '<div class="pie-chart-layout">' +
-                '<div class="pie-canvas-wrap"><canvas id="orderStatusPieChart" aria-label="Biểu đồ tròn tỷ lệ trạng thái đơn hàng" role="img"></canvas></div>' +
+                '<div class="pie-canvas-wrap"><canvas id="orderStatusPieChart" aria-label="Biểu đồ tròn trạng thái đơn hàng" role="img"></canvas></div>' +
                 '<div id="order-pie-legend" class="pie-legend"></div>' +
                 '</div>' +
+                '</div>' +
+
+                '<div class="category-payment-charts">' +
+
+                '<div class="chart-panel pie-panel">' +
+                '<div class="chart-panel-head">' +
+                '<div>' +
+                '<h3>Sản phẩm theo danh mục</h3>' +
+                '<p>Phân bố số lượng sản phẩm theo từng danh mục</p>' +
+                '</div>' +
+                '</div>' +
+                '<div class="pie-chart-layout">' +
+                '<div class="pie-canvas-wrap">' +
+                '<canvas id="categoryPieChart"></canvas>' +
+                '</div>' +
+                '<div id="category-pie-legend" class="pie-legend"></div>' +
+                '</div>' +
+                '</div>' +
+
+                '<div class="chart-panel pie-panel">' +
+                '<div class="chart-panel-head">' +
+                '<div>' +
+                '<h3>Đơn hàng theo phương thức thanh toán</h3>' +
+                '<p>Phân bố đơn hàng theo phương thức thanh toán</p>' +
+                '</div>' +
+                '</div>' +
+                '<div class="pie-chart-layout">' +
+                '<div class="pie-canvas-wrap">' +
+                '<canvas id="paymentPieChart"></canvas>' +
+                '</div>' +
+                '<div id="payment-pie-legend" class="pie-legend"></div>' +
+                '</div>' +
+                '</div>' +
+
                 '</div>' +
 
                 '<div class="table-card">' +
@@ -465,6 +503,8 @@
 
             drawAnalyticsChart();
             drawOrderPieChart();
+            drawCategoryPieChart();
+            drawPaymentPieChart();
         }
 
         function drawOrderPieChart() {
@@ -477,16 +517,30 @@
             if (!canvas || !legend) return;
             var breakdown = (S.revenueStats || {}).orderStatusBreakdown || {};
             var names = {
-                PENDING:'Chờ xác nhận', CONFIRMED:'Đã xác nhận', PROCESSING:'Đang xử lý',
-                SHIPPING:'Đang giao', SHIPPED:'Đã giao', COMPLETED:'Hoàn thành',
-                UNKNOWN:'Chưa xác định'
+                PENDING: 'Chờ xác nhận',
+                CONFIRMED: 'Đã xác nhận',
+                PROCESSING: 'Đang xử lý',
+                SHIPPING: 'Đang giao',
+                SHIPPED: 'Đã giao',
+                COMPLETED: 'Hoàn thành',
+                CANCELLED: 'Đã hủy',
+                UNKNOWN: 'Chưa xác định'
             };
+
             var colors = {
-                PENDING:'#f59e0b', CONFIRMED:'#3b82f6', PROCESSING:'#8b5cf6',
-                SHIPPING:'#06b6d4', SHIPPED:'#14b8a6', COMPLETED:'#10b981',
-                UNKNOWN:'#94a3b8'
+                PENDING: '#f59e0b',
+                CONFIRMED: '#3b82f6',
+                PROCESSING: '#8b5cf6',
+                SHIPPING: '#06b6d4',
+                SHIPPED: '#14b8a6',
+                COMPLETED: '#10b981',
+                CANCELLED: '#ef4444',
+                UNKNOWN: '#94a3b8'
             };
-            var keys = Object.keys(breakdown).filter(function(k) { return k !== 'CANCELLED' && Number(breakdown[k]) > 0; });
+
+            var keys = Object.keys(breakdown).filter(function(k) {
+                return Number(breakdown[k]) > 0;
+            });
             var total = keys.reduce(function(sum, k) { return sum + Number(breakdown[k]); }, 0);
             if (!total) {
                 canvas.style.display = 'none';
@@ -519,6 +573,209 @@
                         tooltip: {callbacks: {label: function(item) {
                                     return ' ' + item.label + ': ' + item.raw + ' đơn (' + (item.raw / total * 100).toFixed(1) + '%)';
                                 }}}
+                    }
+                }
+            });
+        }
+
+        function drawCategoryPieChart() {
+            if (categoryPieChartInstance) {
+                categoryPieChartInstance.destroy();
+                categoryPieChartInstance = null;
+            }
+
+            var canvas = $('categoryPieChart');
+            var legend = $('category-pie-legend');
+
+            if (!canvas || !legend) return;
+
+            if (typeof Chart === 'undefined') {
+                legend.textContent = 'Không tải được thư viện Chart.js.';
+                return;
+            }
+
+            // Đếm số sản phẩm trong từng danh mục.
+            var categoryCounts = {};
+
+            (S.products || []).forEach(function(product) {
+                var category = product.category_name || 'Chưa phân loại';
+
+                categoryCounts[category] =
+                    (categoryCounts[category] || 0) + 1;
+            });
+
+            var labels = Object.keys(categoryCounts);
+            var values = labels.map(function(category) {
+                return categoryCounts[category];
+            });
+
+            var total = values.reduce(function(sum, value) {
+                return sum + value;
+            }, 0);
+
+            if (total === 0) {
+                legend.textContent = 'Chưa có dữ liệu sản phẩm.';
+                return;
+            }
+
+            var colors = [
+                '#2563eb',
+                '#10b981',
+                '#f59e0b',
+                '#ef4444',
+                '#8b5cf6',
+                '#06b6d4',
+                '#ec4899',
+                '#64748b'
+            ];
+
+            legend.innerHTML = labels.map(function(label, index) {
+                    var count = values[index];
+
+                    return '<div class="pie-legend-row">' +
+                        '<span class="pie-dot" style="background:' +
+                        colors[index % colors.length] + '"></span>' +
+                        '<span>' + esc(label) + '</span>' +
+                        '<strong>' + count + ' (' +
+                        (count / total * 100).toFixed(1) + '%)</strong>' +
+                        '</div>';
+                }).join('') +
+                '<div class="pie-legend-total">Tổng sản phẩm: <strong>' +
+                total + '</strong></div>';
+
+            categoryPieChartInstance = new Chart(canvas.getContext('2d'), {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: labels.map(function(_, index) {
+                            return colors[index % colors.length];
+                        }),
+                        borderColor: '#ffffff',
+                        borderWidth: 3,
+                        hoverOffset: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(item) {
+                                    var count = item.raw;
+                                    var percent = (count / total * 100).toFixed(1);
+
+                                    return ' ' + item.label + ': ' +
+                                        count + ' sản phẩm (' + percent + '%)';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function drawPaymentPieChart() {
+            if (paymentPieChartInstance) {
+                paymentPieChartInstance.destroy();
+                paymentPieChartInstance = null;
+            }
+
+            var canvas = $('paymentPieChart');
+            var legend = $('payment-pie-legend');
+
+            if (!canvas || !legend) return;
+
+            if (typeof Chart === 'undefined') {
+                legend.textContent = 'Không tải được thư viện Chart.js.';
+                return;
+            }
+
+            // Đếm số đơn hàng theo phương thức thanh toán.
+            var paymentCounts = {};
+
+            (S.orders || []).forEach(function(order) {
+                var payment = order.payment_method || 'Chưa xác định';
+
+                paymentCounts[payment] =
+                    (paymentCounts[payment] || 0) + 1;
+            });
+
+            var labels = Object.keys(paymentCounts);
+            var values = labels.map(function(payment) {
+                return paymentCounts[payment];
+            });
+
+            var total = values.reduce(function(sum, value) {
+                return sum + value;
+            }, 0);
+
+            if (total === 0) {
+                legend.textContent = 'Chưa có dữ liệu đơn hàng.';
+                return;
+            }
+
+            var colors = [
+                '#2563eb',
+                '#10b981',
+                '#f59e0b',
+                '#ef4444',
+                '#8b5cf6',
+                '#06b6d4',
+                '#ec4899'
+            ];
+
+            legend.innerHTML = labels.map(function(label, index) {
+                    var count = values[index];
+
+                    return '<div class="pie-legend-row">' +
+                        '<span class="pie-dot" style="background:' +
+                        colors[index % colors.length] + '"></span>' +
+                        '<span>' + esc(label) + '</span>' +
+                        '<strong>' + count + ' (' +
+                        (count / total * 100).toFixed(1) + '%)</strong>' +
+                        '</div>';
+                }).join('') +
+                '<div class="pie-legend-total">Tổng đơn hàng: <strong>' +
+                total + '</strong></div>';
+
+            paymentPieChartInstance = new Chart(canvas.getContext('2d'), {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: labels.map(function(_, index) {
+                            return colors[index % colors.length];
+                        }),
+                        borderColor: '#ffffff',
+                        borderWidth: 3,
+                        hoverOffset: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(item) {
+                                    var count = item.raw;
+                                    var percent = (count / total * 100).toFixed(1);
+
+                                    return ' ' + item.label + ': ' +
+                                        count + ' đơn (' + percent + '%)';
+                                }
+                            }
+                        }
                     }
                 }
             });

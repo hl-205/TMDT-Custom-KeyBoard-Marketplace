@@ -41,7 +41,8 @@ public class AdminDAO extends DBContext {
         List<Map<String, Object>> list = new ArrayList<>();
         String sql = "SELECT o.id, o.order_code, o.receiver_name, o.receiver_phone, o.shipping_address, "
                 + "COALESCE(u.email, '') AS customer_email, o.total_amount, o.order_status, "
-                + "o.product_id, o.created_at, COALESCE(p.name, '') AS product_name "
+                + "o.product_id, o.created_at, o.payment_method, "
+                + "COALESCE(p.name, '') AS product_name "
                 + "FROM orders o LEFT JOIN users u ON o.user_id = u.id "
                 + "LEFT JOIN products p ON o.product_id = p.id ORDER BY o.id DESC";
         try (Connection conn = getConnection();
@@ -57,9 +58,9 @@ public class AdminDAO extends DBContext {
                 row.put("customer_email", rs.getString("customer_email"));
                 row.put("total_amount", rs.getLong("total_amount"));
                 row.put("order_status", rs.getString("order_status"));
+                row.put("payment_method", rs.getString("payment_method"));
                 row.put("product_id", rs.getInt("product_id"));
                 row.put("product_name", rs.getString("product_name"));
-                row.put("created_at", rs.getTimestamp("created_at") == null ? "" : rs.getTimestamp("created_at").toString());
                 list.add(row);
             }
         }
@@ -217,7 +218,7 @@ public class AdminDAO extends DBContext {
         // Thống kê trạng thái đơn trong cùng khoảng ngày với biểu đồ doanh thu.
         Map<String, Integer> orderStatusBreakdown = new LinkedHashMap<>();
         String statusSql = "SELECT COALESCE(order_status, 'UNKNOWN') AS status, COUNT(*) AS total "
-                + "FROM orders WHERE created_at >= ? AND created_at < ? AND (order_status IS NULL OR order_status <> 'CANCELLED') "
+                + "FROM orders WHERE created_at >= ? AND created_at < ? "
                 + "GROUP BY COALESCE(order_status, 'UNKNOWN') ORDER BY status";
         try (Connection conn = getConnection();
              PreparedStatement ps = conn.prepareStatement(statusSql)) {

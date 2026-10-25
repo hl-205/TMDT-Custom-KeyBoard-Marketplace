@@ -156,7 +156,7 @@ public class CheckoutServlet extends HttpServlet {
         }
 
         try {
-            int orderId = orderDAO.createOrder(
+            List<Integer> orderIds = orderDAO.createOrders(
                     user.getId(),
                     name.trim(),
                     phone.trim(),
@@ -168,6 +168,7 @@ public class CheckoutServlet extends HttpServlet {
                     shippingFee
             );
 
+            int orderId = orderIds.get(0);
             // Chỉ xóa các dòng đã đặt, giữ lại các dòng chưa được chọn.
             @SuppressWarnings("unchecked")
             Set<String> selectedKeys = (Set<String>) session.getAttribute("checkoutSelectedKeys");

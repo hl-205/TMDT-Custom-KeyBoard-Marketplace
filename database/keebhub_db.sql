@@ -139,14 +139,18 @@ CREATE TABLE custom_services (
                                  CONSTRAINT fk_services_shop FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+-- Giỏ hàng: đã gộp sẵn variant_label, extra_price và unique key mới
+-- (không còn index user_product_unique cũ nên không cần migration)
 CREATE TABLE cart_items (
                             id INT AUTO_INCREMENT PRIMARY KEY,
                             user_id INT NOT NULL,
                             product_id INT NOT NULL,
                             quantity INT NOT NULL DEFAULT 1,
+                            variant_label VARCHAR(255) NOT NULL DEFAULT '',
+                            extra_price BIGINT NOT NULL DEFAULT 0,
                             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                            UNIQUE KEY user_product_unique (user_id, product_id),
+                            UNIQUE KEY user_product_variant_unique (user_id, product_id, variant_label, extra_price),
                             CONSTRAINT fk_cart_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                             CONSTRAINT fk_cart_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -514,18 +518,3 @@ INSERT INTO order_progress (order_id, step_number, step_title, step_desc, status
                                                                                                     (1, 3, 'Cân stabilizer', 'Clip + lube Durock V2 cho phím Space, Enter, Backspace, 2 Shift. Đã căn wire thẳng tắp, hết rattle.', 'COMPLETED', '16/10 · 10:05'),
                                                                                                     (1, 4, 'Lắp ráp & test toàn phím', 'Lắp switch, gắn keycap, test từng phím bằng phần mềm VIA và kiểm tra âm thanh.', 'IN_PROGRESS', 'Đang thực hiện'),
                                                                                                     (1, 5, 'Đóng gói & bàn giao vận chuyển', 'Quay video soundtest cuối, đóng thùng chống sốc bàn giao vận chuyển.', 'PENDING', 'Dự kiến 18/10');
--- Migration an toàn cho giỏ hàng có phân loại và phụ phí.
-USE keebhub_db;
-SET @has_label = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cart_items' AND COLUMN_NAME = 'variant_label');
-SET @sql = IF(@has_label = 0, 'ALTER TABLE cart_items ADD COLUMN variant_label VARCHAR(255) NOT NULL DEFAULT \'\' ', 'SELECT 1');
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
-SET @has_extra = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cart_items' AND COLUMN_NAME = 'extra_price');
-SET @sql = IF(@has_extra = 0, 'ALTER TABLE cart_items ADD COLUMN extra_price BIGINT NOT NULL DEFAULT 0', 'SELECT 1');
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
-SET @has_old = (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cart_items' AND INDEX_NAME = 'user_product_unique');
-SET @sql = IF(@has_old > 0, 'ALTER TABLE cart_items DROP INDEX user_product_unique', 'SELECT 1');
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
-SET @has_new = (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cart_items' AND INDEX_NAME = 'user_product_variant_unique');
-SET @sql = IF(@has_new > 0, 'ALTER TABLE cart_items DROP INDEX user_product_variant_unique', 'SELECT 1');
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
-ALTER TABLE cart_items ADD UNIQUE KEY user_product_variant_unique (user_id, product_id, variant_label, extra_price);

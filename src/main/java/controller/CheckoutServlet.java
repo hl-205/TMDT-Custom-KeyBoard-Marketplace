@@ -29,24 +29,44 @@ public class CheckoutServlet extends HttpServlet {
         User sessionUser = (session != null) ? (User) session.getAttribute("user") : null;
 
         if (sessionUser == null) {
+            // Mua ngay khi chưa đăng nhập: đăng nhập xong quay lại đúng trang thanh toán.
+            if ("1".equals(req.getParameter("buyNow")) && session != null
+                    && session.getAttribute("buyNowItem") != null) {
+                String back = java.net.URLEncoder.encode(
+                        req.getContextPath() + "/checkout?buyNow=1", java.nio.charset.StandardCharsets.UTF_8);
+                resp.sendRedirect(req.getContextPath() + "/login?redirect=" + back);
+                return;
+            }
             resp.sendRedirect(req.getContextPath() + "/login");
             return;
         }
 
         Map<String, CartItem> cart = (Map<String, CartItem>) session.getAttribute("cart");
-        if (cart == null || cart.isEmpty()) {
+
+        // Mua ngay: thanh toán riêng 1 sản phẩm, không dùng giỏ hàng.
+        if ("1".equals(req.getParameter("buyNow")) && session.getAttribute("buyNowItem") != null) {
+            session.setAttribute("checkoutMode", "BUY_NOW");
+        } else if (req.getParameterValues("sel") != null) {
+            // Đi từ giỏ hàng sang: bỏ chế độ mua ngay.
+            session.removeAttribute("checkoutMode");
+            session.removeAttribute("buyNowItem");
+        }
+        boolean buyNowMode = isBuyNow(session);
+        req.setAttribute("buyNowMode", buyNowMode);
+
+        if (!buyNowMode && (cart == null || cart.isEmpty())) {
             resp.sendRedirect(req.getContextPath() + "/cart");
             return;
         }
 
         // Chỉ các sản phẩm tích chọn tại giỏ hàng được chuyển sang thanh toán.
         String[] selected = req.getParameterValues("sel");
-        if (selected != null) {
+        if (!buyNowMode && selected != null) {
             LinkedHashSet<String> keys = new LinkedHashSet<>();
             for (String key : selected) if (cart.containsKey(key)) keys.add(key);
             session.setAttribute("checkoutSelectedKeys", keys);
         }
-        List<CartItem> selectedItems = getSelectedItems(session, cart);
+        List<CartItem> selectedItems = getCheckoutItems(session, cart);
         if (selectedItems.isEmpty()) {
             resp.sendRedirect(req.getContextPath() + "/cart");
             return;
@@ -95,7 +115,8 @@ public class CheckoutServlet extends HttpServlet {
         }
 
         Map<String, CartItem> cart = (Map<String, CartItem>) session.getAttribute("cart");
-        if (cart == null || cart.isEmpty()) {
+        boolean buyNowMode = isBuyNow(session);
+        if (!buyNowMode && (cart == null || cart.isEmpty())) {
             resp.sendRedirect(req.getContextPath() + "/cart");
             return;
         }
@@ -133,7 +154,7 @@ public class CheckoutServlet extends HttpServlet {
         }
 
         // Chỉ tạo đơn từ lựa chọn đã lưu khi chuyển từ giỏ hàng.
-        List<CartItem> cartList = getSelectedItems(session, cart);
+        List<CartItem> cartList = getCheckoutItems(session, cart);
         if (cartList.isEmpty()) {
             resp.sendRedirect(req.getContextPath() + "/cart");
             return;
@@ -170,11 +191,17 @@ public class CheckoutServlet extends HttpServlet {
 
             int orderId = orderIds.get(0);
             // Chỉ xóa các dòng đã đặt, giữ lại các dòng chưa được chọn.
-            @SuppressWarnings("unchecked")
-            Set<String> selectedKeys = (Set<String>) session.getAttribute("checkoutSelectedKeys");
-            if (selectedKeys != null) for (String key : selectedKeys) cart.remove(key);
-            cartDAO.syncCart(user.getId(), cart);
-            session.removeAttribute("checkoutSelectedKeys");
+            if (buyNowMode) {
+                // Mua ngay: giỏ hàng giữ nguyên, chỉ xóa sản phẩm mua ngay.
+                session.removeAttribute("buyNowItem");
+                session.removeAttribute("checkoutMode");
+            } else {
+                @SuppressWarnings("unchecked")
+                Set<String> selectedKeys = (Set<String>) session.getAttribute("checkoutSelectedKeys");
+                if (selectedKeys != null) for (String key : selectedKeys) cart.remove(key);
+                cartDAO.syncCart(user.getId(), cart);
+                session.removeAttribute("checkoutSelectedKeys");
+            }
             session.removeAttribute("appliedCouponCode");
             session.removeAttribute("appliedDiscountAmount");
 
@@ -191,6 +218,16 @@ public class CheckoutServlet extends HttpServlet {
             req.setAttribute("error", e.getMessage());
             doGet(req, resp);
         }
+    }
+
+    private boolean isBuyNow(HttpSession session) {
+        return "BUY_NOW".equals(session.getAttribute("checkoutMode"))
+                && session.getAttribute("buyNowItem") instanceof CartItem;
+    }
+
+    private List<CartItem> getCheckoutItems(HttpSession session, Map<String, CartItem> cart) {
+        if (isBuyNow(session)) return List.of((CartItem) session.getAttribute("buyNowItem"));
+        return getSelectedItems(session, cart);
     }
 
     @SuppressWarnings("unchecked")

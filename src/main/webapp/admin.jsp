@@ -397,7 +397,7 @@
                 '<div class="chart-panel pie-panel">' +
                 '<div class="chart-panel-head"><div>' +
                 '<h3>Biểu đồ tròn trạng thái đơn hàng</h3>' +
-                '<p> Tỷ lệ trạng thái đơn hàng</p>' +
+                '<p>Tỷ lệ trạng thái hiện tại của tất cả đơn hàng trong database</p>' +
                 '</div></div>' +
                 '<div class="pie-chart-layout">' +
                 '<div class="pie-canvas-wrap"><canvas id="orderStatusPieChart" aria-label="Biểu đồ tròn trạng thái đơn hàng" role="img"></canvas></div>' +
@@ -779,6 +779,26 @@
                     }
                 }
             });
+        }
+
+        function refreshOrderAnalytics() {
+            // Tải lại dữ liệu thống kê sau khi trạng thái đơn hàng đã được ghi vào MySQL.
+            // DAO trả về breakdown trạng thái toàn bộ đơn hàng, không phụ thuộc bộ lọc ngày doanh thu.
+            return post({ action: 'getRevenueStats', from_date: '', to_date: '' })
+                .then(function (res) {
+                    if (!res || !res.success || !res.revStats) {
+                        throw new Error((res && res.message) || 'Máy chủ không trả về dữ liệu thống kê.');
+                    }
+                    S.revenueStats = res.revStats;
+                    // Nếu trang thống kê đang mở, hủy và vẽ lại biểu đồ với dữ liệu mới.
+                    if (S.page === 'analytics') renderPage();
+                    return true;
+                })
+                .catch(function (error) {
+                    console.error('Không thể làm mới biểu đồ sau khi cập nhật đơn hàng:', error);
+                    toast('Đã cập nhật đơn hàng nhưng chưa tải lại được biểu đồ. Hãy mở lại mục Thống kê biểu đồ.', true);
+                    return false;
+                });
         }
 
         function fetchRevenueStats(fromDate, toDate) {
@@ -1180,6 +1200,8 @@
                 ], function (form) {
                     return call({action:'updateOrderStatus', id:id, status:form.status}, function () {
                         selectedOrder.order_status = form.status;
+                        // Đồng bộ lại số liệu biểu đồ từ CSDL, không tải lại toàn bộ trang.
+                        refreshOrderAnalytics();
                     });
                 });
             } else if (action === 'edit-order') {

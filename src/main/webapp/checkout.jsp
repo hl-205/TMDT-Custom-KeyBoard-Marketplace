@@ -1,4 +1,3 @@
-```
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
@@ -12,7 +11,7 @@
   <title>Đặt hàng và Thanh toán - KeebHub</title>
 
   <link rel="stylesheet" href="assets/css/style.css">
-  <link rel="stylesheet" href="assets/css/checkout.css">
+  <link rel="stylesheet" href="assets/css/checkout.css?v=2">
 </head>
 <body>
 <jsp:include page="includes/header.jsp" />
@@ -220,7 +219,34 @@
           </c:forEach>
         </div>
 
-        <%-- Mã giảm giá được chọn ở giỏ hàng; checkout chỉ hiển thị khoản đã giảm. --%>
+        <%-- Mã khuyến mãi KeebHub: nhập mã hoặc chọn nhanh mã gợi ý --%>
+        <section class="promo-box" aria-labelledby="promoTitle">
+          <h3 class="promo-title" id="promoTitle"><span class="promo-title-icon">&#127903;&#65039;</span> Mã khuyến mãi KeebHub</h3>
+
+          <div class="promo-entry">
+            <input type="text"
+                   id="promoInput"
+                   placeholder="Nhập mã khuyến mãi"
+                   autocomplete="off"
+                   maxlength="50"
+                   value="<c:out value='${checkoutCouponCode}' />">
+            <button type="button" id="applyPromoBtn">Áp dụng</button>
+          </div>
+
+          <div id="promoMessage" class="promo-message" role="status" aria-live="polite" hidden></div>
+
+          <c:if test="${not empty availableCoupons}">
+            <p class="promo-suggest-label">Gợi ý mã hot cho bạn:</p>
+            <div class="promo-suggest-list" id="promoSuggestList">
+              <c:forEach items="${availableCoupons}" var="cp">
+                <button type="button" class="promo-chip" data-code="<c:out value='${cp.code}' />">
+                  &#127991;&#65039; <c:out value="${cp.code}" /> (<c:out value="${cp.formattedDiscount}" />)
+                </button>
+              </c:forEach>
+            </div>
+          </c:if>
+        </section>
+
         <!-- Tổng tiền -->
         <div class="summary-totals">
           <div class="row">
@@ -231,7 +257,8 @@
           <div id="discountRow"
                class="row discount-row ${checkoutDiscount > 0 ? 'show' : ''}">
             <span>
-              Giảm giá (<span id="appliedCodeText"><c:out value="${checkoutCouponCode}" /></span>)
+              Giảm giá voucher (<span id="appliedCodeText"><c:out value="${checkoutCouponCode}" /></span>)
+              <button type="button" class="remove-coupon" id="removePromoBtn">[Bỏ]</button>
             </span>
             <b id="discountVal">
               -<fmt:formatNumber value="${checkoutDiscount}" pattern="#,###" />₫
@@ -275,7 +302,7 @@
 
 <script>
   const baseSubtotal = Number('${total}') || 0;
-  const currentDiscount = Number('${checkoutDiscount}') || 0;
+  let currentDiscount = Number('${checkoutDiscount}') || 0;
 
   const formatCurrency = amount => new Intl.NumberFormat('vi-VN').format(amount) + '₫';
   const byId = id => document.getElementById(id);
@@ -298,7 +325,7 @@
     byId('submitOrderBtn').textContent = paymentButtons[method] || 'Đặt hàng & thanh toán';
   }
 
-  // Mã giảm giá lấy từ giỏ hàng, chỉ thay đổi phí khi chọn vận chuyển.
+  // Tính lại tổng tiền theo mã khuyến mãi và phí vận chuyển đang chọn.
   function updateTotal() {
     const selectedShipping = document.querySelector('input[name="shippingMethod"]:checked');
     const shippingFee = selectedShipping ? Number(selectedShipping.dataset.fee) : 0;
@@ -311,6 +338,83 @@
       card.classList.toggle('selected', card.querySelector('input').checked);
     });
   }
+
+  // ===== Mã khuyến mãi =====
+  const ctxPath = '${pageContext.request.contextPath}';
+  const promoInput = byId('promoInput');
+  const promoMessage = byId('promoMessage');
+
+  function showPromoMessage(text, ok) {
+    promoMessage.textContent = text;
+    promoMessage.className = 'promo-message ' + (ok ? 'ok' : 'error');
+    promoMessage.hidden = !text;
+  }
+
+  // Cập nhật dòng giảm giá, ô ẩn gửi lên server và tổng tiền.
+  function setDiscount(code, amount) {
+    currentDiscount = Number(amount) || 0;
+    const active = currentDiscount > 0 && !!code;
+    byId('hiddenCouponCode').value = active ? code : '';
+    byId('appliedCodeText').textContent = active ? code : '';
+    byId('discountVal').textContent = '-' + new Intl.NumberFormat('vi-VN').format(currentDiscount) + '₫';
+    byId('discountRow').classList.toggle('show', active);
+    promoInput.value = active ? code : '';
+    document.querySelectorAll('.promo-chip').forEach(chip => {
+      chip.classList.toggle('active', active && chip.dataset.code === code);
+    });
+    updateTotal();
+  }
+
+  function postCoupon(params) {
+    return fetch(ctxPath + '/apply-coupon', {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      body: new URLSearchParams(params),
+      credentials: 'same-origin'
+    }).then(res => res.json());
+  }
+
+  function applyPromo(rawCode) {
+    const code = (rawCode || promoInput.value).trim().toUpperCase();
+    if (!code) {
+      showPromoMessage('Vui lòng nhập mã khuyến mãi.', false);
+      return;
+    }
+    showPromoMessage('Đang kiểm tra mã...', true);
+    postCoupon({ code: code })
+            .then(data => {
+              if (data.success) {
+                setDiscount(data.code || code, data.discountAmount);
+                showPromoMessage(data.message, true);
+              } else {
+                setDiscount('', 0);
+                promoInput.value = code;
+                showPromoMessage(data.message || 'Mã khuyến mãi không hợp lệ.', false);
+              }
+            })
+            .catch(() => showPromoMessage('Không thể kiểm tra mã khuyến mãi. Vui lòng thử lại.', false));
+  }
+
+  function removePromo() {
+    postCoupon({ remove: 'true' })
+            .then(() => {
+              setDiscount('', 0);
+              showPromoMessage('Đã bỏ mã khuyến mãi.', true);
+            })
+            .catch(() => showPromoMessage('Không thể bỏ mã khuyến mãi. Vui lòng thử lại.', false));
+  }
+
+  byId('applyPromoBtn').addEventListener('click', () => applyPromo());
+  byId('removePromoBtn').addEventListener('click', removePromo);
+  promoInput.addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      applyPromo();
+    }
+  });
+  document.querySelectorAll('.promo-chip').forEach(chip => {
+    chip.addEventListener('click', () => applyPromo(chip.dataset.code));
+  });
 
   // Khởi tạo sự kiện giao diện.
   document.querySelectorAll('input[name="shippingMethod"]').forEach(radio => {
@@ -327,8 +431,16 @@
   }
 
   updateTotal();
+
+  if (currentDiscount > 0) {
+    const initialCode = byId('hiddenCouponCode').value;
+    showPromoMessage('Đã áp dụng mã ' + initialCode + '. Bạn được giảm ' + formatCurrency(currentDiscount) + '.', true);
+    document.querySelectorAll('.promo-chip').forEach(chip => {
+      chip.classList.toggle('active', chip.dataset.code === initialCode);
+    });
+  } else {
+    promoInput.value = '';
+  }
 </script>
 </body>
 </html>
-
-```

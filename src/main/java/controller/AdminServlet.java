@@ -173,7 +173,13 @@ public class AdminServlet extends HttpServlet {
                     String fromDate = trim(req.getParameter("from_date"));
                     String toDate = trim(req.getParameter("to_date"));
                     var revStats = dao.getRevenueStats(fromDate, toDate);
-                    sendJson(resp, true, "Tải thống kê doanh thu thành công.", 0, null, revStats);
+
+                    // admin.jsp đọc dữ liệu thống kê trong thuộc tính res.revStats.
+                    // Bọc kết quả vào đúng key để bộ lọc doanh thu và biểu đồ tròn
+                    // dùng cùng một cấu trúc JSON.
+                    Map<String, Object> extra = new LinkedHashMap<>();
+                    extra.put("revStats", revStats);
+                    sendJson(resp, true, "Tải thống kê doanh thu thành công.", 0, null, extra);
                 }
                 default -> sendJson(resp, false, "Thao tác không hợp lệ.", 0, null, null);
             }

@@ -14,13 +14,10 @@ import model.Product;
 import model.User;
 
 import java.io.IOException;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 @WebServlet("/cart")
@@ -45,35 +42,6 @@ public class CartServlet extends HttpServlet {
         return Math.max(0, sum);
     }
 
-    private long selectedSubtotal(HttpServletRequest req, Map<String, CartItem> cart) {
-        String[] keys = req.getParameterValues("selectedKey");
-        if (keys == null) return "true".equals(req.getParameter("selectionProvided")) ? 0 : subtotal(cart.values());
-        long sum = 0;
-        for (String key : keys) {
-            CartItem item = cart.get(key);
-            if (item != null) sum = Math.addExact(sum, item.getLineTotal().longValue());
-        }
-        return Math.max(0, sum);
-    }
-
-    private void prepareCoupons(HttpServletRequest req, HttpSession session,
-                                Map<String, CartItem> cart) throws SQLException {
-        long sum = subtotal(cart.values());
-        req.setAttribute("availableCoupons", cartDAO.getAvailableCoupons(sum));
-        String code = (String) session.getAttribute("appliedCouponCode");
-        long discount = 0;
-        if (code != null && !code.isBlank()) {
-            Map<String, Object> coupon = cartDAO.findCoupon(code);
-            if (cartDAO.isCouponValid(coupon, sum)) {
-                discount = cartDAO.calculateDiscount(coupon, sum);
-                req.setAttribute("appliedCouponCode", code);
-            } else {
-                session.removeAttribute("appliedCouponCode");
-            }
-        }
-        req.setAttribute("appliedCouponDiscount", discount);
-    }
-
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
@@ -84,25 +52,16 @@ public class CartServlet extends HttpServlet {
         req.setAttribute("cartItems", new ArrayList<>(cart.values()));
         int productId = cart.isEmpty() ? 0 : cart.values().iterator().next().getProduct().getId();
         req.setAttribute("recommendedProducts", productDAO.getSimilarProducts(productId, 4));
-        try {
-            prepareCoupons(req, session, cart);
-        } catch (SQLException e) {
-            log("Không tải được mã giảm giá", e);
-            req.setAttribute("availableCoupons", Collections.emptyList());
-            req.setAttribute("appliedCouponDiscount", 0L);
-        }
         req.getRequestDispatcher("/cart.jsp").forward(req, resp);
     }
 
     private void json(HttpServletResponse resp, boolean success, String message,
-                      long discount, long total, String code) throws IOException {
+                      long total) throws IOException {
         resp.setContentType("application/json; charset=UTF-8");
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("success", success);
         result.put("message", message);
-        result.put("couponDiscount", discount);
         result.put("grandTotal", Math.max(0, total));
-        result.put("appliedCouponCode", code == null ? "" : code);
         resp.getWriter().write(gson.toJson(result));
     }
 
@@ -157,57 +116,6 @@ public class CartServlet extends HttpServlet {
         Map<String, CartItem> cart = getCart(session, user);
         String action = text(req.getParameter("action"));
         if (action.isEmpty()) action = "add";
-
-        if ("applyCoupon".equals(action) || "removeCoupon".equals(action)
-                || "recalculateCoupon".equals(action)) {
-            long sum = selectedSubtotal(req, cart);
-            if ("removeCoupon".equals(action)) {
-                session.removeAttribute("appliedCouponCode");
-                json(resp, true, "Đã bỏ mã giảm giá.", 0, sum, null);
-                return;
-            }
-            if ("recalculateCoupon".equals(action)) {
-                String currentCode = (String) session.getAttribute("appliedCouponCode");
-                if (currentCode == null || currentCode.isBlank() || sum <= 0) {
-                    if (sum <= 0) session.removeAttribute("appliedCouponCode");
-                    json(resp, true, "", 0, sum, sum <= 0 ? null : currentCode);
-                    return;
-                }
-                try {
-                    Map<String, Object> current = cartDAO.findCoupon(currentCode);
-                    if (!cartDAO.isCouponValid(current, sum)) {
-                        session.removeAttribute("appliedCouponCode");
-                        json(resp, true, "Mã giảm giá không còn đủ điều kiện với sản phẩm đã chọn.", 0, sum, null);
-                    } else {
-                        long amount = cartDAO.calculateDiscount(current, sum);
-                        json(resp, true, "", amount, sum - amount, currentCode);
-                    }
-                } catch (SQLException e) {
-                    log("Không thể tính lại coupon", e);
-                    json(resp, false, "Không thể kiểm tra lại mã giảm giá.", 0, sum, currentCode);
-                }
-                return;
-            }
-            String code = text(req.getParameter("couponCode")).toUpperCase(Locale.ROOT);
-            if (code.isEmpty()) {
-                json(resp, false, "Vui lòng nhập mã giảm giá.", 0, sum, null);
-                return;
-            }
-            try {
-                Map<String, Object> coupon = cartDAO.findCoupon(code);
-                if (!cartDAO.isCouponValid(coupon, sum)) {
-                    json(resp, false, "Mã không hợp lệ, hết hạn hoặc đơn chưa đủ điều kiện.", 0, sum, null);
-                    return;
-                }
-                long discount = cartDAO.calculateDiscount(coupon, sum);
-                session.setAttribute("appliedCouponCode", code);
-                json(resp, true, "Áp dụng mã thành công!", discount, sum - discount, code);
-            } catch (SQLException e) {
-                log("Lỗi mã giảm giá", e);
-                json(resp, false, "Không thể kiểm tra mã giảm giá.", 0, sum, null);
-            }
-            return;
-        }
 
         boolean ajax = "XMLHttpRequest".equalsIgnoreCase(req.getHeader("X-Requested-With"));
         boolean buyNow = "1".equals(req.getParameter("buyNow"));
@@ -300,8 +208,7 @@ public class CartServlet extends HttpServlet {
                 default: throw new IllegalArgumentException("Thao tác không hợp lệ: " + action);
             }
             if (user != null) cartDAO.syncCart(user.getId(), cart);
-            // Mã vẫn lưu trong session nhưng sẽ được kiểm tra lại theo giá trị giỏ hàng.
-            if (ajax) json(resp, true, "Cập nhật giỏ hàng thành công.", 0, subtotal(cart.values()), null);
+            if (ajax) json(resp, true, "Cập nhật giỏ hàng thành công.", subtotal(cart.values()));
             else if (buyNow && "add".equals(action)) {
                 resp.sendRedirect(req.getContextPath() + "/checkout?buyNow=1");
             } else resp.sendRedirect(req.getContextPath() + "/cart");
@@ -309,7 +216,7 @@ public class CartServlet extends HttpServlet {
             log("Lỗi thao tác giỏ hàng", e);
             if (ajax) {
                 resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                json(resp, false, e.getMessage(), 0, subtotal(cart.values()), null);
+                json(resp, false, e.getMessage(), subtotal(cart.values()));
             } else {
                 session.setAttribute("flashError", e.getMessage());
                 resp.sendRedirect(req.getContextPath() + "/cart");

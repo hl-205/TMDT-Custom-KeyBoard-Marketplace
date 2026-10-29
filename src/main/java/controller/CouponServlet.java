@@ -50,12 +50,6 @@ public class CouponServlet extends HttpServlet {
         }
 
         BigDecimal subtotal = calculateCartSubtotal(session);
-        String subtotalParam = req.getParameter("subtotal");
-        if (subtotalParam != null && !subtotalParam.isBlank()) {
-            try {
-                subtotal = new BigDecimal(subtotalParam.trim());
-            } catch (Exception ignored) {}
-        }
 
         CouponDAO.DiscountResult result = couponDAO.calculateDiscount(code, subtotal);
         if (result.isValid()) {
@@ -86,9 +80,14 @@ public class CouponServlet extends HttpServlet {
 
     @SuppressWarnings("unchecked")
     private BigDecimal calculateCartSubtotal(HttpSession session) {
+        // Mua ngay: chỉ tính riêng sản phẩm mua ngay.
+        if ("BUY_NOW".equals(session.getAttribute("checkoutMode"))
+                && session.getAttribute("buyNowItem") instanceof CartItem) {
+            return ((CartItem) session.getAttribute("buyNowItem")).getLineTotal();
+        }
         Map<String, CartItem> cart = (Map<String, CartItem>) session.getAttribute("cart");
         if (cart == null || cart.isEmpty()) return BigDecimal.ZERO;
-        java.util.List<String> selected = (java.util.List<String>) session.getAttribute("checkoutSelectedKeys");
+        java.util.Collection<String> selected = (java.util.Collection<String>) session.getAttribute("checkoutSelectedKeys");
         java.util.Collection<CartItem> items = cart.values();
         if (selected != null) {
             java.util.List<CartItem> filtered = new java.util.ArrayList<>();

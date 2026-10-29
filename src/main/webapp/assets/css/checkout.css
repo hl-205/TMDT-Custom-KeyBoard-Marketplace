@@ -736,3 +736,140 @@
         transition: none !important;
     }
 }
+
+/* ===== Mã khuyến mãi KeebHub ===== */
+.promo-box {
+    margin: 0 0 18px;
+    padding: 20px;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 16px;
+}
+
+.promo-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 14px;
+    color: #182230;
+    font-size: 15px;
+    font-weight: 800;
+}
+
+.promo-title-icon {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.promo-entry {
+    display: flex;
+    gap: 10px;
+}
+
+.promo-entry input {
+    flex: 1;
+    min-width: 0;
+    height: 44px;
+    padding: 0 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background: #fff;
+    color: #182230;
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.promo-entry input::placeholder {
+    font-weight: 400;
+    text-transform: none;
+    color: #98a2b3;
+}
+
+.promo-entry input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+}
+
+.promo-entry button {
+    height: 44px;
+    padding: 0 20px;
+    border: 0;
+    border-radius: 10px;
+    background: #1e293b;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.promo-entry button:hover {
+    background: #0f172a;
+}
+
+.promo-message {
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.promo-message[hidden] {
+    display: none;
+}
+
+.promo-message.ok {
+    border: 1px solid #a7f3d0;
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.promo-message.error {
+    border: 1px solid #fecaca;
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.promo-suggest-label {
+    margin: 14px 0 8px;
+    color: #667085;
+    font-size: 13px;
+}
+
+.promo-suggest-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.promo-chip {
+    padding: 6px 10px;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+}
+
+.promo-chip:hover,
+.promo-chip.active {
+    border-color: #2563eb;
+    background: #dbeafe;
+}
+
+.summary-totals .discount-row .remove-coupon {
+    margin-left: 6px;
+    font-weight: 600;
+}
+
+@media (max-width: 480px) {
+    .promo-box {
+        padding: 16px 14px;
+    }
+}

@@ -28,7 +28,9 @@ public class AdminServlet extends HttpServlet {
     private static final List<String> ROLES = Arrays.asList("CUSTOMER", "USER", "SELLER", "ADMIN", "MODERATOR");
     private static final List<String> USER_STATUS = Arrays.asList("ACTIVE", "INACTIVE", "BLOCKED");
     private static final List<String> ORDER_STATUS = Arrays.asList("PENDING", "CONFIRMED", "PROCESSING", "SHIPPING", "SHIPPED", "COMPLETED", "CANCELLED");
-    private static final List<String> PRODUCT_STATUS = Arrays.asList("ACTIVE", "INACTIVE");
+    private static final List<String> PRODUCT_STATUS = Arrays.asList("ACTIVE", "INACTIVE", "PENDING", "REJECTED", "NEEDS_EDIT");
+    private static final List<String> MODERATION_STATUS = Arrays.asList("ACTIVE", "PENDING", "REJECTED", "NEEDS_EDIT");
+    private static final Pattern SLUG_PATTERN = Pattern.compile("^[a-z0-9]+(-[a-z0-9]+)*$");
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
     private static final long MAX_MONEY = 999_999_999_999L;
 
@@ -53,6 +55,8 @@ public class AdminServlet extends HttpServlet {
             req.setAttribute("ordersJson", gson.toJson(orders));
             req.setAttribute("productsJson", gson.toJson(products));
             req.setAttribute("shopsJson", gson.toJson(shops));
+            req.setAttribute("shopsFullJson", gson.toJson(dao.getShopsFull()));
+            req.setAttribute("servicesJson", gson.toJson(dao.getServices()));
             req.setAttribute("categoriesJson", gson.toJson(categories));
             req.setAttribute("statsJson", gson.toJson(stats));
             req.setAttribute("revenueStatsJson", gson.toJson(revenueStats));
@@ -117,44 +121,61 @@ public class AdminServlet extends HttpServlet {
                     if (stockValue > Integer.MAX_VALUE) throw new IllegalArgumentException("Số lượng tồn kho quá lớn.");
 
                     int savedId = dao.saveProduct(id, name, sku, shopId, categoryId, price, (int) stockValue, status);
-                    sendJson(resp, true, "Đã lưu sản phẩm thành công.", savedId, dao.getStats(), null);
+                    sendJson(resp, true, id > 0 ? "Đã cập nhật sản phẩm thành công." : "Đã thêm sản phẩm thành công.", savedId, dao.getStats(), null);
                 }
-                case "deleteProduct" -> {
-                    if (id <= 0) throw new IllegalArgumentException("Thiếu ID sản phẩm cần xóa.");
-                    boolean hardDeleted = dao.deleteProduct(id);
-                    Map<String, Object> extra = new LinkedHashMap<>();
-                    extra.put("hardDeleted", hardDeleted);
-                    String message = hardDeleted
-                            ? "Đã xóa hoàn toàn sản phẩm khỏi hệ thống."
-                            : "Sản phẩm đã có đơn hàng nên được chuyển sang trạng thái ngừng bán để bảo toàn lịch sử mua hàng.";
-                    sendJson(resp, true, message, id, dao.getStats(), extra);
+                case "approveShop" -> {
+                    if (id <= 0) throw new IllegalArgumentException("Thiếu ID cửa hàng.");
+                    dao.setShopVerified(id, true);
+                    sendJson(resp, true, "Đã duyệt và kích hoạt cửa hàng.", id, dao.getStats(), shopExtra());
                 }
-                case "saveOrder" -> {
-                    String receiver = required(req, "receiver_name", "Tên người nhận");
-                    String email = required(req, "customer_email", "Email khách hàng").toLowerCase();
-                    String phone = required(req, "receiver_phone", "Số điện thoại người nhận");
-                    String address = required(req, "shipping_address", "Địa chỉ giao hàng");
-                    String status = id > 0 ? "PENDING" : "PENDING"; // Đơn mới mặc định chờ xác nhận; chỉ tab trạng thái được đổi trạng thái.
-                    String orderCode = trim(req.getParameter("order_code"));
-
-                    if (!EMAIL_PATTERN.matcher(email).matches()) throw new IllegalArgumentException("Email khách hàng không đúng định dạng.");
-                    if (orderCode.length() > 30) throw new IllegalArgumentException("Mã đơn hàng tối đa 30 ký tự.");
-
-                    int productId = parseInt(req.getParameter("product_id"));
-                    int quantity = req.getParameter("quantity") == null || req.getParameter("quantity").isBlank()
-                            ? 1 : positiveInt(req.getParameter("quantity"), "Số lượng");
-
-                    Map<String, Object> orderResult = dao.saveOrder(id, orderCode, receiver, email, phone, address, productId, quantity, status);
-                    int savedId = (int) orderResult.get("id");
+                case "rejectShop" -> {
+                    if (id <= 0) throw new IllegalArgumentException("Thiếu ID cửa hàng.");
+                    dao.setShopVerified(id, false);
+                    dao.setShopOwnerStatus(id, "BLOCKED");
+                    sendJson(resp, true, "Đã từ chối hồ sơ và khóa tài khoản chủ shop.", id, dao.getStats(), shopExtra());
+                }
+                case "lockShop" -> {
+                    if (id <= 0) throw new IllegalArgumentException("Thiếu ID cửa hàng.");
+                    dao.setShopOwnerStatus(id, "BLOCKED");
+                    sendJson(resp, true, "Đã khóa tài khoản chủ shop.", id, dao.getStats(), shopExtra());
+                }
+                case "unlockShop" -> {
+                    if (id <= 0) throw new IllegalArgumentException("Thiếu ID cửa hàng.");
+                    dao.setShopOwnerStatus(id, "ACTIVE");
+                    sendJson(resp, true, "Đã mở khóa tài khoản chủ shop.", id, dao.getStats(), shopExtra());
+                }
+                case "moderate" -> {
+                    if (id <= 0) throw new IllegalArgumentException("Thiếu ID mục cần kiểm duyệt.");
+                    String type = trim(req.getParameter("type")).toUpperCase();
+                    String status = oneOf(req.getParameter("status"), MODERATION_STATUS, "Trạng thái kiểm duyệt");
+                    if ("SERVICE".equals(type)) dao.setServiceStatus(id, status);
+                    else if ("PRODUCT".equals(type)) dao.setProductStatus(id, status);
+                    else throw new IllegalArgumentException("Loại mục kiểm duyệt không hợp lệ.");
+                    String msg = switch (status) {
+                        case "ACTIVE" -> "Đã duyệt đăng bán.";
+                        case "REJECTED" -> "Đã từ chối mục này.";
+                        case "NEEDS_EDIT" -> "Đã yêu cầu shop chỉnh sửa.";
+                        default -> "Đã đưa mục về hàng đợi chờ duyệt.";
+                    };
+                    sendJson(resp, true, msg, id, dao.getStats(), moderationExtra());
+                }
+                case "bulkApprove" -> {
+                    String type = trim(req.getParameter("type")).toUpperCase();
+                    int approved = dao.bulkApprove(type);
+                    sendJson(resp, true, approved > 0 ? "Đã duyệt " + approved + " mục đạt đủ tiêu chí." : "Không có mục nào đạt đủ tiêu chí để duyệt.",
+                            0, dao.getStats(), moderationExtra());
+                }
+                case "saveCategory" -> {
+                    String name = required(req, "name", "Tên danh mục");
+                    String slug = required(req, "slug", "Slug").toLowerCase();
+                    String icon = trim(req.getParameter("icon"));
+                    if (name.length() > 100) throw new IllegalArgumentException("Tên danh mục tối đa 100 ký tự.");
+                    if (icon.length() > 50) throw new IllegalArgumentException("Biểu tượng tối đa 50 ký tự.");
+                    if (!SLUG_PATTERN.matcher(slug).matches()) throw new IllegalArgumentException("Slug chỉ gồm chữ thường, số và dấu gạch ngang.");
+                    int savedId = dao.saveCategory(id, name, slug, icon);
                     Map<String, Object> extra = new LinkedHashMap<>();
-                    if (orderResult.containsKey("orderCode")) {
-                        extra.put("orderCode", orderResult.get("orderCode"));
-                    }
-                    if (orderResult.containsKey("totalAmount")) {
-                        extra.put("totalAmount", orderResult.get("totalAmount"));
-                    }
-                    sendJson(resp, true, id > 0 ? "Đã cập nhật đơn hàng thành công." : "Đã tạo đơn hàng mới thành công.",
-                            savedId, dao.getStats(), extra);
+                    extra.put("categories", dao.getCategories());
+                    sendJson(resp, true, id > 0 ? "Đã cập nhật danh mục." : "Đã thêm danh mục mới.", savedId, dao.getStats(), extra);
                 }
                 case "updateOrderStatus" -> {
                     if (id <= 0) throw new IllegalArgumentException("Thiếu ID đơn hàng.");
@@ -163,11 +184,6 @@ public class AdminServlet extends HttpServlet {
                         throw new IllegalArgumentException("Không thể chuyển trạng thái này. Hãy tải lại danh sách và kiểm tra trạng thái hiện tại.");
                     }
                     sendJson(resp, true, "Đã cập nhật trạng thái đơn hàng.", id, dao.getStats(), null);
-                }
-                case "deleteOrder" -> {
-                    if (id <= 0) throw new IllegalArgumentException("Thiếu ID đơn hàng cần xóa.");
-                    dao.deleteOrder(id);
-                    sendJson(resp, true, "Đã xóa đơn hàng và các chi tiết liên quan.", id, dao.getStats(), null);
                 }
                 case "getRevenueStats" -> {
                     String fromDate = trim(req.getParameter("from_date"));
@@ -191,6 +207,19 @@ public class AdminServlet extends HttpServlet {
             getServletContext().log("Admin operation failed", e);
             sendJson(resp, false, "Có lỗi hệ thống khi xử lý yêu cầu. Báo cáo quản trị viên hệ thống.", 0, null, null);
         }
+    }
+
+    private Map<String, Object> shopExtra() throws SQLException {
+        Map<String, Object> extra = new LinkedHashMap<>();
+        extra.put("shopsFull", dao.getShopsFull());
+        return extra;
+    }
+
+    private Map<String, Object> moderationExtra() throws SQLException {
+        Map<String, Object> extra = new LinkedHashMap<>();
+        extra.put("products", dao.getProducts());
+        extra.put("services", dao.getServices());
+        return extra;
     }
 
     private String friendlyError(SQLException e) {

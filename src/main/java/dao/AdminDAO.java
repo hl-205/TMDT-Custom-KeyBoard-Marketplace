@@ -19,7 +19,18 @@ public class AdminDAO extends DBContext {
 
     public List<Map<String, Object>> getUsers() throws SQLException {
         List<Map<String, Object>> list = new ArrayList<>();
-        String sql = "SELECT id, first_name, last_name, email, role, status FROM users ORDER BY id DESC";
+        // Số đơn / chi tiêu: khách hàng tính theo đơn đã mua, chủ shop tính theo đơn của cửa hàng.
+        String sql = "SELECT u.id, u.first_name, u.last_name, u.email, u.phone, u.role, u.status, u.is_verified, u.created_at, "
+                + "CASE WHEN u.role = 'SELLER' THEN COALESCE(t.cnt, 0) ELSE COALESCE(s.cnt, 0) END AS order_count, "
+                + "CASE WHEN u.role = 'SELLER' THEN COALESCE(t.amount, 0) ELSE COALESCE(s.amount, 0) END AS total_spent "
+                + "FROM users u "
+                + "LEFT JOIN (SELECT user_id, COUNT(*) AS cnt, "
+                + "  SUM(CASE WHEN order_status <> 'CANCELLED' THEN total_amount ELSE 0 END) AS amount "
+                + "  FROM orders GROUP BY user_id) s ON s.user_id = u.id "
+                + "LEFT JOIN (SELECT sh.owner_id, COUNT(o.id) AS cnt, "
+                + "  SUM(CASE WHEN o.order_status <> 'CANCELLED' THEN o.total_amount ELSE 0 END) AS amount "
+                + "  FROM shops sh JOIN orders o ON o.shop_id = sh.id GROUP BY sh.owner_id) t ON t.owner_id = u.id "
+                + "ORDER BY u.id DESC";
         try (Connection conn = getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -29,8 +40,13 @@ public class AdminDAO extends DBContext {
                 row.put("first_name", rs.getString("first_name"));
                 row.put("last_name", rs.getString("last_name"));
                 row.put("email", rs.getString("email"));
+                row.put("phone", rs.getString("phone"));
                 row.put("role", rs.getString("role"));
                 row.put("status", rs.getString("status"));
+                row.put("verified", rs.getInt("is_verified") == 1);
+                row.put("created_at", rs.getString("created_at"));
+                row.put("order_count", rs.getLong("order_count"));
+                row.put("total_spent", rs.getLong("total_spent"));
                 list.add(row);
             }
         }
@@ -71,7 +87,15 @@ public class AdminDAO extends DBContext {
         List<Map<String, Object>> list = new ArrayList<>();
         String sql = "SELECT p.id, p.name, p.sku, p.shop_id, p.category_id, "
                 + "COALESCE(s.shop_name, '') AS shop_name, COALESCE(c.name, '') AS category_name, "
-                + "p.price, p.stock, p.status FROM products p "
+                + "p.price, p.stock, p.status, p.created_at, "
+                + "COALESCE(p.brand, '') AS brand, COALESCE(p.switch_type, '') AS switch_type, "
+                + "COALESCE(p.layout, '') AS layout, COALESCE(p.mount_type, '') AS mount_type, "
+                + "COALESCE(p.pin_type, '') AS pin_type, COALESCE(p.actuation_force, '') AS actuation_force, "
+                + "COALESCE(p.image_url, '') AS image_url, "
+                + "CHAR_LENGTH(COALESCE(p.description, '')) AS desc_len, LEFT(COALESCE(p.description, ''), 600) AS description, "
+                + "(SELECT COUNT(*) FROM product_specs ps WHERE ps.product_id = p.id) AS spec_count, "
+                + "(SELECT COUNT(*) FROM product_compatibilities pc WHERE pc.product_id = p.id) AS compat_count "
+                + "FROM products p "
                 + "LEFT JOIN shops s ON p.shop_id = s.id "
                 + "LEFT JOIN categories c ON p.category_id = c.id ORDER BY p.id DESC";
         try (Connection conn = getConnection();
@@ -89,12 +113,25 @@ public class AdminDAO extends DBContext {
                 row.put("price", rs.getLong("price"));
                 row.put("stock", rs.getInt("stock"));
                 row.put("status", rs.getString("status"));
+                row.put("created_at", rs.getString("created_at"));
+                row.put("brand", rs.getString("brand"));
+                row.put("switch_type", rs.getString("switch_type"));
+                row.put("layout", rs.getString("layout"));
+                row.put("mount_type", rs.getString("mount_type"));
+                row.put("pin_type", rs.getString("pin_type"));
+                row.put("actuation_force", rs.getString("actuation_force"));
+                row.put("image_url", rs.getString("image_url"));
+                row.put("desc_len", rs.getInt("desc_len"));
+                row.put("description", rs.getString("description"));
+                row.put("spec_count", rs.getInt("spec_count"));
+                row.put("compat_count", rs.getInt("compat_count"));
                 list.add(row);
             }
         }
         return list;
     }
 
+    /** Danh sách cửa hàng rút gọn dùng cho ô chọn cửa hàng khi thêm/sửa sản phẩm. */
     public List<Map<String, Object>> getShops() throws SQLException {
         List<Map<String, Object>> list = new ArrayList<>();
         try (Connection conn = getConnection();
@@ -113,16 +150,176 @@ public class AdminDAO extends DBContext {
     public List<Map<String, Object>> getCategories() throws SQLException {
         List<Map<String, Object>> list = new ArrayList<>();
         try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement("SELECT id, name FROM categories ORDER BY name");
+             PreparedStatement ps = conn.prepareStatement("SELECT id, name, slug, COALESCE(icon, '') AS icon FROM categories ORDER BY id");
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 Map<String, Object> row = new LinkedHashMap<>();
                 row.put("id", rs.getInt("id"));
                 row.put("name", rs.getString("name"));
+                row.put("slug", rs.getString("slug"));
+                row.put("icon", rs.getString("icon"));
                 list.add(row);
             }
         }
         return list;
+    }
+
+    /** Hồ sơ đầy đủ của cửa hàng kèm thông tin chủ shop và số liệu vận hành. */
+    public List<Map<String, Object>> getShopsFull() throws SQLException {
+        List<Map<String, Object>> list = new ArrayList<>();
+        String sql = "SELECT s.id, s.shop_name, s.avatar_text, s.avatar_color, COALESCE(s.description, '') AS description, "
+                + "COALESCE(s.address, '') AS address, s.is_verified, s.is_workshop, s.rating_avg, s.on_time_rate, s.cancel_rate, "
+                + "COALESCE(s.joined_date, '') AS joined_date, s.owner_id, COALESCE(u.email, '') AS owner_email, "
+                + "COALESCE(u.phone, '') AS owner_phone, TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))) AS owner_name, "
+                + "COALESCE(u.status, 'ACTIVE') AS owner_status, "
+                + "(SELECT COUNT(*) FROM products p WHERE p.shop_id = s.id) AS products, "
+                + "(SELECT COUNT(*) FROM custom_services cs WHERE cs.shop_id = s.id) AS services, "
+                + "(SELECT COUNT(*) FROM orders o WHERE o.shop_id = s.id) AS order_count, "
+                + "(SELECT COALESCE(SUM(o.total_amount), 0) FROM orders o WHERE o.shop_id = s.id AND o.order_status <> 'CANCELLED' "
+                + "   AND YEAR(o.created_at) = YEAR(CURDATE()) AND MONTH(o.created_at) = MONTH(CURDATE())) AS gmv_month "
+                + "FROM shops s LEFT JOIN users u ON u.id = s.owner_id ORDER BY s.is_verified ASC, s.id DESC";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("id", rs.getInt("id"));
+                row.put("shop_name", rs.getString("shop_name"));
+                row.put("avatar_text", rs.getString("avatar_text"));
+                row.put("avatar_color", rs.getString("avatar_color"));
+                row.put("description", rs.getString("description"));
+                row.put("address", rs.getString("address"));
+                row.put("verified", rs.getInt("is_verified") == 1);
+                row.put("workshop", rs.getInt("is_workshop") == 1);
+                row.put("rating_avg", rs.getDouble("rating_avg"));
+                row.put("on_time_rate", rs.getDouble("on_time_rate"));
+                row.put("cancel_rate", rs.getDouble("cancel_rate"));
+                row.put("joined_date", rs.getString("joined_date"));
+                row.put("owner_id", rs.getInt("owner_id"));
+                row.put("owner_name", rs.getString("owner_name"));
+                row.put("owner_email", rs.getString("owner_email"));
+                row.put("owner_phone", rs.getString("owner_phone"));
+                row.put("owner_status", rs.getString("owner_status"));
+                row.put("products", rs.getInt("products"));
+                row.put("services", rs.getInt("services"));
+                row.put("order_count", rs.getLong("order_count"));
+                row.put("gmv_month", rs.getLong("gmv_month"));
+                list.add(row);
+            }
+        }
+        return list;
+    }
+
+    public List<Map<String, Object>> getServices() throws SQLException {
+        List<Map<String, Object>> list = new ArrayList<>();
+        String sql = "SELECT cs.id, cs.shop_id, COALESCE(s.shop_name, '') AS shop_name, cs.service_name, cs.price, "
+                + "COALESCE(cs.duration_text, '') AS duration_text, CHAR_LENGTH(COALESCE(cs.description, '')) AS desc_len, "
+                + "LEFT(COALESCE(cs.description, ''), 600) AS description, cs.status, COALESCE(s.is_workshop, 0) AS is_workshop "
+                + "FROM custom_services cs LEFT JOIN shops s ON s.id = cs.shop_id ORDER BY cs.id DESC";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("id", rs.getInt("id"));
+                row.put("shop_id", rs.getInt("shop_id"));
+                row.put("shop_name", rs.getString("shop_name"));
+                row.put("name", rs.getString("service_name"));
+                row.put("price", rs.getLong("price"));
+                row.put("duration", rs.getString("duration_text"));
+                row.put("desc_len", rs.getInt("desc_len"));
+                row.put("description", rs.getString("description"));
+                row.put("status", rs.getString("status"));
+                row.put("workshop", rs.getInt("is_workshop") == 1);
+                list.add(row);
+            }
+        }
+        return list;
+    }
+
+    public void setShopVerified(int shopId, boolean verified) throws SQLException {
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement("UPDATE shops SET is_verified = ? WHERE id = ?")) {
+            ps.setInt(1, verified ? 1 : 0);
+            ps.setInt(2, shopId);
+            if (ps.executeUpdate() == 0) throw new IllegalArgumentException("Không tìm thấy cửa hàng #" + shopId);
+        }
+    }
+
+    /** Khóa / mở khóa tài khoản chủ shop (cột users.status). */
+    public void setShopOwnerStatus(int shopId, String status) throws SQLException {
+        String sql = "UPDATE users SET status = ? WHERE id = (SELECT owner_id FROM shops WHERE id = ?)";
+        try (Connection conn = getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, status);
+            ps.setInt(2, shopId);
+            if (ps.executeUpdate() == 0) throw new IllegalArgumentException("Cửa hàng này chưa gắn với tài khoản chủ shop.");
+        }
+    }
+
+    public void setProductStatus(int id, String status) throws SQLException {
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement("UPDATE products SET status = ? WHERE id = ?")) {
+            ps.setString(1, status);
+            ps.setInt(2, id);
+            if (ps.executeUpdate() == 0) throw new IllegalArgumentException("Không tìm thấy sản phẩm #" + id);
+        }
+    }
+
+    public void setServiceStatus(int id, String status) throws SQLException {
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement("UPDATE custom_services SET status = ? WHERE id = ?")) {
+            ps.setString(1, status);
+            ps.setInt(2, id);
+            if (ps.executeUpdate() == 0) throw new IllegalArgumentException("Không tìm thấy dịch vụ #" + id);
+        }
+    }
+
+    /**
+     * Duyệt hàng loạt các mục đang chờ duyệt và đạt đủ 4 tiêu chí tự động
+     * (phải khớp với bộ tiêu chí hiển thị ở admin.jsp).
+     */
+    public int bulkApprove(String type) throws SQLException {
+        int total = 0;
+        try (Connection conn = getConnection()) {
+            if (!"SERVICE".equals(type)) {
+                String sql = "UPDATE products p SET p.status = 'ACTIVE' WHERE p.status = 'PENDING' "
+                        + "AND COALESCE(p.sku, '') <> '' AND COALESCE(p.brand, '') <> '' AND p.price > 0 AND CHAR_LENGTH(COALESCE(p.description, '')) >= 100 "
+                        + "AND (SELECT COUNT(*) FROM product_specs ps WHERE ps.product_id = p.id) >= 3 "
+                        + "AND (SELECT COUNT(*) FROM product_compatibilities pc WHERE pc.product_id = p.id) >= 1";
+                try (PreparedStatement ps = conn.prepareStatement(sql)) { total += ps.executeUpdate(); }
+            }
+            if (!"PRODUCT".equals(type)) {
+                String sql = "UPDATE custom_services cs SET cs.status = 'ACTIVE' WHERE cs.status = 'PENDING' "
+                        + "AND CHAR_LENGTH(COALESCE(cs.description, '')) >= 100 AND cs.price > 0 "
+                        + "AND COALESCE(cs.duration_text, '') <> '' "
+                        + "AND EXISTS (SELECT 1 FROM shops s WHERE s.id = cs.shop_id AND s.is_workshop = 1)";
+                try (PreparedStatement ps = conn.prepareStatement(sql)) { total += ps.executeUpdate(); }
+            }
+        }
+        return total;
+    }
+
+    public int saveCategory(int id, String name, String slug, String icon) throws SQLException {
+        if (id <= 0) {
+            String sql = "INSERT INTO categories (name, slug, icon, product_count) VALUES (?, ?, ?, 0)";
+            try (Connection conn = getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                ps.setString(1, name);
+                ps.setString(2, slug);
+                ps.setString(3, icon);
+                ps.executeUpdate();
+                return firstKey(ps);
+            }
+        }
+        String sql = "UPDATE categories SET name = ?, slug = ?, icon = ? WHERE id = ?";
+        try (Connection conn = getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, name);
+            ps.setString(2, slug);
+            ps.setString(3, icon);
+            ps.setInt(4, id);
+            if (ps.executeUpdate() == 0) throw new IllegalArgumentException("Không tìm thấy danh mục #" + id);
+            return id;
+        }
     }
 
     public Map<String, Object> getStats() throws SQLException {

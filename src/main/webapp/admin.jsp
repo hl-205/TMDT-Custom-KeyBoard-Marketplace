@@ -1,4 +1,4 @@
-<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+﻿<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <!DOCTYPE html>
 <html lang="vi">
@@ -626,7 +626,7 @@
                         ['Thông tin cơ bản đầy đủ (SKU, thương hiệu, giá)', !!String(p.sku || '').trim() && !!String(p.brand || '').trim() && Number(p.price) > 0],
                         ['Mô tả trên 100 ký tự', Number(p.desc_len) >= 100],
                         ['Đủ thông số bắt buộc (từ 3 dòng)', Number(p.spec_count) >= 3],
-                        ['Có dữ liệu tương thích (UC27)', Number(p.compat_count) >= 1]
+                        ['Có dữ liệu tương thích', Number(p.compat_count) >= 1]
                     ], raw: p});
             });
             S.services.forEach(function (v) {
@@ -765,7 +765,7 @@
                 var pct = list.length ? Math.round(filled / list.length * 100) : 0;
                 return '<tr><td><strong>' + esc(a.label) + '</strong><small class="cell-sub">' + esc(vals || 'Chưa có dữ liệu') + '</small></td>' +
                     '<td class="um-num">' + nfmt(filled) + '/' + nfmt(list.length) + ' <span class="' + (pct >= 80 ? 'rate-good' : 'rate-bad') + '">(' + pct + '%)</span></td>' +
-                    '<td class="um-num"><input type="checkbox" disabled' + (a.uc ? ' checked' : '') + ' aria-label="Dùng cho UC27"></td></tr>';
+                    '<td class="um-num"><input type="checkbox" disabled' + (a.uc ? ' checked' : '') + ' aria-label="Dùng cho kiểm tra tương thích"></td></tr>';
             }).join('');
             var ruleRows = COMPAT_RULES.map(function (r) {
                 return '<tr><td><strong>' + esc(r[0]) + '</strong><small class="cell-sub wrap">' + esc(r[1]) + '</small></td><td><span class="um-state um-state-blocked">' + r[2] + '</span></td></tr>';
@@ -774,8 +774,8 @@
             return '<div class="ct-grid"><section class="um-card"><div class="ct-head"><div><h3>Cây danh mục</h3><p>' + nfmt(cats.length) + ' danh mục · ' + nfmt(totalProducts) + ' sản phẩm</p></div>' +
                 '<button type="button" class="um-tool primary" data-act="cat-add">+ Thêm danh mục</button></div><div class="ct-tree">' + tree + '</div></section>' +
                 '<div class="ct-side"><section class="um-card"><div class="ct-head"><div><h3>Thuộc tính của “' + esc(selected.name) + '”</h3><p>Mức độ khai báo thuộc tính của các sản phẩm trong danh mục</p></div></div>' +
-                '<div class="table-scroll"><table class="um-table"><thead><tr><th>Thuộc tính</th><th class="um-num">Đã khai báo</th><th class="um-num">Dùng cho UC27</th></tr></thead><tbody>' + attrRows + '</tbody></table></div></section>' +
-                '<section class="um-card"><div class="ct-head"><div><h3>Quy tắc tương thích (UC27)</h3><p>Quy tắc Custom Builder đang áp dụng (cố định trong mã nguồn)</p></div></div>' +
+                '<div class="table-scroll"><table class="um-table"><thead><tr><th>Thuộc tính</th><th class="um-num">Đã khai báo</th><th class="um-num">Dùng cho kiểm tra tương thích</th></tr></thead><tbody>' + attrRows + '</tbody></table></div></section>' +
+                '<section class="um-card"><div class="ct-head"><div><h3>Quy tắc tương thích linh kiện</h3><p>Quy tắc Custom Builder đang áp dụng (cố định trong mã nguồn)</p></div></div>' +
                 '<div class="table-scroll"><table class="um-table"><thead><tr><th>Quy tắc</th><th>Mức</th></tr></thead><tbody>' + ruleRows + '</tbody></table></div></section></div></div>';
         }
         function slugify(text) {

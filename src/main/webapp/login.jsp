@@ -1,4 +1,4 @@
-<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+﻿<%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -140,12 +140,12 @@
             <div class="seller-callout-box">
                 <span>🏪</span>
                 <div>
-                    Bạn là chủ shop? <a href="#">Đăng nhập Kênh người bán</a> để quản lý đơn và tiến độ gia công.
+                    Bạn là chủ shop? <a href="seller-orders">Đăng nhập Kênh người bán</a> để quản lý đơn và tiến độ gia công.
                 </div>
             </div>
 
             <div class="auth-terms-note">
-                Bằng việc đăng nhập, bạn đồng ý với <a href="#">Điều khoản sử dụng</a> và <a href="policy.jsp">Chính sách bảo mật</a> của KeebHub.
+                Bằng việc đăng nhập, bạn đồng ý với <a href="#">Điều khoản sử dụng</a> và <a href="index.jsp#footer-support">Chính sách bảo mật</a> của KeebHub.
             </div>
         </div>
     </div>

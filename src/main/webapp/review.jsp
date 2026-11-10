@@ -9,7 +9,7 @@
     }
     Product product = (Product) request.getAttribute("product");
     if (product == null) {
-        response.sendRedirect("review?orderCode=KH-281044&productId=7");
+        response.sendRedirect("review?orderCode=KH-20261010-002&productId=7");
         return;
     }
     String orderCode = (String) request.getAttribute("orderCode");
@@ -39,6 +39,35 @@
         .sub-star-btn.active {
             color: #F59E0B;
         }
+        .preview-upload-item {
+            width: 84px;
+            height: 84px;
+            border-radius: 10px;
+            border: 1.5px solid #1B64F2;
+            position: relative;
+            overflow: hidden;
+        }
+        .preview-upload-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .preview-remove-btn {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(15, 23, 42, 0.75);
+            color: #fff;
+            border: none;
+            font-size: 11px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
     </style>
 </head>
 <body>
@@ -53,7 +82,6 @@
     </div>
 
     <div class="account-layout-2col">
-        <!-- Sidebar hiển thị đúng tên & avatar của tài khoản đang đăng nhập -->
         <aside class="account-sidebar-card">
             <div class="acc-user-box">
                 <div class="acc-avatar-circle"><%= currentUser.getAvatarText() %></div>
@@ -63,23 +91,21 @@
                 </div>
             </div>
             <div class="acc-nav-group-title">Tài khoản</div>
-            <a href="my-orders" class="acc-nav-link"><span>👤 Hồ sơ cá nhân</span></a>
-            <a href="my-orders" class="acc-nav-link"><span>📍 Sổ địa chỉ</span></a>
+            <a href="profile" class="acc-nav-link"><span>👤 Thông tin tài khoản</span></a>
             <div class="acc-nav-group-title">Mua hàng</div>
-            <a href="my-orders" class="acc-nav-link"><span>📦 Đơn hàng của tôi</span><span class="badge">3</span></a>
+            <a href="my-orders" class="acc-nav-link"><span>📦 Đơn hàng của tôi</span></a>
             <a href="my-reviews" class="acc-nav-link active"><span>⭐ Đánh giá của tôi</span></a>
             <div class="acc-nav-group-title">Hỗ trợ</div>
             <a href="logout" class="acc-nav-link" style="color:#EF4444;font-weight:700;"><span>↪ Đăng xuất</span></a>
         </aside>
 
-        <!-- Form Đánh giá sản phẩm -->
         <section class="review-form-card">
             <div class="review-card-top">
                 <div>
                     <h2 style="font-size:20px;font-weight:800;">Đánh giá sản phẩm</h2>
-                    <span style="font-size:12px;color:#64748B;">Đơn #<%= orderCode %> · <%= product.getShopName() %> · Giao thành công 18/09/2026</span>
+                    <span style="font-size:12px;color:#64748B;">Đơn #<%= orderCode %> · <%= product.getShopName() %></span>
                 </div>
-                <span class="voucher-pill-orange">🎁 Nhận 50.000đ voucher</span>
+                <span class="voucher-pill-orange">🎁 Nhận +50 điểm thưởng</span>
             </div>
 
             <% if (request.getAttribute("error") != null) { %>
@@ -104,6 +130,7 @@
                 <input type="hidden" name="qualityRating" id="qualityRatingInput" value="5">
                 <input type="hidden" name="accuracyRating" id="accuracyRatingInput" value="5">
                 <input type="hidden" name="deliveryRating" id="deliveryRatingInput" value="5">
+                <input type="hidden" name="imageUrls" id="imageUrlsHidden" value="">
 
                 <strong style="font-size:13px;">Bạn hài lòng đến mức nào?</strong>
                 <div class="star-picker-row" id="starPicker">
@@ -115,7 +142,6 @@
                     <span class="star-rating-text" id="ratingLabelText">Tuyệt vời</span>
                 </div>
 
-                <!-- Đánh giá chi tiết 3 tiêu chí có thể click chọn sao độc lập -->
                 <strong style="font-size:13px;display:block;margin-bottom:10px;">Đánh giá chi tiết</strong>
                 <div class="sub-ratings-3col">
                     <div>
@@ -182,15 +208,30 @@
                     <span><strong id="charCountNum">0</strong> / 2000</span>
                 </div>
 
-                <strong style="font-size:13px;">Thêm hình ảnh / video <span style="font-weight:400;color:#94A3B8;">(không bắt buộc — có ảnh được thêm 20k)</span></strong>
-                <div class="upload-slot-row">
-                    <div class="upload-slot-box"><div class="illus-keycap" style="width:42px;height:42px;"></div></div>
-                    <div class="upload-slot-box"><div class="illus-kit" style="width:46px;height:28px;"></div></div>
-                    <div class="upload-slot-box"><span style="font-size:20px;">+</span><span>Thêm ảnh</span></div>
+                <!-- Tải ảnh từ máy tính hoặc chọn ảnh thực tế -->
+                <strong style="font-size:13px;">Thêm hình ảnh thực tế <span style="font-weight:400;color:#94A3B8;">(hiển thị trong bộ lọc "Có hình ảnh")</span></strong>
+                <input type="file" id="reviewFilePicker" accept="image/*" multiple style="display:none;">
+                <div class="upload-slot-row" id="uploadPreviewRow" style="flex-wrap:wrap;">
+                    <div class="upload-slot-box" onclick="document.getElementById('reviewFilePicker').click()" title="Tải ảnh từ máy tính">
+                        <span style="font-size:20px;">📷</span>
+                        <span>Tải ảnh lên</span>
+                    </div>
+                    <div class="upload-slot-box" onclick="addSampleKeyboardPhoto('https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=600&q=80')" title="Đính kèm ảnh chụp bàn phím mẫu 1">
+                        <span style="font-size:18px;">⌨️</span>
+                        <span>Ảnh mẫu 1</span>
+                    </div>
+                    <div class="upload-slot-box" onclick="addSampleKeyboardPhoto('https://images.unsplash.com/photo-1595225476474-87563907a212?auto=format&fit=crop&w=600&q=80')" title="Đính kèm ảnh chụp bàn phím mẫu 2">
+                        <span style="font-size:18px;">🎨</span>
+                        <span>Ảnh mẫu 2</span>
+                    </div>
                 </div>
-                <div style="font-size:11px;color:#94A3B8;margin-bottom:18px;">Tối đa 6 ảnh (≤5MB/ảnh) và 1 video (≤30 giây)</div>
+                <div style="font-size:11px;color:#94A3B8;margin-bottom:14px;">Bạn có thể bấm "Tải ảnh lên" để chọn file ảnh từ máy tính hoặc chọn ảnh mẫu (tối đa 4 ảnh).</div>
 
-                <!-- Tên ẩn danh tự động khớp với Họ & Tên của tài khoản đang đăng nhập -->
+                <label style="display:flex;align-items:center;gap:8px;padding:12px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;margin-bottom:12px;cursor:pointer;">
+                    <input type="checkbox" name="isCustomService" <%= variant.toLowerCase().contains("lube") || variant.toLowerCase().contains("custom") ? "checked" : "" %> style="width:16px;height:16px;accent-color:#1B64F2;">
+                    <span>Đơn hàng này có sử dụng <strong>Dịch vụ gia công / Modding tại xưởng</strong></span>
+                </label>
+
                 <label style="display:flex;align-items:center;gap:8px;padding:12px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;margin-bottom:20px;cursor:pointer;">
                     <input type="checkbox" name="anonymous" checked style="width:16px;height:16px;accent-color:#1B64F2;">
                     <span>Hiển thị tên tôi là <strong><%= currentUser.getMaskedName() %></strong> (ẩn danh một phần)</span>
@@ -211,7 +252,6 @@
 <jsp:include page="includes/footer.jsp" />
 
 <script>
-    // 1. Chọn sao tổng quan
     const stars = document.querySelectorAll('#starPicker .star-btn-big');
     const ratingInput = document.getElementById('ratingValueInput');
     const ratingLabel = document.getElementById('ratingLabelText');
@@ -235,7 +275,6 @@
         });
     });
 
-    // 2. Chọn sao cho 3 tiêu chí Đánh giá chi tiết (Chất lượng, Đúng mô tả, Tốc độ giao)
     const subGroups = document.querySelectorAll('.sub-star-group');
     subGroups.forEach(group => {
         const targetId = group.getAttribute('data-target');
@@ -254,7 +293,6 @@
         });
     });
 
-    // 3. Đếm ký tự nhận xét
     const commentArea = document.getElementById('reviewComment');
     const charCountNum = document.getElementById('charCountNum');
     const charMinHint = document.getElementById('charMinHint');
@@ -269,6 +307,58 @@
                 charMinHint.textContent = 'Cần thêm ' + (20 - len) + ' ký tự nữa (Tối thiểu 20 ký tự)';
                 charMinHint.style.color = '#EF4444';
             }
+        });
+    }
+
+    // Quản lý danh sách ảnh đính kèm
+    let selectedImages = [];
+    const uploadRow = document.getElementById('uploadPreviewRow');
+    const imageUrlsHidden = document.getElementById('imageUrlsHidden');
+    const filePicker = document.getElementById('reviewFilePicker');
+
+    function syncImagesUI() {
+        imageUrlsHidden.value = selectedImages.join(';');
+        uploadRow.querySelectorAll('.preview-upload-item').forEach(el => el.remove());
+
+        selectedImages.forEach((src, idx) => {
+            const box = document.createElement('div');
+            box.className = 'preview-upload-item';
+            box.innerHTML = `<img src="${src}" alt="Preview"><button type="button" class="preview-remove-btn" onclick="removeSelectedImage(${idx})">✕</button>`;
+            uploadRow.insertBefore(box, uploadRow.firstChild);
+        });
+    }
+
+    window.removeSelectedImage = function(index) {
+        selectedImages.splice(index, 1);
+        syncImagesUI();
+    };
+
+    window.addSampleKeyboardPhoto = function(url) {
+        if (selectedImages.length >= 4) {
+            alert('Tối đa 4 ảnh cho mỗi đánh giá.');
+            return;
+        }
+        if (!selectedImages.includes(url)) {
+            selectedImages.push(url);
+            syncImagesUI();
+        }
+    };
+
+    if (filePicker) {
+        filePicker.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files || []);
+            files.forEach(file => {
+                if (selectedImages.length >= 4) return;
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    if (selectedImages.length < 4) {
+                        selectedImages.push(evt.target.result);
+                        syncImagesUI();
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+            filePicker.value = '';
         });
     }
 </script>

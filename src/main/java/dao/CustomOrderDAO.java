@@ -56,6 +56,91 @@ public class CustomOrderDAO {
         }
     }
 
+    public static class SellerProductItem {
+        private int id;
+        private int shopId;
+        private int categoryId;
+        private String categoryName;
+        private String sku;
+        private String name;
+        private String brand;
+        private String shortDesc;
+        private String description;
+        private long price;
+        private long oldPrice;
+        private int stock;
+        private int soldCount;
+        private boolean supportCustom;
+        private String switchType;
+        private String actuationForce;
+        private String pinType;
+        private String layout;
+        private String mountType;
+        private String status;
+        private int specCount;
+        private int compatCount;
+        private String specsText;
+        private String compatText;
+        private Timestamp createdAt;
+
+        public int getId() { return id; }
+        public void setId(int id) { this.id = id; }
+        public int getShopId() { return shopId; }
+        public void setShopId(int shopId) { this.shopId = shopId; }
+        public int getCategoryId() { return categoryId; }
+        public void setCategoryId(int categoryId) { this.categoryId = categoryId; }
+        public String getCategoryName() { return categoryName != null ? categoryName : "Linh kiện"; }
+        public void setCategoryName(String categoryName) { this.categoryName = categoryName; }
+        public String getSku() { return sku != null ? sku : ""; }
+        public void setSku(String sku) { this.sku = sku; }
+        public String getName() { return name != null ? name : ""; }
+        public void setName(String name) { this.name = name; }
+        public String getBrand() { return brand != null ? brand : ""; }
+        public void setBrand(String brand) { this.brand = brand; }
+        public String getShortDesc() { return shortDesc != null ? shortDesc : ""; }
+        public void setShortDesc(String shortDesc) { this.shortDesc = shortDesc; }
+        public String getDescription() { return description != null ? description : ""; }
+        public void setDescription(String description) { this.description = description; }
+        public long getPrice() { return price; }
+        public void setPrice(long price) { this.price = price; }
+        public long getOldPrice() { return oldPrice; }
+        public void setOldPrice(long oldPrice) { this.oldPrice = oldPrice; }
+        public int getStock() { return stock; }
+        public void setStock(int stock) { this.stock = stock; }
+        public int getSoldCount() { return soldCount; }
+        public void setSoldCount(int soldCount) { this.soldCount = soldCount; }
+        public boolean isSupportCustom() { return supportCustom; }
+        public void setSupportCustom(boolean supportCustom) { this.supportCustom = supportCustom; }
+        public String getSwitchType() { return switchType != null ? switchType : ""; }
+        public void setSwitchType(String switchType) { this.switchType = switchType; }
+        public String getActuationForce() { return actuationForce != null ? actuationForce : ""; }
+        public void setActuationForce(String actuationForce) { this.actuationForce = actuationForce; }
+        public String getPinType() { return pinType != null ? pinType : ""; }
+        public void setPinType(String pinType) { this.pinType = pinType; }
+        public String getLayout() { return layout != null ? layout : ""; }
+        public void setLayout(String layout) { this.layout = layout; }
+        public String getMountType() { return mountType != null ? mountType : ""; }
+        public void setMountType(String mountType) { this.mountType = mountType; }
+        public String getStatus() { return status != null ? status : "PENDING"; }
+        public void setStatus(String status) { this.status = status; }
+        public int getSpecCount() { return specCount; }
+        public void setSpecCount(int specCount) { this.specCount = specCount; }
+        public int getCompatCount() { return compatCount; }
+        public void setCompatCount(int compatCount) { this.compatCount = compatCount; }
+        public String getSpecsText() { return specsText != null ? specsText : ""; }
+        public void setSpecsText(String specsText) { this.specsText = specsText; }
+        public String getCompatText() { return compatText != null ? compatText : ""; }
+        public void setCompatText(String compatText) { this.compatText = compatText; }
+        public Timestamp getCreatedAt() { return createdAt; }
+        public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
+
+        public String getFormattedPrice() { return formatVND(price); }
+        public boolean isAutoPassModeration() {
+            return !getSku().isBlank() && !getBrand().isBlank() && price > 0
+                    && getDescription().length() >= 100 && specCount >= 3 && compatCount >= 1;
+        }
+    }
+
     public static class CustomOrder {
         private int id;
         private String orderCode;
@@ -144,7 +229,7 @@ public class CustomOrderDAO {
         }
 
         public String getBuildCode() {
-            return "Build #B-" + (7700 + id);
+            return isCustomOrder() ? ("Build #B-" + (7700 + id)) : ("Đơn bán lẻ #" + orderCode);
         }
 
         public String getProductSummary() {
@@ -180,7 +265,6 @@ public class CustomOrderDAO {
         public void setUpdatedTime(String updatedTime) { this.updatedTime = updatedTime; }
     }
 
-    // Đồng bộ cấu trúc bảng & đồng bộ các đơn đặt từ CheckoutServlet (order_items) sang bảng orders
     public synchronized void ensureDatabaseNormalized() {
         try (Connection conn = DBContext.getConnection();
              Statement st = conn.createStatement()) {
@@ -192,7 +276,6 @@ public class CustomOrderDAO {
                 schemaChecked = true;
             }
 
-            // Tự động đồng bộ product_id và variant_summary từ bảng order_items cho các đơn đặt qua CheckoutServlet
             String syncItemsSql = "UPDATE orders o "
                     + "JOIN order_items oi ON o.id = oi.order_id "
                     + "SET o.product_id = oi.product_id, "
@@ -314,7 +397,7 @@ public class CustomOrderDAO {
     public List<ServicePackage> getAllServicesByShop(int shopId) {
         ensureDatabaseNormalized();
         List<ServicePackage> list = new ArrayList<>();
-        String sql = "SELECT * FROM custom_services WHERE shop_id = ? ORDER BY price ASC";
+        String sql = "SELECT * FROM custom_services WHERE shop_id = ? ORDER BY id DESC";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, shopId);
@@ -339,9 +422,10 @@ public class CustomOrderDAO {
         return list;
     }
 
+    // Gói dịch vụ mới do Seller tạo sẽ có status = 'PENDING' để gửi sang Admin kiểm duyệt
     public boolean addServicePackage(int shopId, String name, long price, String duration, String desc, boolean popular) {
         String sql = "INSERT INTO custom_services (shop_id, service_name, price, duration_text, description, is_popular, sold_month, status) "
-                + "VALUES (?, ?, ?, ?, ?, ?, 0, 'ACTIVE')";
+                + "VALUES (?, ?, ?, ?, ?, ?, 0, 'PENDING')";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, shopId);
@@ -357,8 +441,11 @@ public class CustomOrderDAO {
         return false;
     }
 
+    // Nếu gói dịch vụ đang bị REJECTED hoặc NEEDS_EDIT, khi Seller sửa sẽ chuyển về PENDING để Admin duyệt lại
     public boolean updateServicePackage(int id, String name, long price, String duration, String desc, boolean popular) {
-        String sql = "UPDATE custom_services SET service_name = ?, price = ?, duration_text = ?, description = ?, is_popular = ? WHERE id = ?";
+        String sql = "UPDATE custom_services SET service_name = ?, price = ?, duration_text = ?, description = ?, is_popular = ?, "
+                + "status = CASE WHEN status IN ('REJECTED', 'NEEDS_EDIT') THEN 'PENDING' ELSE status END "
+                + "WHERE id = ?";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, name.trim());
@@ -374,8 +461,10 @@ public class CustomOrderDAO {
         return false;
     }
 
+    // Chỉ cho phép bật/tắt khi gói dịch vụ đã được Admin duyệt (ACTIVE hoặc INACTIVE)
     public boolean toggleServiceStatus(int id) {
-        String sql = "UPDATE custom_services SET status = CASE WHEN status = 'ACTIVE' THEN 'INACTIVE' ELSE 'ACTIVE' END WHERE id = ?";
+        String sql = "UPDATE custom_services SET status = CASE WHEN status = 'ACTIVE' THEN 'INACTIVE' ELSE 'ACTIVE' END "
+                + "WHERE id = ? AND status IN ('ACTIVE', 'INACTIVE')";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
@@ -396,6 +485,324 @@ public class CustomOrderDAO {
             e.printStackTrace();
         }
         return false;
+    }
+
+    // ===================== QUẢN LÝ & ĐĂNG SẢN PHẨM CỦA SELLER (GỬI ADMIN DUYỆT) =====================
+
+    public List<SellerProductItem> getSellerProductsByShop(int shopId, String statusFilter) {
+        List<SellerProductItem> list = new ArrayList<>();
+        StringBuilder sql = new StringBuilder(
+                "SELECT p.*, c.name AS category_name, "
+                        + "(SELECT COUNT(*) FROM product_specs ps WHERE ps.product_id = p.id) AS spec_cnt, "
+                        + "(SELECT COUNT(*) FROM product_compatibilities pc WHERE pc.product_id = p.id) AS compat_cnt "
+                        + "FROM products p "
+                        + "LEFT JOIN categories c ON p.category_id = c.id "
+                        + "WHERE p.shop_id = ? "
+        );
+        if (statusFilter != null && !statusFilter.isBlank() && !"ALL".equalsIgnoreCase(statusFilter)) {
+            sql.append("AND p.status = ? ");
+        }
+        sql.append("ORDER BY p.id DESC");
+
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            ps.setInt(1, shopId);
+            if (statusFilter != null && !statusFilter.isBlank() && !"ALL".equalsIgnoreCase(statusFilter)) {
+                ps.setString(2, statusFilter.trim().toUpperCase());
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    SellerProductItem item = mapSellerProduct(rs);
+                    item.setSpecsText(loadSpecsText(conn, item.getId()));
+                    item.setCompatText(loadCompatText(conn, item.getId()));
+                    list.add(item);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public int countSellerProductsByStatus(int shopId, String statusFilter) {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM products WHERE shop_id = ? ");
+        if (statusFilter != null && !statusFilter.isBlank() && !"ALL".equalsIgnoreCase(statusFilter)) {
+            sql.append("AND status = ? ");
+        }
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            ps.setInt(1, shopId);
+            if (statusFilter != null && !statusFilter.isBlank() && !"ALL".equalsIgnoreCase(statusFilter)) {
+                ps.setString(2, statusFilter.trim().toUpperCase());
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt(1);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    public boolean saveSellerProduct(int productId, int shopId, int categoryId, String sku, String name, String brand,
+                                     long price, long oldPrice, int stock, boolean supportCustom,
+                                     String layout, String mountType, String pinType, String switchType, String actuationForce,
+                                     String shortDesc, String description, String specsText, String compatText) {
+        int discountPercent = 0;
+        if (oldPrice > price && oldPrice > 0) {
+            discountPercent = (int) Math.round(((oldPrice - price) * 100.0) / oldPrice);
+        }
+
+        try (Connection conn = DBContext.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                int targetProductId = productId;
+                if (productId <= 0) {
+                    String ins = "INSERT INTO products (shop_id, category_id, sku, name, brand, short_desc, description, "
+                            + "price, old_price, discount_percent, stock, sold_count, rating_avg, rating_count, badge, "
+                            + "support_custom, switch_type, actuation_force, pin_type, layout, mount_type, status) "
+                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 5.0, 0, 'Mới', ?, ?, ?, ?, ?, ?, 'PENDING')";
+                    try (PreparedStatement ps = conn.prepareStatement(ins, Statement.RETURN_GENERATED_KEYS)) {
+                        ps.setInt(1, shopId);
+                        ps.setInt(2, categoryId);
+                        ps.setString(3, sku.trim());
+                        ps.setString(4, name.trim());
+                        ps.setString(5, brand.trim());
+                        ps.setString(6, shortDesc != null ? shortDesc.trim() : "");
+                        ps.setString(7, description != null ? description.trim() : "");
+                        ps.setLong(8, price);
+                        ps.setLong(9, oldPrice);
+                        ps.setInt(10, discountPercent);
+                        ps.setInt(11, stock);
+                        ps.setInt(12, supportCustom ? 1 : 0);
+                        ps.setString(13, emptyToNull(switchType));
+                        ps.setString(14, emptyToNull(actuationForce));
+                        ps.setString(15, emptyToNull(pinType));
+                        ps.setString(16, emptyToNull(layout));
+                        ps.setString(17, emptyToNull(mountType));
+                        ps.executeUpdate();
+                        try (ResultSet rs = ps.getGeneratedKeys()) {
+                            if (rs.next()) targetProductId = rs.getInt(1);
+                        }
+                    }
+                } else {
+                    String upd = "UPDATE products SET category_id = ?, sku = ?, name = ?, brand = ?, short_desc = ?, "
+                            + "description = ?, price = ?, old_price = ?, discount_percent = ?, stock = ?, "
+                            + "support_custom = ?, switch_type = ?, actuation_force = ?, pin_type = ?, layout = ?, mount_type = ?, "
+                            + "status = 'PENDING' WHERE id = ? AND shop_id = ?";
+                    try (PreparedStatement ps = conn.prepareStatement(upd)) {
+                        ps.setInt(1, categoryId);
+                        ps.setString(2, sku.trim());
+                        ps.setString(3, name.trim());
+                        ps.setString(4, brand.trim());
+                        ps.setString(5, shortDesc != null ? shortDesc.trim() : "");
+                        ps.setString(6, description != null ? description.trim() : "");
+                        ps.setLong(7, price);
+                        ps.setLong(8, oldPrice);
+                        ps.setInt(9, discountPercent);
+                        ps.setInt(10, stock);
+                        ps.setInt(11, supportCustom ? 1 : 0);
+                        ps.setString(12, emptyToNull(switchType));
+                        ps.setString(13, emptyToNull(actuationForce));
+                        ps.setString(14, emptyToNull(pinType));
+                        ps.setString(15, emptyToNull(layout));
+                        ps.setString(16, emptyToNull(mountType));
+                        ps.setInt(17, productId);
+                        ps.setInt(18, shopId);
+                        ps.executeUpdate();
+                    }
+                }
+
+                if (targetProductId > 0) {
+                    replaceProductSpecs(conn, targetProductId, specsText);
+                    replaceProductCompatibilities(conn, targetProductId, compatText);
+                }
+
+                syncShopAndCategoryActiveCounts(conn);
+                conn.commit();
+                return true;
+            } catch (Exception ex) {
+                conn.rollback();
+                ex.printStackTrace();
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public boolean toggleSellerProductStatus(int productId, int shopId) {
+        String sql = "UPDATE products SET status = CASE WHEN status = 'ACTIVE' THEN 'INACTIVE' ELSE 'ACTIVE' END "
+                + "WHERE id = ? AND shop_id = ? AND status IN ('ACTIVE', 'INACTIVE')";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, productId);
+            ps.setInt(2, shopId);
+            boolean ok = ps.executeUpdate() > 0;
+            if (ok) syncShopAndCategoryActiveCounts(conn);
+            return ok;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public boolean deleteSellerProduct(int productId, int shopId) {
+        try (Connection conn = DBContext.getConnection()) {
+            String checkRef = "SELECT (SELECT COUNT(*) FROM order_items WHERE product_id = ?) + "
+                    + "(SELECT COUNT(*) FROM orders WHERE product_id = ?) AS cnt";
+            int refs = 0;
+            try (PreparedStatement ps = conn.prepareStatement(checkRef)) {
+                ps.setInt(1, productId);
+                ps.setInt(2, productId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) refs = rs.getInt(1);
+                }
+            }
+            if (refs > 0) {
+                try (PreparedStatement ps = conn.prepareStatement("UPDATE products SET status = 'INACTIVE' WHERE id = ? AND shop_id = ?")) {
+                    ps.setInt(1, productId);
+                    ps.setInt(2, shopId);
+                    ps.executeUpdate();
+                }
+            } else {
+                try (PreparedStatement ps = conn.prepareStatement("DELETE FROM products WHERE id = ? AND shop_id = ?")) {
+                    ps.setInt(1, productId);
+                    ps.setInt(2, shopId);
+                    ps.executeUpdate();
+                }
+            }
+            syncShopAndCategoryActiveCounts(conn);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    private void replaceProductSpecs(Connection conn, int productId, String specsText) throws SQLException {
+        try (PreparedStatement del = conn.prepareStatement("DELETE FROM product_specs WHERE product_id = ?")) {
+            del.setInt(1, productId);
+            del.executeUpdate();
+        }
+        if (specsText == null || specsText.isBlank()) return;
+        String[] lines = specsText.split("[;\\r\\n]+");
+        String ins = "INSERT INTO product_specs (product_id, spec_name, spec_value, display_order) VALUES (?, ?, ?, ?)";
+        try (PreparedStatement ps = conn.prepareStatement(ins)) {
+            int order = 1;
+            for (String line : lines) {
+                String trimmed = line.trim();
+                if (trimmed.isEmpty()) continue;
+                int colon = trimmed.indexOf(':');
+                String k = (colon > 0) ? trimmed.substring(0, colon).trim() : ("Thông số " + order);
+                String v = (colon > 0) ? trimmed.substring(colon + 1).trim() : trimmed;
+                if (!k.isEmpty() && !v.isEmpty()) {
+                    ps.setInt(1, productId);
+                    ps.setString(2, k);
+                    ps.setString(3, v);
+                    ps.setInt(4, order++);
+                    ps.addBatch();
+                }
+            }
+            ps.executeBatch();
+        }
+    }
+
+    private void replaceProductCompatibilities(Connection conn, int productId, String compatText) throws SQLException {
+        try (PreparedStatement del = conn.prepareStatement("DELETE FROM product_compatibilities WHERE product_id = ?")) {
+            del.setInt(1, productId);
+            del.executeUpdate();
+        }
+        if (compatText == null || compatText.isBlank()) return;
+        String[] lines = compatText.split("[;\\r\\n]+");
+        String ins = "INSERT INTO product_compatibilities (product_id, title, description, is_compatible) VALUES (?, ?, ?, 1)";
+        try (PreparedStatement ps = conn.prepareStatement(ins)) {
+            for (String line : lines) {
+                String trimmed = line.trim();
+                if (trimmed.isEmpty()) continue;
+                int colon = trimmed.indexOf(':');
+                String title = (colon > 0) ? trimmed.substring(0, colon).trim() : "Tương thích hệ thống";
+                String desc = (colon > 0) ? trimmed.substring(colon + 1).trim() : trimmed;
+                if (!title.isEmpty() && !desc.isEmpty()) {
+                    ps.setInt(1, productId);
+                    ps.setString(2, title);
+                    ps.setString(3, desc);
+                    ps.addBatch();
+                }
+            }
+            ps.executeBatch();
+        }
+    }
+
+    private String loadSpecsText(Connection conn, int productId) {
+        StringBuilder sb = new StringBuilder();
+        String sql = "SELECT spec_name, spec_value FROM product_specs WHERE product_id = ? ORDER BY display_order ASC, id ASC";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, productId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    if (sb.length() > 0) sb.append("; ");
+                    sb.append(rs.getString("spec_name")).append(": ").append(rs.getString("spec_value"));
+                }
+            }
+        } catch (SQLException ignored) {}
+        return sb.toString();
+    }
+
+    private String loadCompatText(Connection conn, int productId) {
+        StringBuilder sb = new StringBuilder();
+        String sql = "SELECT title, description FROM product_compatibilities WHERE product_id = ? ORDER BY id ASC";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, productId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    if (sb.length() > 0) sb.append("; ");
+                    sb.append(rs.getString("title")).append(": ").append(rs.getString("description"));
+                }
+            }
+        } catch (SQLException ignored) {}
+        return sb.toString();
+    }
+
+    private void syncShopAndCategoryActiveCounts(Connection conn) {
+        try (Statement st = conn.createStatement()) {
+            st.executeUpdate("UPDATE categories c SET product_count = (SELECT COUNT(*) FROM products p WHERE p.category_id = c.id AND p.status = 'ACTIVE')");
+            st.executeUpdate("UPDATE shops s SET product_count = (SELECT COUNT(*) FROM products p WHERE p.shop_id = s.id AND p.status = 'ACTIVE')");
+        } catch (SQLException ignored) {}
+    }
+
+    private String emptyToNull(String val) {
+        return (val == null || val.trim().isEmpty()) ? null : val.trim();
+    }
+
+    private SellerProductItem mapSellerProduct(ResultSet rs) throws SQLException {
+        SellerProductItem p = new SellerProductItem();
+        p.setId(rs.getInt("id"));
+        p.setShopId(rs.getInt("shop_id"));
+        p.setCategoryId(rs.getInt("category_id"));
+        try { p.setCategoryName(rs.getString("category_name")); } catch (SQLException ignored) {}
+        p.setSku(rs.getString("sku"));
+        p.setName(rs.getString("name"));
+        p.setBrand(rs.getString("brand"));
+        p.setShortDesc(rs.getString("short_desc"));
+        p.setDescription(rs.getString("description"));
+        p.setPrice(rs.getLong("price"));
+        p.setOldPrice(rs.getLong("old_price"));
+        p.setStock(rs.getInt("stock"));
+        p.setSoldCount(rs.getInt("sold_count"));
+        p.setSupportCustom(rs.getInt("support_custom") == 1);
+        p.setSwitchType(rs.getString("switch_type"));
+        p.setActuationForce(rs.getString("actuation_force"));
+        p.setPinType(rs.getString("pin_type"));
+        p.setLayout(rs.getString("layout"));
+        p.setMountType(rs.getString("mount_type"));
+        p.setStatus(rs.getString("status"));
+        try { p.setSpecCount(rs.getInt("spec_cnt")); } catch (SQLException ignored) {}
+        try { p.setCompatCount(rs.getInt("compat_cnt")); } catch (SQLException ignored) {}
+        p.setCreatedAt(rs.getTimestamp("created_at"));
+        return p;
     }
 
     public List<CustomOrder> getOrdersForSeller(String statusFilter, boolean onlyCustom) {
@@ -493,9 +900,10 @@ public class CustomOrderDAO {
         return null;
     }
 
-    // Lưu Phiếu Báo Giá (shopNote + extraFee) và chuyển trạng thái sang PROCESSING
+    // Hỗ trợ lập Phiếu Báo Giá & Xác nhận đơn cho cả Đơn Custom lẫn Đơn Mua sẵn / Bán lẻ
     public boolean acceptCustomOrder(int orderId, int committedDays, String shopNote, long extraFee) {
         CustomOrder current = getOrderById(orderId);
+        boolean isCustom = (current != null && current.isCustomOrder());
         long oldTotal = (current != null) ? current.getTotalAmount() : 0;
         long newTotal = oldTotal + extraFee;
 
@@ -503,25 +911,30 @@ public class CustomOrderDAO {
         if (shopNote != null && !shopNote.isBlank()) {
             quotationText = shopNote.trim();
         } else if (extraFee > 0) {
-            quotationText = "Phiếu báo giá từ xưởng: Giá tạm tính ban đầu " + formatVND(oldTotal)
-                    + " + Phụ phí vật tư/mod phát sinh " + formatVND(extraFee)
-                    + " = Tổng chốt " + formatVND(newTotal) + ". Cam kết hoàn thành trong " + committedDays + " ngày.";
+            quotationText = "Phiếu báo giá từ shop: Giá tạm tính ban đầu " + formatVND(oldTotal)
+                    + " + Phụ phí điều chỉnh " + formatVND(extraFee)
+                    + " = Tổng chốt " + formatVND(newTotal) + ". Cam kết bàn giao trong " + committedDays + " ngày.";
         } else {
-            quotationText = "Phiếu báo giá từ xưởng: Giữ nguyên mức giá niêm yết " + formatVND(oldTotal)
-                    + " (Không phát sinh phụ phí). Cam kết hoàn thành trong " + committedDays + " ngày.";
+            quotationText = "Phiếu báo giá từ shop: Xác nhận mức giá chốt " + formatVND(oldTotal)
+                    + " (Không phát sinh phụ phí). Cam kết bàn giao trong " + committedDays + " ngày.";
         }
 
-        String sql = "UPDATE orders SET order_status = 'PROCESSING', progress_percent = 20, committed_days = ?, "
+        String nextStatus = isCustom ? "PROCESSING" : "SHIPPING";
+        int nextProgress = isCustom ? 20 : 80;
+
+        String sql = "UPDATE orders SET order_status = ?, progress_percent = ?, committed_days = ?, "
                 + "shop_note = ?, custom_fee = custom_fee + ?, total_amount = total_amount + ? WHERE id = ?";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, committedDays);
-            ps.setString(2, quotationText);
-            ps.setLong(3, extraFee);
-            ps.setLong(4, extraFee);
-            ps.setInt(5, orderId);
+            ps.setString(1, nextStatus);
+            ps.setInt(2, nextProgress);
+            ps.setInt(3, committedDays);
+            ps.setString(4, quotationText);
+            ps.setLong(5, extraFee);
+            ps.setLong(6, extraFee);
+            ps.setInt(7, orderId);
             boolean updated = ps.executeUpdate() > 0;
-            if (updated) {
+            if (updated && isCustom) {
                 List<ProgressStep> existing = getProgressSteps(orderId);
                 if (existing.isEmpty()) {
                     createInitialFiveSteps(conn, orderId);
@@ -536,8 +949,8 @@ public class CustomOrderDAO {
 
     public boolean rejectCustomOrder(int orderId, String reasonNote) {
         String note = (reasonNote != null && !reasonNote.isBlank())
-                ? "Xưởng từ chối nhận đơn: " + reasonNote.trim()
-                : "Xưởng từ chối nhận đơn do quá tải công suất hoặc hết vật tư mod.";
+                ? "Shop từ chối nhận đơn: " + reasonNote.trim()
+                : "Shop từ chối nhận đơn do quá tải công suất hoặc hết vật tư.";
         String sql = "UPDATE orders SET order_status = 'CANCELLED', progress_percent = 0, shop_note = ? WHERE id = ?";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -552,6 +965,18 @@ public class CustomOrderDAO {
 
     public boolean rejectCustomOrder(int orderId) {
         return rejectCustomOrder(orderId, null);
+    }
+
+    public boolean markOrderShipping(int orderId) {
+        String sql = "UPDATE orders SET order_status = 'SHIPPING', progress_percent = 90 WHERE id = ?";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, orderId);
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
     public boolean markOrderCompleted(int orderId) {

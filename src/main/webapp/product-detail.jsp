@@ -1,6 +1,10 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ page import="model.Product" %>
 <%@ page import="model.Product.*" %>
+<%@ page import="model.User" %>
+<%@ page import="dao.ProductDAO.ReviewItem" %>
+<%@ page import="dao.ProductDAO.ReviewReplyItem" %>
+<%@ page import="dao.ProductDAO.ReviewStats" %>
 <%@ page import="java.util.List" %>
 <%
     Product product = (Product) request.getAttribute("product");
@@ -8,14 +12,27 @@
         response.sendRedirect("product-detail?id=1");
         return;
     }
+    User currentUser = (User) session.getAttribute("user");
     List<ProductOption> colorOptions = (List<ProductOption>) request.getAttribute("colorOptions");
     List<ProductOption> plateOptions = (List<ProductOption>) request.getAttribute("plateOptions");
     List<ProductSpec> specs = (List<ProductSpec>) request.getAttribute("specs");
     List<ProductCompatibility> compatibilities = (List<ProductCompatibility>) request.getAttribute("compatibilities");
-    List<Review> reviews = (List<Review>) request.getAttribute("reviews");
     List<Product> similarProducts = (List<Product>) request.getAttribute("similarProducts");
 
-    // Tìm option Plate mặc định có extraPrice = 0 để khớp với giá gốc khi mới mở trang
+    ReviewStats reviewStats = (ReviewStats) request.getAttribute("reviewStats");
+    if (reviewStats == null) reviewStats = new ReviewStats();
+    List<ReviewItem> reviewItems = (List<ReviewItem>) request.getAttribute("reviewItems");
+    Integer filteredReviewCountObj = (Integer) request.getAttribute("filteredReviewCount");
+    int filteredReviewCount = (filteredReviewCountObj != null) ? filteredReviewCountObj : 0;
+
+    Integer starFilter = (Integer) request.getAttribute("starFilter");
+    Boolean hasImageObj = (Boolean) request.getAttribute("hasImage");
+    boolean hasImage = (hasImageObj != null && hasImageObj);
+    Boolean hasCustomObj = (Boolean) request.getAttribute("hasCustom");
+    boolean hasCustom = (hasCustomObj != null && hasCustomObj);
+    Integer revLimitObj = (Integer) request.getAttribute("revLimit");
+    int revLimit = (revLimitObj != null) ? revLimitObj : 15;
+
     int defaultPlateIndex = 0;
     String defaultPlateLabel = "Polycarbonate";
     if (plateOptions != null) {
@@ -27,6 +44,11 @@
             }
         }
     }
+
+    String filterQueryBase = "product-detail?id=" + product.getId()
+            + (starFilter != null ? "&star=" + starFilter : "")
+            + (hasImage ? "&hasImage=1" : "")
+            + (hasCustom ? "&hasCustom=1" : "");
 %>
 <!DOCTYPE html>
 <html lang="vi">
@@ -36,6 +58,100 @@
     <title><%= product.getName() %> - KeebHub</title>
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/product-detail.css">
+    <style>
+        .r-pill {
+            text-decoration: none;
+            display: inline-block;
+            cursor: pointer;
+        }
+        .rev-real-img {
+            width: 76px;
+            height: 76px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid #CBD5E1;
+            cursor: zoom-in;
+            transition: transform 0.15s ease;
+        }
+        .rev-real-img:hover {
+            transform: scale(1.06);
+            border-color: #1B64F2;
+        }
+        .rev-vote-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid #E2E8F0;
+            background: #F8FAFC;
+            color: #475569;
+            font-size: 12px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.15s;
+        }
+        .rev-vote-btn:hover {
+            border-color: #1B64F2;
+            color: #1B64F2;
+            background: #EFF6FF;
+        }
+        .rev-reply-thread {
+            margin-top: 12px;
+            background: #F8FAFC;
+            border-left: 3px solid #1B64F2;
+            padding: 10px 14px;
+            border-radius: 0 8px 8px 0;
+        }
+        .rev-reply-item {
+            padding: 6px 0;
+            border-bottom: 1px dashed #E2E8F0;
+            font-size: 13px;
+        }
+        .rev-reply-item:last-child {
+            border-bottom: none;
+        }
+        .rev-role-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 10px;
+            margin-left: 6px;
+        }
+        .rev-role-badge.seller {
+            background: #FFF7ED;
+            color: #EA580C;
+            border: 1px solid #FED7AA;
+        }
+        .rev-role-badge.admin {
+            background: #FEF2F2;
+            color: #DC2626;
+            border: 1px solid #FECACA;
+        }
+        .rev-role-badge.customer {
+            background: #EFF6FF;
+            color: #1B64F2;
+        }
+        .img-lightbox-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.82);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 24px;
+        }
+        .img-lightbox-modal.show {
+            display: flex;
+        }
+        .img-lightbox-modal img {
+            max-width: 90vw;
+            max-height: 85vh;
+            border-radius: 12px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+    </style>
 </head>
 <body>
 
@@ -45,7 +161,6 @@
     <div class="pd-breadcrumb">
         <a href="index.jsp">Trang chủ</a> ›
         <a href="category?cat=<%= product.getCategoryId() %>"><%= product.getCategoryName() %></a> ›
-        <a href="category">60% layout</a> ›
         <strong><%= product.getName().split("—")[0].trim() %></strong>
     </div>
 
@@ -111,8 +226,8 @@
             <h1 class="pd-title"><%= product.getName() %></h1>
 
             <div class="pd-meta-stats">
-                <span class="stars">★★★★★ <strong><%= product.getRatingAvg() %></strong></span>
-                <span><%= product.getRatingCount() %> đánh giá</span>
+                <span class="stars">★★★★★ <strong><%= reviewStats.getTotalCount() > 0 ? reviewStats.getAvgRating() : product.getRatingAvg() %></strong></span>
+                <a href="#sec-danhgia" style="color:#64748B;text-decoration:underline;"><%= reviewStats.getTotalCount() %> đánh giá</a>
                 <span>Đã bán <%= product.getFormattedSoldCount() %></span>
                 <span>Mã SP: <%= product.getSku() %></span>
             </div>
@@ -126,7 +241,7 @@
                 </div>
                 <% if (product.getOldPrice() > product.getPrice()) { %>
                 <div class="pd-price-sub">
-                    Tiết kiệm <%= product.getFormattedSavedAmount() %> · Ưu đãi kết thúc sau <strong>04:12:38</strong>
+                    Tiết kiệm <%= product.getFormattedSavedAmount() %> · Giá đã bao gồm VAT
                 </div>
                 <% } %>
             </div>
@@ -150,7 +265,7 @@
                 </div>
             </div>
 
-            <!-- Chọn Plate (Tự động cộng/trừ giá tiền) -->
+            <!-- Chọn Plate -->
             <div class="pd-option-section">
                 <div class="pd-option-label">Plate · <strong id="selectedPlateText"><%= defaultPlateLabel %></strong></div>
                 <div class="pd-option-buttons" id="plateGroup">
@@ -170,7 +285,7 @@
                 </div>
             </div>
 
-            <!-- Số lượng (Giới hạn từ 1 đến tồn kho thực tế) -->
+            <!-- Số lượng -->
             <div class="pd-option-section">
                 <div class="pd-option-label"><strong>Số lượng</strong></div>
                 <div class="pd-qty-row">
@@ -210,12 +325,11 @@
                             <% } %>
                         </div>
                         <div class="pd-shop-sub">
-                            ★ <%= product.getShopRating() %> · <%= product.getFormattedShopFollowers() %> theo dõi · Phản hồi <%= product.getShopResponseRate() %>% trong <%= product.getShopResponseTime() %> · Xưởng gia công tại <%= product.getShopAddress() %>
+                            ★ <%= product.getShopRating() %> · <%= product.getFormattedShopFollowers() %> theo dõi · Phản hồi <%= product.getShopResponseRate() %>% <%= product.getShopResponseTime() %> · Tại <%= product.getShopAddress() %>
                         </div>
                     </div>
                 </div>
                 <div class="pd-shop-btns">
-                    <a href="#" class="btn-shop-sm">💬 Chat</a>
                     <a href="shop?id=<%= product.getShopId() %>" class="btn-shop-sm">Xem shop</a>
                 </div>
             </div>
@@ -243,12 +357,11 @@
                 <a href="#sec-mota" class="pd-tab-link active">Mô tả</a>
                 <a href="#sec-thongso" class="pd-tab-link">Thông số kỹ thuật</a>
                 <a href="#sec-tuongthich" class="pd-tab-link">Tương thích</a>
-                <a href="#sec-danhgia" class="pd-tab-link">Đánh giá (<%= reviews != null ? reviews.size() : product.getRatingCount() %>)</a>
-                <a href="#sec-danhgia" class="pd-tab-link">Hỏi đáp (34)</a>
+                <a href="#sec-danhgia" class="pd-tab-link">Đánh giá (<%= reviewStats.getTotalCount() %>)</a>
             </div>
 
             <div class="pd-article-section" id="sec-mota">
-                <h3><%= product.getName().split("—")[0].trim() %> — bản nâng cấp của huyền thoại</h3>
+                <h3><%= product.getName().split("—")[0].trim() %></h3>
                 <p><%= product.getShortDesc() %></p>
                 <p><%= product.getDescription() %></p>
 
@@ -288,7 +401,7 @@
 
             <div class="pd-article-section" id="sec-tuongthich">
                 <h3>Tương thích linh kiện</h3>
-                <p class="pd-compat-subtitle">Dữ liệu đối chiếu tự động từ cơ sở dữ liệu tương thích của sàn (UC27)</p>
+                <p class="pd-compat-subtitle">Dữ liệu đối chiếu tự động từ cơ sở dữ liệu tương thích của sàn</p>
                 <div class="pd-compat-grid">
                     <% if (compatibilities != null) {
                         for (ProductCompatibility cp : compatibilities) { %>
@@ -304,33 +417,89 @@
                 </div>
             </div>
 
+            <!-- KHỐI ĐÁNH GIÁ TỪ NGƯỜI MUA: ĐỘNG 100% TỪ DATABASE -->
             <div class="pd-article-section" id="sec-danhgia" style="margin-bottom: 0;">
-                <h3>Đánh giá từ người mua</h3>
+                <h3>Đánh giá từ người mua (<%= reviewStats.getTotalCount() %>)</h3>
                 <div class="pd-rating-overview">
                     <div class="rating-score-big">
-                        <strong><%= product.getRatingAvg() %></strong>
+                        <strong><%= reviewStats.getTotalCount() > 0 ? reviewStats.getAvgRating() : 5.0 %></strong>
                         <div class="stars">★★★★★</div>
-                        <span><%= product.getRatingCount() %> đánh giá</span>
+                        <span><%= reviewStats.getTotalCount() %> đánh giá xác thực</span>
                     </div>
                     <div class="rating-bars-list">
-                        <div class="r-bar-row"><span>5 ★</span><div class="r-bar-track"><div class="r-bar-fill" style="width: 88%;"></div></div><span class="r-bar-count">192</span></div>
-                        <div class="r-bar-row"><span>4 ★</span><div class="r-bar-track"><div class="r-bar-fill" style="width: 14%;"></div></div><span class="r-bar-count">19</span></div>
-                        <div class="r-bar-row"><span>3 ★</span><div class="r-bar-track"><div class="r-bar-fill" style="width: 5%;"></div></div><span class="r-bar-count">5</span></div>
-                        <div class="r-bar-row"><span>2 ★</span><div class="r-bar-track"><div class="r-bar-fill" style="width: 2%;"></div></div><span class="r-bar-count">1</span></div>
-                        <div class="r-bar-row"><span>1 ★</span><div class="r-bar-track"><div class="r-bar-fill" style="width: 2%;"></div></div><span class="r-bar-count">1</span></div>
+                        <div class="r-bar-row">
+                            <span>5 ★</span>
+                            <div class="r-bar-track"><div class="r-bar-fill" style="width: <%= reviewStats.getPercent(reviewStats.getStar5()) %>%;"></div></div>
+                            <span class="r-bar-count"><%= reviewStats.getStar5() %></span>
+                        </div>
+                        <div class="r-bar-row">
+                            <span>4 ★</span>
+                            <div class="r-bar-track"><div class="r-bar-fill" style="width: <%= reviewStats.getPercent(reviewStats.getStar4()) %>%;"></div></div>
+                            <span class="r-bar-count"><%= reviewStats.getStar4() %></span>
+                        </div>
+                        <div class="r-bar-row">
+                            <span>3 ★</span>
+                            <div class="r-bar-track"><div class="r-bar-fill" style="width: <%= reviewStats.getPercent(reviewStats.getStar3()) %>%;"></div></div>
+                            <span class="r-bar-count"><%= reviewStats.getStar3() %></span>
+                        </div>
+                        <div class="r-bar-row">
+                            <span>2 ★</span>
+                            <div class="r-bar-track"><div class="r-bar-fill" style="width: <%= reviewStats.getPercent(reviewStats.getStar2()) %>%;"></div></div>
+                            <span class="r-bar-count"><%= reviewStats.getStar2() %></span>
+                        </div>
+                        <div class="r-bar-row">
+                            <span>1 ★</span>
+                            <div class="r-bar-track"><div class="r-bar-fill" style="width: <%= reviewStats.getPercent(reviewStats.getStar1()) %>%;"></div></div>
+                            <span class="r-bar-count"><%= reviewStats.getStar1() %></span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="review-filter-pills">
-                    <span class="r-pill active">Tất cả</span>
-                    <span class="r-pill">5 sao (192)</span>
-                    <span class="r-pill">4 sao (19)</span>
-                    <span class="r-pill">Có hình ảnh (64)</span>
-                    <span class="r-pill">Có gia công (28)</span>
+                <!-- Bộ lọc đầy đủ từ 1 đến 5 sao, Có hình ảnh, Có gia công -->
+                <div class="review-filter-pills" style="flex-wrap:wrap;gap:8px;">
+                    <a href="product-detail?id=<%= product.getId() %>#sec-danhgia"
+                       class="r-pill <%= (starFilter == null && !hasImage && !hasCustom) ? "active" : "" %>">
+                        Tất cả (<%= reviewStats.getTotalCount() %>)
+                    </a>
+                    <a href="product-detail?id=<%= product.getId() %>&star=5#sec-danhgia"
+                       class="r-pill <%= (starFilter != null && starFilter == 5) ? "active" : "" %>">
+                        5 sao (<%= reviewStats.getStar5() %>)
+                    </a>
+                    <a href="product-detail?id=<%= product.getId() %>&star=4#sec-danhgia"
+                       class="r-pill <%= (starFilter != null && starFilter == 4) ? "active" : "" %>">
+                        4 sao (<%= reviewStats.getStar4() %>)
+                    </a>
+                    <a href="product-detail?id=<%= product.getId() %>&star=3#sec-danhgia"
+                       class="r-pill <%= (starFilter != null && starFilter == 3) ? "active" : "" %>">
+                        3 sao (<%= reviewStats.getStar3() %>)
+                    </a>
+                    <a href="product-detail?id=<%= product.getId() %>&star=2#sec-danhgia"
+                       class="r-pill <%= (starFilter != null && starFilter == 2) ? "active" : "" %>">
+                        2 sao (<%= reviewStats.getStar2() %>)
+                    </a>
+                    <a href="product-detail?id=<%= product.getId() %>&star=1#sec-danhgia"
+                       class="r-pill <%= (starFilter != null && starFilter == 1) ? "active" : "" %>">
+                        1 sao (<%= reviewStats.getStar1() %>)
+                    </a>
+                    <a href="product-detail?id=<%= product.getId() %>&hasImage=1#sec-danhgia"
+                       class="r-pill <%= hasImage ? "active" : "" %>">
+                        📷 Có hình ảnh (<%= reviewStats.getWithImagesCount() %>)
+                    </a>
+                    <a href="product-detail?id=<%= product.getId() %>&hasCustom=1#sec-danhgia"
+                       class="r-pill <%= hasCustom ? "active" : "" %>">
+                        🛠️ Có gia công (<%= reviewStats.getWithCustomCount() %>)
+                    </a>
                 </div>
 
-                <% if (reviews != null) {
-                    for (Review rv : reviews) { %>
+                <% if (reviewItems == null || reviewItems.isEmpty()) { %>
+                <div style="padding:36px 20px;text-align:center;color:#64748B;background:#F8FAFC;border-radius:10px;border:1px dashed #CBD5E1;margin-top:14px;">
+                    Chưa có bài đánh giá nào khớp với tiêu chí lọc này.
+                    <div style="margin-top:10px;">
+                        <a href="product-detail?id=<%= product.getId() %>#sec-danhgia" style="color:#1B64F2;font-weight:700;">Xem tất cả đánh giá</a>
+                    </div>
+                </div>
+                <% } else { %>
+                <% for (ReviewItem rv : reviewItems) { %>
                 <div class="review-item-card">
                     <div class="review-user-head">
                         <div class="rev-avatar"><%= rv.getAvatarText() %></div>
@@ -338,6 +507,9 @@
                             <div>
                                 <strong style="font-size: 13px; margin-right: 6px;"><%= rv.getReviewerName() %></strong>
                                 <span class="badge-verified-green">Đã mua hàng</span>
+                                <% if (rv.isCustomService()) { %>
+                                <span style="background:#FFF7ED;color:#EA580C;font-size:11px;font-weight:700;padding:2px 8px;border-radius:12px;margin-left:4px;">🛠️ Đơn có gia công</span>
+                                <% } %>
                             </div>
                             <div class="rev-meta-line">
                                     <span class="stars">
@@ -347,21 +519,95 @@
                             </div>
                         </div>
                     </div>
+
                     <p class="review-comment-text"><%= rv.getComment() %></p>
-                    <div class="review-photos-row">
-                        <div class="rev-photo-box"><div class="mini-thumb-box"><span></span></div></div>
-                        <div class="rev-photo-box"><div class="mini-thumb-box"><span></span><span></span></div></div>
-                        <div class="rev-photo-box"><div class="mini-thumb-box"><span></span></div></div>
+
+                    <!-- Hiển thị ảnh đánh giá thực tế nếu có -->
+                    <% String[] imgs = rv.getImageUrlArray();
+                        if (imgs.length > 0) { %>
+                    <div class="review-photos-row" style="margin-top:10px;">
+                        <% for (String imgUrl : imgs) {
+                            if (!imgUrl.isBlank()) { %>
+                        <img src="<%= imgUrl.trim() %>" alt="Ảnh thực tế từ người mua" class="rev-real-img"
+                             onclick="openLightbox('<%= imgUrl.trim() %>')">
+                        <%  }
+                        } %>
                     </div>
-                    <div class="review-actions-line">
-                        <span>👍 Hữu ích (<%= rv.getHelpfulCount() %>)</span>
-                        <span>Trả lời</span>
+                    <% } %>
+
+                    <!-- Thanh tương tác: Hữu ích (Like), Không hữu ích (Dislike) & Trả lời -->
+                    <div class="review-actions-line" style="display:flex;align-items:center;gap:10px;margin-top:12px;">
+                        <a href="review-action?act=vote&reviewId=<%= rv.getId() %>&helpful=1&productId=<%= product.getId() %>"
+                           class="rev-vote-btn" title="Đánh giá này hữu ích">
+                            👍 Hữu ích (<%= rv.getHelpfulCount() %>)
+                        </a>
+                        <a href="review-action?act=vote&reviewId=<%= rv.getId() %>&helpful=0&productId=<%= product.getId() %>"
+                           class="rev-vote-btn" title="Đánh giá này không hữu ích">
+                            👎 Không hữu ích (<%= rv.getUnhelpfulCount() %>)
+                        </a>
+                        <button type="button" class="rev-vote-btn" style="cursor:pointer;color:#1B64F2;"
+                                onclick="toggleReplyForm(<%= rv.getId() %>)">
+                            💬 Trả lời (<%= rv.getReplies().size() %>)
+                        </button>
+                    </div>
+
+                    <!-- Danh sách phản hồi dưới đánh giá (Của Chủ xưởng, Admin, Khách hàng) -->
+                    <% if (!rv.getReplies().isEmpty()) { %>
+                    <div class="rev-reply-thread">
+                        <% for (ReviewReplyItem rep : rv.getReplies()) {
+                            String badgeCls = "customer";
+                            if ("Chủ xưởng".equalsIgnoreCase(rep.getRoleBadge())) badgeCls = "seller";
+                            else if ("Quản trị viên".equalsIgnoreCase(rep.getRoleBadge())) badgeCls = "admin";
+                        %>
+                        <div class="rev-reply-item">
+                            <div>
+                                <strong style="color:#0F172A;"><%= rep.getReplierName() %></strong>
+                                <span class="rev-role-badge <%= badgeCls %>"><%= rep.getRoleBadge() %></span>
+                                <span style="font-size:11px;color:#94A3B8;margin-left:6px;"><%= rep.getCreatedAt() %></span>
+                            </div>
+                            <p style="color:#334155;margin:4px 0 0 0;"><%= rep.getComment() %></p>
+                        </div>
+                        <% } %>
+                    </div>
+                    <% } %>
+
+                    <!-- Khung nhập câu trả lời -->
+                    <div id="replyFormBox-<%= rv.getId() %>" style="display:none;margin-top:10px;">
+                        <% if (currentUser == null) { %>
+                        <div style="font-size:12px;color:#64748B;background:#F8FAFC;padding:8px 12px;border-radius:6px;">
+                            Vui lòng <a href="login?redirect=<%= request.getContextPath() %>/product-detail?id=<%= product.getId() %>" style="color:#1B64F2;font-weight:700;">Đăng nhập</a> để trả lời đánh giá này.
+                        </div>
+                        <% } else { %>
+                        <form action="review-action" method="POST" style="display:flex;gap:8px;">
+                            <input type="hidden" name="act" value="reply">
+                            <input type="hidden" name="reviewId" value="<%= rv.getId() %>">
+                            <input type="hidden" name="productId" value="<%= product.getId() %>">
+                            <input type="text" name="replyComment" required maxlength="500"
+                                   placeholder="Phản hồi dưới tên <%= currentUser.getFullName() %>..."
+                                   style="flex:1;height:36px;border:1px solid #CBD5E1;border-radius:8px;padding:0 12px;font-size:13px;">
+                            <button type="submit" class="btn btn-blue" style="height:36px;padding:0 16px;font-size:12px;">Gửi phản hồi</button>
+                        </form>
+                        <% } %>
                     </div>
                 </div>
-                <%  }
-                } %>
+                <% } %>
 
-                <button type="button" class="btn-more-reviews">Xem thêm đánh giá</button>
+                <!-- Nút Xem thêm đánh giá (Mỗi lần bấm tải thêm 15 đánh giá tiếp theo) -->
+                <div style="margin-top:16px;text-align:center;">
+                    <div style="font-size:12px;color:#64748B;margin-bottom:8px;">
+                        Đang hiển thị <strong><%= reviewItems.size() %></strong> / <strong><%= filteredReviewCount %></strong> đánh giá
+                    </div>
+                    <% if (filteredReviewCount > reviewItems.size()) {
+                        int nextLimit = revLimit + 15;
+                        int remaining = filteredReviewCount - reviewItems.size();
+                    %>
+                    <a href="<%= filterQueryBase %>&revLimit=<%= nextLimit %>#sec-danhgia"
+                       class="btn-more-reviews" style="display:inline-block;text-decoration:none;width:auto;padding:10px 28px;">
+                        Xem thêm đánh giá (còn <%= remaining %> đánh giá) ↓
+                    </a>
+                    <% } %>
+                </div>
+                <% } %>
             </div>
         </div>
 
@@ -398,9 +644,16 @@
                 </div>
                 <div class="bundle-total-row">
                     <span>Tổng combo</span>
-                    <strong>12.230.000₫</strong>
+                    <strong>5.720.000₫</strong>
                 </div>
-                <a href="cart.jsp" class="btn-full-blue">Thêm cả combo vào giỏ</a>
+                <form method="post" action="<%= request.getContextPath() %>/cart">
+                    <input type="hidden" name="action" value="addBundle">
+                    <input type="hidden" name="productId" value="4">
+                    <input type="hidden" name="productId" value="5">
+                    <input type="hidden" name="productId" value="6">
+                    <input type="hidden" name="productId" value="7">
+                    <button type="submit" class="btn-full-blue" style="border:none;cursor:pointer;width:100%;">Thêm cả combo vào giỏ</button>
+                </form>
             </div>
 
             <div class="sidebar-blue-promo">
@@ -464,11 +717,37 @@
     </section>
 </main>
 
+<!-- Modal phóng to ảnh đánh giá -->
+<div class="img-lightbox-modal" id="imgLightbox" onclick="closeLightbox()">
+    <img id="lightboxImg" src="" alt="Ảnh phóng to">
+</div>
+
 <jsp:include page="includes/footer.jsp" />
 
 <script>
     function formatCurrencyVND(amount) {
         return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "₫";
+    }
+
+    function toggleReplyForm(revId) {
+        const el = document.getElementById('replyFormBox-' + revId);
+        if (el) {
+            el.style.display = (el.style.display === 'none' || el.style.display === '') ? 'block' : 'none';
+        }
+    }
+
+    function openLightbox(src) {
+        const modal = document.getElementById('imgLightbox');
+        const img = document.getElementById('lightboxImg');
+        if (modal && img) {
+            img.src = src;
+            modal.classList.add('show');
+        }
+    }
+
+    function closeLightbox() {
+        const modal = document.getElementById('imgLightbox');
+        if (modal) modal.classList.remove('show');
     }
 
     // 1. Phóng to ảnh khi rê chuột vào khung ảnh chính
@@ -543,7 +822,7 @@
         });
     });
 
-    // 4. Tương tác chọn Plate & Tự động cập nhật Giá tiền theo Plate đã chọn
+    // 4. Tương tác chọn Plate & Tự động cập nhật Giá tiền
     const plateBtns = document.querySelectorAll('#plateGroup .pd-opt-btn:not(.disabled)');
     const selectedPlateText = document.getElementById('selectedPlateText');
     const displayPrice = document.getElementById('displayPrice');
@@ -583,7 +862,6 @@
         }
     }
 
-    // Gửi số lượng đang chọn cùng form thêm vào giỏ
     document.getElementById('cartForm').addEventListener('submit', () => {
         document.getElementById('cartQty').value = parseInt(qtyInput.value, 10) || 1;
         document.getElementById('cartColor').value = document.querySelector('#colorGroup .pd-opt-btn.active:not(.disabled)')?.getAttribute('data-label') || '';

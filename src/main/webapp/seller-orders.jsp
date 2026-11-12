@@ -50,7 +50,7 @@
 
         <% if (request.getParameter("msg") != null) { %>
         <div style="background:#DCFCE7;border:1px solid #BBF7D0;color:#15803D;padding:10px 16px;border-radius:8px;margin-bottom:16px;font-size:13px;font-weight:600;">
-            ✓ Đã cập nhật trạng thái đơn hàng trong Database thành công!
+            ✓ Đã cập nhật trạng thái đơn hàng & phiếu báo giá thành công!
         </div>
         <% } %>
 
@@ -108,7 +108,9 @@
                 </tr>
                 </thead>
                 <tbody>
-                <% for (CustomOrder o : orders) { %>
+                <% for (CustomOrder o : orders) {
+                    boolean isAwaitingQuote = "PENDING".equals(o.getOrderStatus()) || "CONFIRMED".equals(o.getOrderStatus());
+                %>
                 <tr>
                     <td><strong>#<%= o.getOrderCode() %></strong></td>
                     <td><strong><%= o.getReceiverName() %></strong><br><span style="font-size:11px;color:#94A3B8;"><%= o.getReceiverPhone() %></span></td>
@@ -116,6 +118,8 @@
                         <strong><%= o.getProductSummary() %></strong>
                         <% if (o.isCustomOrder()) { %>
                         <span class="s-pill-orange" style="margin-left:6px;">Custom</span>
+                        <% } else { %>
+                        <span style="background:#EFF6FF;color:#1B64F2;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:6px;">Mua sẵn</span>
                         <% } %>
                         <br><span style="font-size:11px;color:#64748B;"><%= o.getVariantSummary() %></span>
                         <% if (o.getShopNote() != null && !o.getShopNote().isBlank()) { %>
@@ -126,9 +130,11 @@
                     <td>
                         <% if ("PENDING".equals(o.getOrderStatus())) { %>
                         <span class="st-badge pending">Chờ báo giá</span>
+                        <% } else if ("CONFIRMED".equals(o.getOrderStatus())) { %>
+                        <span class="st-badge pending">Đã TT · Chờ chốt đơn</span>
                         <% } else if ("PROCESSING".equals(o.getOrderStatus())) { %>
                         <span class="st-badge processing">Đang gia công · <%= o.getProgressPercent() %>%</span>
-                        <% } else if ("SHIPPING".equals(o.getOrderStatus())) { %>
+                        <% } else if ("SHIPPING".equals(o.getOrderStatus()) || "SHIPPED".equals(o.getOrderStatus())) { %>
                         <span class="st-badge shipping">Đang giao</span>
                         <% } else if ("COMPLETED".equals(o.getOrderStatus())) { %>
                         <span class="st-badge completed">Hoàn thành</span>
@@ -138,18 +144,28 @@
                     </td>
                     <td>
                         <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                            <% if ("PENDING".equals(o.getOrderStatus()) && o.isCustomOrder()) { %>
+                            <% if (isAwaitingQuote) { %>
                             <a href="seller-confirm-custom?id=<%= o.getId() %>" class="btn-seller-primary" style="height:32px;font-size:12px;">Lập báo giá & Nhận</a>
                             <% } else if ("PROCESSING".equals(o.getOrderStatus())) { %>
+                            <% if (o.isCustomOrder()) { %>
                             <a href="seller-progress?id=<%= o.getId() %>" class="btn-seller-outline" style="height:32px;font-size:12px;">Cập nhật tiến độ</a>
-                            <% } else if ("SHIPPING".equals(o.getOrderStatus())) { %>
+                            <% } else { %>
+                            <form action="seller-orders" method="POST" style="margin:0;">
+                                <input type="hidden" name="orderId" value="<%= o.getId() %>">
+                                <input type="hidden" name="decision" value="ship">
+                                <button type="submit" class="btn-seller-primary" style="height:32px;font-size:12px;">🚚 Bàn giao vận chuyển</button>
+                            </form>
+                            <% } %>
+                            <a href="seller-confirm-custom?id=<%= o.getId() %>" class="btn-seller-outline" style="height:32px;font-size:12px;">Xem phiếu</a>
+                            <% } else if ("SHIPPING".equals(o.getOrderStatus()) || "SHIPPED".equals(o.getOrderStatus())) { %>
                             <form action="seller-orders" method="POST" style="margin:0;">
                                 <input type="hidden" name="orderId" value="<%= o.getId() %>">
                                 <input type="hidden" name="decision" value="complete">
                                 <button type="submit" class="btn-seller-primary" style="height:32px;font-size:12px;background:#16A34A;">✓ Xác nhận đã giao</button>
                             </form>
+                            <a href="seller-confirm-custom?id=<%= o.getId() %>" class="btn-seller-outline" style="height:32px;font-size:12px;">Xem phiếu</a>
                             <% } else { %>
-                            <a href="seller-progress?id=<%= o.getId() %>" class="btn-seller-outline" style="height:32px;font-size:12px;">Xem chi tiết</a>
+                            <a href="seller-confirm-custom?id=<%= o.getId() %>" class="btn-seller-outline" style="height:32px;font-size:12px;">Xem phiếu</a>
                             <% } %>
                         </div>
                     </td>

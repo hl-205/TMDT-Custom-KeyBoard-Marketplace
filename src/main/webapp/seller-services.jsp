@@ -36,20 +36,24 @@
         <div class="seller-topbar">
             <div class="seller-page-title">
                 <h1>Dịch vụ gia công</h1>
-                <p>${activePkgCount} gói đang mở · ${totalSoldMonth} đơn trong tháng</p>
+                <p>${activePkgCount} gói đang mở · ${totalSoldMonth} đơn trong tháng · Gói mới tạo sẽ qua Admin kiểm duyệt trước khi mở bán</p>
             </div>
             <div class="seller-top-right">
                 <div class="seller-user-pill">
                     <div class="sh-square" style="width:26px;height:26px;border-radius:50%;font-size:11px;"><%= currentUser.getAvatarText() %></div>
                     <span><%= currentUser.getFullName() %> · Chủ shop (<%= shopName %>)</span>
                 </div>
-                <button type="button" class="btn-seller-primary" onclick="openServiceModal('', '', '', '3–4 ngày làm việc', '', false)">+ Thêm gói dịch vụ</button>
+                <button type="button" class="btn-seller-primary" onclick="openServiceModal('', '', '550000', '3–5 ngày làm việc', 'Lube switch toàn bộ bằng Krytox 205g0 và lò xo GPL 105; Cân chỉnh và lube thanh cân bằng Stabilizer chống lọc xọc; Lắp ráp hoàn thiện, test keymap VIA và quay video soundtest bàn giao', false)">+ Thêm gói dịch vụ</button>
             </div>
         </div>
 
-        <% if (request.getParameter("msg") != null) { %>
+        <% if ("saved".equals(request.getParameter("msg"))) { %>
+        <div style="background:#EFF6FF;border:1px solid #BFDBFE;color:#1D4ED8;padding:10px 16px;border-radius:8px;margin-bottom:16px;font-size:13px;font-weight:600;">
+            ✓ Đã lưu gói dịch vụ! Nếu là gói mới tạo hoặc gửi duyệt lại, gói sẽ ở trạng thái <strong>Chờ Admin duyệt (PENDING)</strong>.
+        </div>
+        <% } else if (request.getParameter("msg") != null) { %>
         <div style="background:#DCFCE7;border:1px solid #BBF7D0;color:#15803D;padding:10px 16px;border-radius:8px;margin-bottom:16px;font-size:13px;font-weight:600;">
-            ✓ Đã cập nhật dữ liệu dịch vụ gia công trong Database thành công!
+            ✓ Đã cập nhật dữ liệu dịch vụ gia công thành công!
         </div>
         <% } %>
 
@@ -57,7 +61,7 @@
             <div class="s-kpi-card">
                 <div class="s-kpi-head">🛠️ Đơn gia công tháng này</div>
                 <strong>${totalSoldMonth}</strong>
-                <span class="s-kpi-sub up">▲ Dữ liệu từ bảng custom_services</span>
+                <span class="s-kpi-sub up">▲ Tổng đơn dịch vụ</span>
             </div>
             <div class="s-kpi-card">
                 <div class="s-kpi-head">💰 Doanh thu gia công</div>
@@ -78,22 +82,34 @@
 
         <section class="white-panel-card">
             <h2 style="font-size:16px;font-weight:800;">Các gói dịch vụ của <%= shopName %></h2>
+            <p style="font-size:12px;color:#64748B;">Lưu ý: Mô tả gói dịch vụ cần tối thiểu 100 ký tự và có thời gian thực hiện để đạt tiêu chí duyệt tự động của Admin.</p>
 
             <div class="service-pkg-grid3">
-                <% for (ServicePackage pkg : services) { %>
+                <% for (ServicePackage pkg : services) {
+                    String st = pkg.getStatus() != null ? pkg.getStatus() : "ACTIVE";
+                    boolean canToggle = "ACTIVE".equals(st) || "INACTIVE".equals(st);
+                %>
                 <div class="service-pkg-card <%= pkg.isPopular() ? "popular" : "" %>">
                     <div>
                         <div class="pkg-top-row">
                             <h3><%= pkg.getServiceName() %></h3>
+                            <% if (canToggle) { %>
                             <a href="seller-services?action=toggle&id=<%= pkg.getId() %>"
-                               class="toggle-pill-switch <%= !"ACTIVE".equals(pkg.getStatus()) ? "off" : "" %>"
+                               class="toggle-pill-switch <%= !"ACTIVE".equals(st) ? "off" : "" %>"
                                title="Bật/Tắt gói dịch vụ">
                                 <span></span>
                             </a>
+                            <% } else if ("PENDING".equals(st)) { %>
+                            <span class="st-badge processing" style="font-size:11px;">🕒 Chờ Admin duyệt</span>
+                            <% } else if ("NEEDS_EDIT".equals(st)) { %>
+                            <span class="st-badge pending" style="font-size:11px;">⚠️ Cần sửa</span>
+                            <% } else { %>
+                            <span class="st-badge cancelled" style="font-size:11px;">✕ Từ chối</span>
+                            <% } %>
                         </div>
                         <div class="pkg-price"><%= pkg.getFormattedPrice() %></div>
                         <div class="pkg-duration">
-                            <%= pkg.getDurationText() %>
+                            <%= !pkg.getDurationText().isBlank() ? pkg.getDurationText() : "Chưa điền thời gian" %>
                             <% if (pkg.isPopular()) { %>
                             · <strong style="color:#1B64F2;">Bán chạy nhất</strong>
                             <% } %>
@@ -116,12 +132,12 @@
                                     class="<%= pkg.isPopular() ? "btn-seller-primary" : "btn-seller-outline" %>"
                                     style="flex:1;"
                                     onclick="openServiceModal('<%= pkg.getId() %>', '<%= pkg.getServiceName().replace("'", "\\'") %>', '<%= pkg.getPrice() %>', '<%= pkg.getDurationText().replace("'", "\\'") %>', '<%= pkg.getDescription().replace("'", "\\'") %>', <%= pkg.isPopular() %>)">
-                                Chỉnh sửa gói
+                                <%= canToggle ? "Chỉnh sửa gói" : "Sửa & Gửi duyệt lại" %>
                             </button>
                             <% if (services.size() > 1) { %>
                             <a href="seller-services?action=delete&id=<%= pkg.getId() %>"
                                class="btn-seller-outline" style="color:#EF4444;border-color:#FECACA;"
-                               onclick="return confirm('Xóa gói dịch vụ này khỏi Database?')">Xoá</a>
+                               onclick="return confirm('Xóa gói dịch vụ này?')">Xoá</a>
                             <% } %>
                         </div>
                     </div>
@@ -213,7 +229,7 @@
                 </div>
             </div>
             <div style="margin-bottom:12px;">
-                <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px;">Các hạng mục công việc (ngăn cách bằng dấu chấm phẩy `;`) *</label>
+                <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px;">Các hạng mục công việc (ngăn cách bằng dấu `;`, tối thiểu 100 ký tự để đạt duyệt tự động) *</label>
                 <textarea name="description" id="mDesc" rows="4" required
                           style="width:100%;border:1px solid #CBD5E1;border-radius:8px;padding:8px 12px;"></textarea>
             </div>
@@ -237,7 +253,7 @@
         document.getElementById('mDuration').value = duration;
         document.getElementById('mDesc').value = desc;
         document.getElementById('mPopular').checked = popular;
-        document.getElementById('modalTitle').textContent = id ? 'Chỉnh sửa gói dịch vụ' : 'Thêm gói dịch vụ mới';
+        document.getElementById('modalTitle').textContent = id ? 'Chỉnh sửa gói dịch vụ' : 'Thêm gói dịch vụ mới (Gửi Admin duyệt)';
         document.getElementById('serviceModal').classList.add('show');
     }
     function closeServiceModal() {

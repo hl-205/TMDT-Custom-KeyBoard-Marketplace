@@ -15,13 +15,14 @@
     Shop sellerShop = (Shop) request.getAttribute("sellerShop");
     String shopName = (sellerShop != null) ? sellerShop.getShopName() : "SwitchHouse";
     CustomOrder order = (CustomOrder) request.getAttribute("order");
+    boolean canEditQuote = (order != null && ("PENDING".equals(order.getOrderStatus()) || "CONFIRMED".equals(order.getOrderStatus())));
 %>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xác nhận đơn custom - <%= shopName %></title>
+    <title><%= canEditQuote ? "Lập phiếu báo giá & Xác nhận đơn" : "Phiếu báo giá & Hồ sơ đơn hàng" %> - <%= shopName %></title>
     <link rel="stylesheet" href="assets/css/seller.css">
 </head>
 <body>
@@ -34,10 +35,11 @@
     <main class="seller-main-area">
         <div class="seller-topbar">
             <div class="seller-page-title">
-                <h1>Xác nhận đơn custom chờ xử lý</h1>
-                <p>Xưởng: <strong><%= shopName %></strong></p>
+                <h1><%= canEditQuote ? "Xác nhận đơn & Lập phiếu báo giá" : "Phiếu báo giá & Hồ sơ đơn hàng" %></h1>
+                <p>Xưởng / Gian hàng: <strong><%= shopName %></strong></p>
             </div>
             <div class="seller-top-right">
+                <a href="seller-orders" class="btn-seller-outline">‹ Quay lại danh sách đơn</a>
                 <div class="seller-user-pill">
                     <div class="sh-square" style="width:26px;height:26px;border-radius:50%;font-size:11px;"><%= currentUser.getAvatarText() %></div>
                     <span><%= currentUser.getFullName() %> · Chủ shop (<%= shopName %>)</span>
@@ -45,17 +47,19 @@
             </div>
         </div>
 
-        <% if (order == null || !"PENDING".equals(order.getOrderStatus())) { %>
+        <% if (order == null) { %>
         <div class="white-panel-card" style="text-align:center;padding:56px 24px;">
             <div style="font-size:42px;margin-bottom:12px;">🎉</div>
-            <h3 style="font-size:18px;font-weight:800;margin-bottom:6px;">Không có đơn custom nào đang chờ xác nhận</h3>
-            <p style="color:#64748B;font-size:13px;margin-bottom:20px;">Tất cả yêu cầu gia công từ khách hàng đã được xưởng tiếp nhận hoặc xử lý xong.</p>
+            <h3 style="font-size:18px;font-weight:800;margin-bottom:6px;">Không có đơn hàng nào đang chờ xác nhận & báo giá</h3>
+            <p style="color:#64748B;font-size:13px;margin-bottom:20px;">Tất cả đơn đặt hàng từ khách hàng đã được gian hàng tiếp nhận và lập phiếu báo giá xong.</p>
             <a href="seller-orders" class="btn-seller-primary">Quay lại Quản lý đơn hàng</a>
         </div>
         <% } else { %>
+        <% if (canEditQuote) { %>
         <div class="sla-warning-banner">
-            ⏰ Đơn hàng <strong>#<%= order.getOrderCode() %></strong> đang chờ xưởng phản hồi báo giá (Giá tạm tính: <strong><%= order.getFormattedTotal() %></strong>).
+            ⏰ Đơn hàng <strong>#<%= order.getOrderCode() %></strong> (<%= order.isCustomOrder() ? "Đơn Build Custom" : "Đơn Mua Sẵn" %>) đang chờ gian hàng xác nhận và gửi phiếu báo giá (Giá tạm tính: <strong><%= order.getFormattedTotal() %></strong>).
         </div>
+        <% } %>
 
         <form action="seller-confirm-custom" method="POST" id="confirmOrderForm">
             <input type="hidden" name="orderId" value="<%= order.getId() %>">
@@ -66,36 +70,47 @@
                     <div class="white-panel-card">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                             <div>
-                                <h2 style="font-size:17px;font-weight:800;">Build Sheet — Đơn #<%= order.getOrderCode() %></h2>
-                                <span style="font-size:12px;color:#64748B;"><%= order.getBuildCode() %></span>
+                                <h2 style="font-size:17px;font-weight:800;">Phiếu Thông Tin — Đơn #<%= order.getOrderCode() %></h2>
+                                <span style="font-size:12px;color:#64748B;"><%= order.getBuildCode() %> · Phương thức: <%= order.getPaymentMethod() %></span>
                             </div>
-                            <span class="st-badge completed">✓ Tương thích hệ thống</span>
+                            <span class="st-badge completed">Trạng thái: <%= order.getOrderStatus() %></span>
                         </div>
 
                         <table class="build-sheet-table" style="margin-bottom:16px;">
-                            <tr><td>Sản phẩm chính</td><td><%= order.getProductName() != null ? order.getProductName() : order.getBuildCode() %></td></tr>
-                            <tr><td>Cấu hình chi tiết</td><td><%= order.getVariantSummary() %></td></tr>
-                            <tr><td>Giá linh kiện</td><td><%= order.getFormattedSubtotal() %></td></tr>
-                            <tr><td>Phí gia công gốc</td><td><%= order.getFormattedCustomFee() %></td></tr>
+                            <tr><td>Sản phẩm chính</td><td><strong><%= order.getProductName() != null ? order.getProductName() : order.getBuildCode() %></strong></td></tr>
+                            <tr><td>Chi tiết cấu hình / Phân loại</td><td><%= order.getVariantSummary() %></td></tr>
+                            <tr><td>Giá sản phẩm / linh kiện</td><td><%= order.getFormattedSubtotal() %></td></tr>
+                            <tr><td>Phí gia công / phụ phí</td><td><%= order.getFormattedCustomFee() %></td></tr>
+                            <tr><td>Phí vận chuyển</td><td><%= order.getFormattedShippingFee() %></td></tr>
+                            <tr><td>Giảm giá voucher</td><td>−<%= order.getFormattedDiscount() %></td></tr>
+                            <tr><td>Thời gian cam kết</td><td><%= order.getCommittedDays() %> ngày làm việc</td></tr>
                         </table>
 
-                        <strong style="font-size:13px;display:block;margin-bottom:6px;">Yêu cầu riêng của khách hàng:</strong>
+                        <strong style="font-size:13px;display:block;margin-bottom:6px;">Yêu cầu / Ghi chú của khách hàng:</strong>
                         <div class="customer-quote-box" style="margin-bottom:16px;">
-                            💬 “<%= (order.getCustomerNote() != null && !order.getCustomerNote().isEmpty()) ? order.getCustomerNote() : "Không có ghi chú thêm." %>”
+                            💬 “<%= (order.getCustomerNote() != null && !order.getCustomerNote().isEmpty()) ? order.getCustomerNote() : "Giao hàng tiêu chuẩn, kiểm tra kỹ sản phẩm trước khi đóng gói." %>”
                         </div>
+
+                        <% if (!canEditQuote) { %>
+                        <strong style="font-size:13px;display:block;margin-bottom:6px;color:#15803D;">📋 Nội dung Phiếu Báo Giá / Phản hồi đã gửi cho khách:</strong>
+                        <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:14px 16px;color:#166534;font-size:13px;">
+                            <%= (order.getShopNote() != null && !order.getShopNote().isBlank()) ? order.getShopNote() : "Đơn hàng đã được xác nhận theo đúng mức giá niêm yết." %>
+                        </div>
+                        <% } %>
                     </div>
 
+                    <% if (canEditQuote) { %>
                     <div class="white-panel-card" style="margin-bottom:0;border:2px solid #1B64F2;">
-                        <h3 style="font-size:16px;font-weight:800;color:#1B64F2;margin-bottom:14px;">📋 Lập Phiếu Báo Giá Gia Công</h3>
+                        <h3 style="font-size:16px;font-weight:800;color:#1B64F2;margin-bottom:14px;">📋 Lập Phiếu Báo Giá & Chốt Đơn Với Khách</h3>
 
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px;">
                             <div>
-                                <label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px;">Thời gian cam kết (ngày) *</label>
+                                <label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px;">Thời gian cam kết bàn giao (ngày) *</label>
                                 <input type="number" name="committedDays" value="<%= order.getCommittedDays() %>" min="1" max="30" required
                                        style="width:100%;height:40px;border:1px solid #CBD5E1;border-radius:8px;padding:0 12px;font-weight:700;">
                             </div>
                             <div>
-                                <label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px;">Phụ phí báo giá thêm (+VNĐ)</label>
+                                <label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px;">Phụ phí điều chỉnh báo giá (+VNĐ)</label>
                                 <input type="text" name="extraFee" id="extraFeeInput" value="0"
                                        oninput="this.value = this.value.replace(/[^0-9]/g, ''); updateLiveQuotation();"
                                        style="width:100%;height:40px;border:1.5px solid #EA580C;border-radius:8px;padding:0 12px;font-weight:700;color:#EA580C;">
@@ -105,15 +120,16 @@
                         <div>
                             <label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px;">Nội dung giải trình Phiếu báo giá gửi khách *</label>
                             <textarea name="shopNote" rows="3" required
-                                      placeholder="Xưởng xác nhận báo giá: Đã kiểm tra đủ linh kiện, tiến hành gia công theo đúng yêu cầu..."
-                                      style="width:100%;border:1px solid #CBD5E1;border-radius:8px;padding:10px 12px;font-size:13px;"></textarea>
+                                      placeholder="Xác nhận báo giá chốt đơn: Đã kiểm tra đủ linh kiện/sản phẩm trong kho, cam kết bàn giao đúng hẹn..."
+                                      style="width:100%;border:1px solid #CBD5E1;border-radius:8px;padding:10px 12px;font-size:13px;"><%= order.getShopNote() != null ? order.getShopNote() : "" %></textarea>
                         </div>
                     </div>
+                    <% } %>
                 </div>
 
                 <div>
                     <div class="white-panel-card">
-                        <h3 style="font-size:15px;font-weight:800;margin-bottom:12px;">Khách hàng</h3>
+                        <h3 style="font-size:15px;font-weight:800;margin-bottom:12px;">Khách hàng nhận đơn</h3>
                         <strong style="display:block;font-size:14px;"><%= order.getReceiverName() %></strong>
                         <span style="font-size:13px;color:#64748B;">SĐT: <%= order.getReceiverPhone() %></span>
                         <div style="font-size:13px;color:#475569;margin-top:8px;">Địa chỉ: <%= order.getShippingAddress() %></div>
@@ -121,34 +137,52 @@
 
                     <div class="white-panel-card" id="quotationSummaryBox"
                          data-base-total="<%= order.getTotalAmount() %>">
-                        <h3 style="font-size:15px;font-weight:800;margin-bottom:14px;">Tổng kết báo giá</h3>
+                        <h3 style="font-size:15px;font-weight:800;margin-bottom:14px;">Tổng kết tài chính đơn #<%= order.getOrderCode() %></h3>
                         <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;">
-                            <span style="color:#64748B;">Tổng tiền tạm tính</span><strong><%= order.getFormattedTotal() %></strong>
+                            <span style="color:#64748B;">Tiền hàng + ship</span><strong><%= order.getFormattedTotal() %></strong>
                         </div>
+                        <% if (canEditQuote) { %>
                         <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;color:#EA580C;font-weight:700;">
-                            <span>+ Phụ phí báo giá</span><span id="liveExtraFeeText">+0₫</span>
+                            <span>+ Phụ phí báo giá thêm</span><span id="liveExtraFeeText">+0₫</span>
                         </div>
+                        <% } %>
                         <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid #E2E8F0;border-bottom:1px solid #E2E8F0;margin:8px 0;">
                             <strong>Tổng giá chốt báo khách</strong>
                             <strong style="font-size:18px;color:#EA580C;" id="liveFinalTotalText"><%= order.getFormattedTotal() %></strong>
                         </div>
+                        <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;color:#64748B;">
+                            <span>Khấu trừ phí sàn & thanh toán (6.1%)</span><span>−<%= order.getFormattedPlatformFee() %></span>
+                        </div>
                         <div style="display:flex;justify-content:space-between;align-items:center;padding-top:6px;">
-                            <strong>Xưởng thực nhận</strong>
+                            <strong>Shop thực nhận</strong>
                             <strong style="font-size:16px;color:#16A34A;" id="liveNetShopText"><%= order.getFormattedNetShopReceive() %></strong>
                         </div>
                     </div>
 
+                    <% if (canEditQuote) { %>
                     <div class="white-panel-card" style="margin-bottom:0;display:flex;flex-direction:column;gap:10px;">
                         <button type="submit" class="btn-seller-primary" style="height:44px;font-size:14px;"
                                 onclick="document.getElementById('decisionInput').value='accept'">
-                            ✓ Gửi Phiếu Báo Giá & Bắt đầu gia công
+                            ✓ Gửi Phiếu Báo Giá & Xác nhận đơn
                         </button>
                         <button type="submit" class="btn-seller-outline"
                                 style="height:40px;background:#FEF2F2;color:#DC2626;border-color:#FECACA;font-weight:700;"
-                                onclick="document.getElementById('decisionInput').value='reject'; return confirm('Từ chối đơn gia công này?');">
+                                onclick="document.getElementById('decisionInput').value='reject'; return confirm('Từ chối đơn hàng này?');">
                             ✕ Từ chối nhận đơn
                         </button>
                     </div>
+                    <% } else { %>
+                    <div class="white-panel-card" style="margin-bottom:0;display:flex;flex-direction:column;gap:10px;">
+                        <button type="button" class="btn-seller-primary" style="height:42px;" onclick="window.print()">
+                            🖨️ In Phiếu Báo Giá / Hóa Đơn
+                        </button>
+                        <% if (order.isCustomOrder() && "PROCESSING".equals(order.getOrderStatus())) { %>
+                        <a href="seller-progress?id=<%= order.getId() %>" class="btn-seller-outline" style="height:40px;">
+                            🛠️ Sang trang Cập nhật tiến độ gia công
+                        </a>
+                        <% } %>
+                    </div>
+                    <% } %>
                 </div>
             </div>
         </form>
@@ -163,9 +197,9 @@
 
     function updateLiveQuotation() {
         const box = document.getElementById('quotationSummaryBox');
-        if (!box) return;
-        const baseTotal = parseInt(box.getAttribute('data-base-total'), 10) || 0;
         const extraInput = document.getElementById('extraFeeInput');
+        if (!box || !extraInput) return;
+        const baseTotal = parseInt(box.getAttribute('data-base-total'), 10) || 0;
         const extra = parseInt(extraInput.value, 10) || 0;
 
         const finalTotal = baseTotal + extra;

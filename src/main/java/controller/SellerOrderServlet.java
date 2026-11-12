@@ -48,9 +48,14 @@ public class SellerOrderServlet extends HttpServlet {
                 } catch (Exception ignored) {}
             }
             if (order == null) {
-                List<CustomOrder> pendingList = customDAO.getOrdersForSellerByShop(shopId, "PENDING", true);
-                if (!pendingList.isEmpty()) {
-                    order = pendingList.get(0);
+                List<CustomOrder> pendingCustomList = customDAO.getOrdersForSellerByShop(shopId, "PENDING", true);
+                if (!pendingCustomList.isEmpty()) {
+                    order = pendingCustomList.get(0);
+                } else {
+                    List<CustomOrder> anyPendingList = customDAO.getOrdersForSellerByShop(shopId, "PENDING", false);
+                    if (!anyPendingList.isEmpty()) {
+                        order = anyPendingList.get(0);
+                    }
                 }
             }
             request.setAttribute("order", order);
@@ -79,6 +84,12 @@ public class SellerOrderServlet extends HttpServlet {
             orderId = Integer.parseInt(request.getParameter("orderId"));
         } catch (Exception ignored) {}
 
+        if ("ship".equals(decision)) {
+            customDAO.markOrderShipping(orderId);
+            response.sendRedirect("seller-orders?msg=shipped");
+            return;
+        }
+
         if ("complete".equals(decision)) {
             customDAO.markOrderCompleted(orderId);
             response.sendRedirect("seller-orders?msg=completed");
@@ -106,7 +117,13 @@ public class SellerOrderServlet extends HttpServlet {
             }
         } catch (Exception ignored) {}
 
+        CustomOrder targetOrder = customDAO.getOrderById(orderId);
         customDAO.acceptCustomOrder(orderId, committedDays, shopNote, extraFee);
-        response.sendRedirect("seller-progress?id=" + orderId + "&msg=accepted");
+
+        if (targetOrder != null && targetOrder.isCustomOrder()) {
+            response.sendRedirect("seller-progress?id=" + orderId + "&msg=accepted");
+        } else {
+            response.sendRedirect("seller-orders?msg=accepted");
+        }
     }
 }

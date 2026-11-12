@@ -34,7 +34,7 @@ public class CartDAO extends DBContext {
                     product.setCategoryId(rs.getInt("category_id"));
                     product.setSku(rs.getString("sku"));
                     product.setName(rs.getString("name"));
-                    product.setBrand(rs.getString("brand"));
+                    product.setBrand(rs.getString(A"brand"));
                     product.setShortDesc(rs.getString("short_desc"));
                     product.setDescription(rs.getString("description"));
 

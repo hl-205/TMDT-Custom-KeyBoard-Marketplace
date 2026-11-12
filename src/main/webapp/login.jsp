@@ -1,4 +1,5 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ page import="java.net.URLEncoder, java.nio.charset.StandardCharsets" %>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -88,19 +89,24 @@
             <div class="alert-box alert-success"><%= request.getAttribute("successMsg") %></div>
             <% } %>
 
-            <div class="social-btn-grid">
-                <a href="#" class="btn-social"><strong>G</strong> Google</a>
-                <a href="#" class="btn-social"><strong>f</strong> Facebook</a>
-            </div>
-
-            <div class="auth-divider">hoặc đăng nhập bằng email</div>
-
             <%
                 String redirectVal = request.getParameter("redirect");
                 if (redirectVal == null || redirectVal.isBlank()) {
                     redirectVal = (String) request.getAttribute("redirect");
                 }
+                String googleLoginHref = "login-google";
+                if (redirectVal != null && !redirectVal.isBlank()) {
+                    googleLoginHref += "?redirect=" + URLEncoder.encode(redirectVal, StandardCharsets.UTF_8);
+                }
             %>
+
+            <div class="social-btn-grid">
+                <a href="<%= googleLoginHref %>" class="btn-social"><strong>G</strong> Google</a>
+                <a href="#" class="btn-social"><strong>f</strong> Facebook</a>
+            </div>
+
+            <div class="auth-divider">hoặc đăng nhập bằng email</div>
+
             <form action="login" method="POST">
                 <% if (redirectVal != null && !redirectVal.isBlank()) { %>
                 <input type="hidden" name="redirect" value="<%= redirectVal %>">

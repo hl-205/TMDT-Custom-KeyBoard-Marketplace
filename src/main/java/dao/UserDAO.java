@@ -2,6 +2,7 @@ package dao;
 
 import model.User;
 import java.sql.*;
+import java.util.UUID;
 
 public class UserDAO {
 
@@ -52,6 +53,42 @@ public class UserDAO {
             }
         } catch (Exception e) {
             e.printStackTrace();
+        }
+        return null;
+    }
+
+    public User getUserByEmail(String email) {
+        ensureUserTableSchema();
+        String sql = "SELECT * FROM users WHERE email = ?";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, email.trim());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapUser(rs);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    // Tự động lấy User nếu email đã tồn tại, hoặc tạo mới nếu lần đầu đăng nhập bằng Google
+    public User loginOrRegisterGoogleUser(String email, String firstName, String lastName) {
+        ensureUserTableSchema();
+        User existingUser = getUserByEmail(email);
+        if (existingUser != null) {
+            return existingUser;
+        }
+
+        String f = (firstName != null && !firstName.isBlank()) ? firstName.trim() : "Keeb";
+        String l = (lastName != null && !lastName.isBlank()) ? lastName.trim() : "Member";
+        String randomPassword = "GOOGLE_" + UUID.randomUUID().toString().substring(0, 12);
+
+        boolean created = registerUser(f, l, email.trim(), "", randomPassword);
+        if (created) {
+            return getUserByEmail(email);
         }
         return null;
     }
@@ -107,7 +144,7 @@ public class UserDAO {
                 psVerify.setString(2, oldPassword);
                 try (ResultSet rs = psVerify.executeQuery()) {
                     if (!rs.next()) {
-                        return false; // Mật khẩu cũ không đúng
+                        return false;
                     }
                 }
             }
@@ -141,15 +178,17 @@ public class UserDAO {
         String avatar = "KH";
         if (firstName != null && !firstName.isEmpty() && lastName != null && !lastName.isEmpty()) {
             avatar = ("" + firstName.trim().charAt(0) + lastName.trim().charAt(0)).toUpperCase();
+        } else if (firstName != null && !firstName.isEmpty()) {
+            avatar = firstName.trim().substring(0, Math.min(2, firstName.trim().length())).toUpperCase();
         }
         String sql = "INSERT INTO users (first_name, last_name, email, phone, password, avatar_text, role, points, is_verified, status, address) "
                 + "VALUES (?, ?, ?, ?, ?, ?, 'CUSTOMER', 0, 1, 'ACTIVE', '')";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, firstName.trim());
-            ps.setString(2, lastName.trim());
+            ps.setString(1, firstName != null ? firstName.trim() : "");
+            ps.setString(2, lastName != null ? lastName.trim() : "");
             ps.setString(3, email.trim());
-            ps.setString(4, phone.trim());
+            ps.setString(4, phone != null ? phone.trim() : "");
             ps.setString(5, password);
             ps.setString(6, avatar);
             return ps.executeUpdate() > 0;
